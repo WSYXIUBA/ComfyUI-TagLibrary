@@ -21,8 +21,11 @@ class TagLibraryNode:
     RETURN_NAMES = ("positive", "tags_preview")
     OUTPUT_NODE = False
     DESCRIPTION = (
-        "结构化标签库: 多分类标签点选 + 按类随机 + 组合随机, "
-        "输出 STRING 直连 CLIPTextEncode。⚙ 按钮打开标签库管理页。"
+        "🏷 标签库: 在节点面板上挑选/随机组合标签, 输出拼好的提示词。\n"
+        "▸ 输出 positive → 连 CLIPTextEncode 的 text\n"
+        "▸ 输出 tags_preview → 接 Preview Text 可查看实际输出\n"
+        "▸ 输入 prefix/suffix (可选) → 上游文本拼接在标签前后\n"
+        "▸ 面板 ➕ 添加标签 | 🎲 换随机种子 | NSFW 开关控制 🔞 标签"
     )
 
     @classmethod
@@ -34,26 +37,35 @@ class TagLibraryNode:
                     "multiline": False,
                     "tooltip": "节点面板状态 (自动维护, 勿手改)",
                 }),
-                "mode": (["manual", "random_by_category", "random_mix"],),
+                "mode": (["manual", "random_by_category", "random_mix"],
+                         {"tooltip": "manual=手动点选的启用标签 / random_by_category=每分类抽N条 / random_mix=全库混合抽取"}),
                 "seed": ("INT", {"default": 0, "min": 0,
-                                 "max": 0xffffffffffffffff}),
-                "nsfw_mode": (["off", "on", "only"],),
+                                 "max": 0xffffffffffffffff,
+                                 "tooltip": "随机种子, 同 seed 同结果; 面板 🎲ROLL 换随机数"}),
+                "nsfw_mode": (["off", "on", "only"],
+                              {"tooltip": "off=排除 NSFW 标签 / on=普通+NSFW 混合 / only=只出 NSFW"}),
             },
             "optional": {
                 "prefix": ("STRING", {"forceInput": True,
-                                      "tooltip": "上游文本, 会拼在输出最前面"}),
+                                      "tooltip": "⬅️ 可选: 上游文本会拼在标签前面 (如质量词/LoRA触发词)"}),
                 "suffix": ("STRING", {"forceInput": True,
-                                      "tooltip": "上游文本, 会拼在输出最后面"}),
-                "min_tags": ("INT", {"default": 3, "min": 0, "max": 60}),
-                "max_tags": ("INT", {"default": 8, "min": 1, "max": 60}),
-                "category_weights": ("STRING", {"default": "{}"}),
+                                      "tooltip": "⬅️ 可选: 上游文本拼在标签后面"}),
+                "min_tags": ("INT", {"default": 3, "min": 0, "max": 60,
+                                     "tooltip": "随机模式最少输出标签数"}),
+                "max_tags": ("INT", {"default": 8, "min": 1, "max": 60,
+                                     "tooltip": "随机模式最多输出标签数"}),
+                "category_weights": ("STRING", {"default": "{}",
+                                                "tooltip": "分类权重 (面板自动维护)"}),
                 "search_text": ("STRING", {"default": "",
-                                           "tooltip": "random_mix 的过滤词 (中英/别名)"}),
-                "separator": (["comma", "space"],),
-                "use_weights_syntax": ("BOOLEAN", {"default": False}),
-                "dedupe": ("BOOLEAN", {"default": True}),
+                                           "tooltip": "random_mix 的过滤词 (支持中文/英文/别名)"}),
+                "separator": (["comma", "space"],
+                              {"tooltip": "comma=逗号分隔(推荐) / space=空格分隔"}),
+                "use_weights_syntax": ("BOOLEAN", {"default": False,
+                                                   "tooltip": "开启后带权重的标签输出为 (tag:1.2) 语法"}),
+                "dedupe": ("BOOLEAN", {"default": True,
+                                       "tooltip": "相同标签只输出一次"}),
                 "pinned_required": ("BOOLEAN", {"default": True,
-                                                "tooltip": "随机模式下钉选标签必含"}),
+                                                "tooltip": "📌 钉选标签在随机模式下必定包含"}),
             },
         }
 
