@@ -176,6 +176,7 @@ def dedupe_against(new_tree: dict, existing_lib: dict) -> tuple[dict, dict]:
     kept_en = set()
     out_cats = []
     seen_cat_names = {}
+    used_sids = set()
     for cat in new_tree.get("categories", []):
         name = cat.get("name") or cat.get("id") or "?"
         # 同名分类合并 id: 复用已有分类 id 或生成 slug
@@ -186,6 +187,11 @@ def dedupe_against(new_tree: dict, existing_lib: dict) -> tuple[dict, dict]:
             kept = []
             sid_base = re.sub(r"[^a-z0-9\-]+", "-", (sub.get("name") or "misc").lower()).strip("-")[:40] or "misc"
             sid = f"{cid}.{sid_base}"
+            n = 2
+            while sid in used_sids:
+                sid = f"{cid}.{sid_base}-{n}"
+                n += 1
+            used_sids.add(sid)
             used_ids = set()
             for t in sub.get("tags", []):
                 en_l = t.get("en", "").strip().lower()
