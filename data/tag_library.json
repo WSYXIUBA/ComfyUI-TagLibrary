@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "settings": {
+    "name": "默认标签库",
+    "language_note": "en=出图用文本, zh=显示名, aliases=同义词(用于搜索与去重)"
+  },
+  "categories": [
+    {
+      "id": "character",
+      "name": "人物",
+      "icon": "👤",
+      "color": "#54a0ff",
+      "subcategories": [
+        {
+          "id": "character.body",
+          "name": "体型",
+          "tags": [
+            { "id": "character.body.slim", "en": "slim", "zh": "纤细", "weight": 1.0, "aliases": ["slender", "thin"] },
+            { "id": "character.body.curvy", "en": "curvy", "zh": "丰满曲线", "weight": 1.0 },
+            { "id": "character.body.petite", "en": "petite", "zh": "娇小", "weight": 1.0, "aliases": ["small body"] },
+            { "id": "character.body.tall", "en": "tall female", "zh": "高挑", "weight": 1.0 },
+            { "id": "character.body.muscular", "en": "muscular", "zh": "肌肉", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "character.hair",
+          "name": "发型发色",
+          "tags": [
+            { "id": "character.hair.long", "en": "long hair", "zh": "长发", "weight": 1.0 },
+            { "id": "character.hair.short", "en": "short hair", "zh": "短发", "weight": 1.0 },
+            { "id": "character.hair.twintails", "en": "twintails", "zh": "双马尾", "weight": 1.0 },
+            { "id": "character.hair.ponytail", "en": "ponytail", "zh": "马尾", "weight": 1.0 },
+            { "id": "character.hair.braid", "en": "braid", "zh": "编发", "weight": 1.0, "aliases": ["plait"] },
+            { "id": "character.hair.blue", "en": "blue hair", "zh": "蓝发", "weight": 1.0 },
+            { "id": "character.hair.silver", "en": "silver hair", "zh": "银发", "weight": 1.0, "aliases": ["white hair"] },
+            { "id": "character.hair.blonde", "en": "blonde", "zh": "金发", "weight": 1.0, "aliases": ["yellow hair"] },
+            { "id": "character.hair.black", "en": "black hair", "zh": "黑发", "weight": 1.0 },
+            { "id": "character.hair.heterochromia", "en": "heterochromia", "zh": "异色瞳", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "character.expression",
+          "name": "表情",
+          "tags": [
+            { "id": "character.expression.smile", "en": "smile", "zh": "微笑", "weight": 1.0 },
+            { "id": "character.expression.open_mouth", "en": "open mouth", "zh": "张嘴", "weight": 1.0 },
+            { "id": "character.expression.blush", "en": "blush", "zh": "脸红", "weight": 1.0 },
+            { "id": "character.expression.smirk", "en": "smirk", "zh": "坏笑", "weight": 1.0 },
+            { "id": "character.expression.pout", "en": "pout", "zh": "嘟嘴", "weight": 1.0, "aliases": ["angry pout"] },
+            { "id": "character.expression.closed_eyes", "en": "closed eyes", "zh": "闭眼", "weight": 1.0 },
+            { "id": "character.expression.tears", "en": "tears", "zh": "流泪", "weight": 1.0 },
+            { "id": "character.expression.embarrassed", "en": "embarrassed", "zh": "害羞窘迫", "weight": 1.0 },
+            { "id": "character.expression.serious", "en": "serious", "zh": "认真表情", "weight": 1.0 },
+            { "id": "character.expression.smirking_cat", "en": ":3", "zh": "猫嘴", "weight": 1.0, "aliases": ["cat mouth"] }
+          ]
+        },
+        {
+          "id": "character.pose",
+          "name": "动作姿势",
+          "tags": [
+            { "id": "character.pose.standing", "en": "standing", "zh": "站立", "weight": 1.0 },
+            { "id": "character.pose.sitting", "en": "sitting", "zh": "坐着", "weight": 1.0 },
+            { "id": "character.pose.arms_behind_back", "en": "arms behind back", "zh": "手背后", "weight": 1.0 },
+            { "id": "character.pose.hands_on_hips", "en": "hands on hips", "zh": "叉腰", "weight": 1.0 },
+            { "id": "character.pose.looking_at_viewer", "en": "looking at viewer", "zh": "看向镜头", "weight": 1.0 },
+            { "id": "character.pose.lying", "en": "lying on bed", "zh": "躺床", "weight": 1.0 },
+            { "id": "character.pose.waving", "en": "waving", "zh": "挥手", "weight": 1.0 },
+            { "id": "character.pose.head_tilt", "en": "head tilt", "zh": "歪头", "weight": 1.0 },
+            { "id": "character.pose.stretching", "en": "stretching", "zh": "伸懒腰", "weight": 1.0 },
+            { "id": "character.pose.dynamic_pose", "en": "dynamic pose", "zh": "动感姿势", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "character.clothing",
+          "name": "服装",
+          "tags": [
+            { "id": "character.clothing.witch_hat", "en": "witch hat", "zh": "魔女帽", "weight": 1.1 },
+            { "id": "character.clothing.school_uniform", "en": "school uniform", "zh": "校服", "weight": 1.0 },
+            { "id": "character.clothing.hoodie", "en": "hoodie", "zh": "连帽衫", "weight": 1.0 },
+            { "id": "character.clothing.dress", "en": "dress", "zh": "连衣裙", "weight": 1.0 },
+            { "id": "character.clothing.kimono", "en": "kimono", "zh": "和服", "weight": 1.0 },
+            { "id": "character.clothing.maid", "en": "maid outfit", "zh": "女仆装", "weight": 1.0 },
+            { "id": "character.clothing.overalls", "en": "overalls", "zh": "背带裤", "weight": 1.0 },
+            { "id": "character.clothing.thighhighs", "en": "thighhighs", "zh": "过膝袜", "weight": 1.0 },
+            { "id": "character.clothing.boots", "en": "boots", "zh": "长靴", "weight": 1.0 },
+            { "id": "character.clothing.cape", "en": "cape", "zh": "披风", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "character.accessory",
+          "name": "配饰",
+          "tags": [
+            { "id": "character.accessory.glasses", "en": "glasses", "zh": "眼镜", "weight": 1.0 },
+            { "id": "character.accessory.hair_ribbon", "en": "hair ribbon", "zh": "发带", "weight": 1.0 },
+            { "id": "character.accessory.earrings", "en": "earrings", "zh": "耳环", "weight": 1.0 },
+            { "id": "character.accessory.necklace", "en": "necklace", "zh": "项链", "weight": 1.0 },
+            { "id": "character.accessory.choker", "en": "choker", "zh": "颈环", "weight": 1.0 },
+            { "id": "character.accessory.staff", "en": "holding staff", "zh": "持法杖", "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "background",
+      "name": "背景场景",
+      "icon": "🖼️",
+      "color": "#2ecc71",
+      "subcategories": [
+        {
+          "id": "background.indoor",
+          "name": "室内",
+          "tags": [
+            { "id": "background.indoor.bedroom", "en": "bedroom", "zh": "卧室", "weight": 1.0 },
+            { "id": "background.indoor.library", "en": "library", "zh": "图书室", "weight": 1.0 },
+            { "id": "background.indoor.classroom", "en": "classroom", "zh": "教室", "weight": 1.0 },
+            { "id": "background.indoor.cafe", "en": "cafe interior", "zh": "咖啡店内", "weight": 1.0 },
+            { "id": "background.indoor.shrine", "en": "shrine interior", "zh": "神社内", "weight": 1.0 },
+            { "id": "background.indoor.laboratory", "en": "laboratory", "zh": "实验室", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "background.outdoor",
+          "name": "室外",
+          "tags": [
+            { "id": "background.outdoor.city", "en": "city street", "zh": "城市街道", "weight": 1.0 },
+            { "id": "background.outdoor.forest", "en": "forest", "zh": "森林", "weight": 1.0 },
+            { "id": "background.outdoor.beach", "en": "beach", "zh": "海滩", "weight": 1.0 },
+            { "id": "background.outdoor.mountain", "en": "mountain scenery", "zh": "山景", "weight": 1.0 },
+            { "id": "background.outdoor.rooftop", "en": "rooftop", "zh": "天台", "weight": 1.0 },
+            { "id": "background.outdoor.flower_field", "en": "flower field", "zh": "花田", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "background.fantasy",
+          "name": "幻想场景",
+          "tags": [
+            { "id": "background.fantasy.magic_circle", "en": "magic circle", "zh": "魔法阵", "weight": 1.1 },
+            { "id": "background.fantasy.ruins", "en": "ancient ruins", "zh": "古代遗迹", "weight": 1.0 },
+            { "id": "background.fantasy.float_island", "en": "floating islands", "zh": "浮空岛", "weight": 1.0 },
+            { "id": "background.fantasy.crystal_cave", "en": "crystal cave", "zh": "水晶洞窟", "weight": 1.0 },
+            { "id": "background.fantasy.other_world", "en": "fantasy world", "zh": "异世界风景", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "background.weather_time",
+          "name": "天气时间",
+          "tags": [
+            { "id": "background.weather_time.night", "en": "night", "zh": "夜晚", "weight": 1.0 },
+            { "id": "background.weather_time.sunset", "en": "sunset", "zh": "日落", "weight": 1.0, "aliases": ["dusk"] },
+            { "id": "background.weather_time.rain", "en": "rain", "zh": "雨天", "weight": 1.0 },
+            { "id": "background.weather_time.snow", "en": "snowing", "zh": "雪", "weight": 1.0 },
+            { "id": "background.weather_time.star_sky", "en": "starry sky", "zh": "星空", "weight": 1.0 },
+            { "id": "background.weather_time.cherry_blossoms", "en": "cherry blossoms", "zh": "樱花", "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "lighting",
+      "name": "光影效果",
+      "icon": "💡",
+      "color": "#f39c12",
+      "subcategories": [
+        {
+          "id": "lighting.type",
+          "name": "光源类型",
+          "tags": [
+            { "id": "lighting.type.dispersion", "en": "dispersion", "zh": "色散光", "weight": 1.1 },
+            { "id": "lighting.type.sss", "en": "subsurface scattering", "zh": "次表面散射", "weight": 1.1 },
+            { "id": "lighting.type.dappled_moonlight", "en": "dappled moonlight", "zh": "斑驳月光", "weight": 1.1 },
+            { "id": "lighting.type.rim_light", "en": "rim lighting", "zh": "轮廓光", "weight": 1.0 },
+            { "id": "lighting.type.backlighting", "en": "backlighting", "zh": "逆光", "weight": 1.0 },
+            { "id": "lighting.type.cinematic", "en": "cinematic lighting", "zh": "电影感打光", "weight": 1.0 },
+            { "id": "lighting.type.sunlight", "en": "sunlight through leaves", "zh": "树叶间阳光", "weight": 1.0, "aliases": ["dappled sunlight"] },
+            { "id": "lighting.type.neon", "en": "neon lights", "zh": "霓虹灯", "weight": 1.0 },
+            { "id": "lighting.type.candlelight", "en": "candlelight", "zh": "烛光", "weight": 1.0 },
+            { "id": "lighting.type.volumetric", "en": "volumetric lighting", "zh": "体积光", "weight": 1.0, "aliases": ["god rays"] }
+          ]
+        },
+        {
+          "id": "lighting.mood",
+          "name": "氛围",
+          "tags": [
+            { "id": "lighting.mood.soft", "en": "soft lighting", "zh": "柔光", "weight": 1.0 },
+            { "id": "lighting.mood.contrast", "en": "strong contrast", "zh": "强对比光影", "weight": 1.0 },
+            { "id": "lighting.mood.dim", "en": "dim light", "zh": "昏暗光线", "weight": 1.0 },
+            { "id": "lighting.mood.glow", "en": "glowing particles", "zh": "发光粒子", "weight": 1.0 },
+            { "id": "lighting.mood.shadow_play", "en": "shadow play", "zh": "影子戏光斑", "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "style",
+      "name": "画风质量",
+      "icon": "🎨",
+      "color": "#9b59b6",
+      "subcategories": [
+        {
+          "id": "style.quality",
+          "name": "质量词",
+          "tags": [
+            { "id": "style.quality.masterpiece", "en": "masterpiece", "zh": "杰作", "weight": 1.2 },
+            { "id": "style.quality.best_quality", "en": "best quality", "zh": "最佳质量", "weight": 1.2 },
+            { "id": "style.quality.very_aesthetic", "en": "very aesthetic", "zh": "高美学", "weight": 1.2 },
+            { "id": "style.quality.absurdres", "en": "absurdres", "zh": "超高分辨率", "weight": 1.0 },
+            { "id": "style.quality.highly_detailed", "en": "highly detailed", "zh": "细节丰富", "weight": 1.0 },
+            { "id": "style.quality.official_art", "en": "official art", "zh": "官方画风", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "style.fx",
+          "name": "漫画特效线",
+          "tags": [
+            { "id": "style.fx.speed_lines", "en": "speed lines", "zh": "速度线", "weight": 1.0 },
+            { "id": "style.fx.action_lines", "en": "motion lines", "zh": "动作特效线", "weight": 1.0 },
+            { "id": "style.fx.impact_frame", "en": "impact frame", "zh": "冲击帧", "weight": 1.0 },
+            { "id": "style.fx.sweat_drop", "en": "sweatdrop", "zh": "汗滴符号", "weight": 1.0 },
+            { "id": "style.fx.anger_mark", "en": "anger vein", "zh": "青筋符号", "weight": 1.0 },
+            { "id": "style.fx.sparkle", "en": "sparkles", "zh": "闪光特效", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "style.texture",
+          "name": "质感风格",
+          "tags": [
+            { "id": "style.texture.flat_color", "en": "flat color", "zh": "平涂", "weight": 1.0 },
+            { "id": "style.texture.watercolor", "en": "watercolor \\(medium\\)", "zh": "水彩风", "weight": 1.0, "aliases": ["watercolor"] },
+            { "id": "style.texture.sketch", "en": "sketch", "zh": "素描线条", "weight": 1.0 },
+            { "id": "style.texture.anime_screencap", "en": "anime screencap style", "zh": "动画截图风", "weight": 1.0 },
+            { "id": "style.texture.oil", "en": "oil painting \\(medium\\)", "zh": "油画风", "weight": 1.0, "aliases": ["oil painting"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "camera",
+      "name": "镜头景别",
+      "icon": "📷",
+      "color": "#e74c3c",
+      "subcategories": [
+        {
+          "id": "camera.distance",
+          "name": "景别",
+          "tags": [
+            { "id": "camera.distance.close_up", "en": "close-up", "zh": "特写", "weight": 1.0 },
+            { "id": "camera.distance.upper_body", "en": "upper body", "zh": "半身", "weight": 1.0 },
+            { "id": "camera.distance.cowboy_shot", "en": "cowboy shot", "zh": "七分身", "weight": 1.0 },
+            { "id": "camera.distance.full_body", "en": "full body", "zh": "全身", "weight": 1.0 },
+            { "id": "camera.distance.wide_shot", "en": "wide shot", "zh": "远景", "weight": 1.0 },
+            { "id": "camera.distance.portrait", "en": "portrait", "zh": "头像肖像", "weight": 1.0 }
+          ]
+        },
+        {
+          "id": "camera.angle",
+          "name": "角度",
+          "tags": [
+            { "id": "camera.angle.from_above", "en": "from above", "zh": "俯视", "weight": 1.0 },
+            { "id": "camera.angle.from_below", "en": "from below", "zh": "仰视", "weight": 1.0 },
+            { "id": "camera.angle.from_side", "en": "from side", "zh": "侧面视角", "weight": 1.0 },
+            { "id": "camera.angle.from_behind", "en": "from behind", "zh": "背后视角", "weight": 1.0 },
+            { "id": "camera.angle.dutch", "en": "dutch angle", "zh": "斜角镜头", "weight": 1.0 },
+            { "id": "camera.angle.pov", "en": "pov", "zh": "第一人称视角", "weight": 1.0 }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "composition",
+      "name": "构图",
+      "icon": "🔲",
+      "color": "#1abc9c",
+      "subcategories": [
+        {
+          "id": "composition.layout",
+          "name": "布局",
+          "tags": [
+            { "id": "composition.layout.rule_of_thirds", "en": "rule of thirds composition", "zh": "三分法构图", "weight": 1.0 },
+            { "id": "composition.layout.centered", "en": "centered composition", "zh": "居中构图", "weight": 1.0 },
+            { "id": "composition.layout.symmetry", "en": "symmetrical composition", "zh": "对称构图", "weight": 1.0 },
+            { "id": "composition.layout.dynamic_angle", "en": "dynamic angle composition", "zh": "动感构图", "weight": 1.0 },
+            { "id": "composition.layout.negative_space", "en": "negative space", "zh": "留白构图", "weight": 1.0 },
+            { "id": "composition.layout.depth_layers", "en": "depth of field background", "zh": "层次景深", "weight": 1.0, "aliases": ["blurry background"] }
+          ]
+        }
+      ]
+    }
+  ]
+}
