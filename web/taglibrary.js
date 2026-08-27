@@ -97,6 +97,8 @@ export function buildPanelWidget(node, container) {
   container.classList.add("taglib-panel");
 
   const ui = { activeCat: null, filter: "", mode: "manual", chipsBoxHeight: null };
+  // activeCat=null -> 显示全部分类的 chips; 点胶囊切换到该分类; 再点取消回全部
+
 
   container.innerHTML = `
     <div class="tl-head">
