@@ -222,6 +222,42 @@ const CSS = `
 .tl-x { cursor: pointer; opacity: .5; padding: 0 1px; }
 .tl-x:hover { opacity: 1; color: #ff9a9a; }
 
+/* ---------- 已添加标签 (Added view): 灰=停用, 绿=启用 ---------- */
+.tl-ttag {
+  display: inline-flex; align-items: center; gap: 5px;
+  border-radius: 7px;
+  padding: 2.5px 8px;
+  font-size: inherit;
+  cursor: pointer;
+  user-select: none;
+  transition: all .13s ease;
+}
+.tl-ttag b { font-weight: 600; }
+.tl-ttag .t-zh { font-style: normal; opacity: .55; font-size: .82em; }
+
+/* 停用: 灰色 */
+.tl-ttag {
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.16);
+  color: #99a2b3;
+}
+
+/* 启用: 绿色 */
+.tl-ttag.on {
+  background: color-mix(in srgb, #2ecc71 20%, transparent);
+  border-color: rgba(46,204,113,.65);
+  color: #d9ffe8;
+  box-shadow: 0 0 6px -2px rgba(46,204,113,.5);
+}
+.tl-ttag.on:hover { background: color-mix(in srgb, #2ecc71 30%, transparent); }
+.tl-ttag.nsfw:not(.on) { border-color: rgba(255,107,107,.35); color: #d9a0a0; }
+.tl-ttag.nsfw.on {
+  background: color-mix(in srgb, #ff4757 22%, transparent);
+  border-color: rgba(255,71,87,.7);
+  color: #ffdada;
+  box-shadow: 0 0 6px -2px rgba(255,71,87,.55);
+}
+
 /* ---------- 底部预览 ---------- */
 .tl-preview-row {
   display: flex; align-items: center; gap: 6px;

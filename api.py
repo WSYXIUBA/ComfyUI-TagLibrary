@@ -157,7 +157,8 @@ async def import_tagfile(request: web.Request) -> web.Response:
 
     client_mtime = request.headers.get("X-TagLib-Mtime")
     result = library.save_user_library(
-        base, float(client_mtime) if client_mtime else None)
+        base, float(client_mtime) if client_mtime else None,
+        merge_base=merged_now)  # 底座=导入前的合并库, 防止默认分类被误记墓碑
     return _json_response({
         "ok": True,
         "imported_categories": len(new_tree["categories"]),
