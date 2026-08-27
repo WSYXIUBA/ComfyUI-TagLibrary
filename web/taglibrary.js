@@ -22,6 +22,24 @@ const SET_LANG = SETTING_PREFIX + "display_lang";
 
 let LIB_CACHE = null;
 let LIB_FETCHING = null;
+let LIB_PATH = new Map();  // en_l -> [大类名, 子分类名, 孙分类名|null]
+
+function buildLibPath(lib) {
+  const m = new Map();
+  for (const c of lib.categories || []) {
+    for (const s of c.subcategories || []) {
+      if (s.groups && s.groups.length) {
+        for (const g of s.groups) {
+          for (const t of g.tags || []) m.set(t.en.toLowerCase(), [c.name, s.name, g.name]);
+        }
+      }
+      for (const t of s.tags || []) {
+        if (!m.has(t.en.toLowerCase())) m.set(t.en.toLowerCase(), [c.name, s.name, null]);
+      }
+    }
+  }
+  return m;
+}
 
 async function fetchLibrary() {
   if (LIB_CACHE) return LIB_CACHE;
@@ -30,6 +48,7 @@ async function fetchLibrary() {
       .then((r) => r.json())
       .then((data) => {
         LIB_CACHE = data.library || { categories: [] };
+        LIB_PATH = buildLibPath(LIB_CACHE);
         return LIB_CACHE;
       })
       .finally(() => { LIB_FETCHING = null; });
@@ -39,6 +58,7 @@ async function fetchLibrary() {
 
 function invalidateLibraryCache() {
   LIB_CACHE = null;
+  LIB_PATH = new Map();
 }
 
 /* ---------------------------------------------------- settings helpers */
@@ -254,17 +274,20 @@ export function buildPanelWidget(node, container) {
 
   function outputPreview(tags) {
     const st = getState(node);
-    const excl = new Set(st.exclude_categories || []);
-    // 排除类目的标签: 查库拿分类归属; 库未加载时按标签名匹配 (best effort)
-    const catOfTag = new Map();
-    for (const c of (LIB_CACHE?.categories || [])) {
-      for (const s of c.subcategories || []) {
-        for (const t of s.tags || []) catOfTag.set(t.en.toLowerCase(), c.name);
-      }
+    const ex = new Set(st.exclude_categories || []);
+    // 三级排除: "大类" / "大类/子类" / "大类/子类/孙类" (与后端 tag_excluded 同规则)
+    function isExcluded(en_l) {
+      const path = LIB_PATH.get(en_l);
+      if (!path) return false;
+      const [cname, sname, gname] = path;
+      if (ex.has(cname)) return true;
+      if (gname && ex.has(`${cname}/${sname}/${gname}`)) return true;
+      if (ex.has(`${cname}/${sname}`)) return true;
+      return false;
     }
     const parts = tags
       .filter((t) => t.enabled !== false)
-      .filter((t) => !excl.has(catOfTag.get(t.en.toLowerCase())))
+      .filter((t) => !isExcluded(t.en.toLowerCase()))
       .map((t) => t.en);
     return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
   }
@@ -485,20 +508,61 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
 
   function libCats() { return (LIB_CACHE && LIB_CACHE.categories) || []; }
 
+  /* ---------- 三级侧栏树: 大类(可折叠) > 子分类 > 孙分类 ---------- */
   function renderCats() {
     catsBox.innerHTML = "";
-    const mk = (id, label, count, icon) => {
-      const el = document.createElement("div");
-      el.className = "tp-cat" + (ui.activeCat === id ? " active" : "");
-      el.style.color = id === "__all__" ? "#9ecbff" : findColor(id) || "#888";
-      el.innerHTML = `<span>${icon || "📁"}</span><span class="nm">${label}</span><span class="ct">${count}</span>`;
-      el.onclick = () => { ui.activeCat = id; renderCats(); renderChips(); };
-      catsBox.appendChild(el);
-    };
-    let allCount = 0;
-    for (const c of libCats()) allCount += countTags(c);
-    mk("__all__", "全部", allCount, "🗂");
-    for (const c of libCats()) mk(c.id, `${c.icon || ""} ${c.name}`, countTags(c), "");
+    if (!ui.openCats) ui.openCats = new Set();
+    const allCount = libCats().reduce((n, c) => n + countTags(c), 0);
+    mkRow(catsBox, {
+      id: "__all__", icon: "🗂", name: "全部", count: allCount,
+      depth: 0, active: ui.activeCat === "__all__",
+      onclick: () => { ui.activeCat = "__all__"; ui.activeSub = null; renderCats(); renderChips(); },
+    });
+    for (const c of libCats()) {
+      const open = ui.openCats.has(c.id);
+      mkRow(catsBox, {
+        id: c.id, icon: c.icon || "📁", name: c.name, count: countTags(c),
+        depth: 0, color: c.color, chevron: true, open,
+        active: ui.activeCat === c.id && !ui.activeSub,
+        onclick: () => { ui.activeCat = c.id; ui.activeSub = null; renderCats(); renderChips(); },
+        onchevron: () => {
+          open ? ui.openCats.delete(c.id) : ui.openCats.add(c.id);
+          renderCats();
+        },
+      });
+      if (!open) continue;
+      for (const sub of c.subcategories || []) {
+        mkRow(catsBox, {
+          id: sub.id, name: sub.name, count: (sub.tags || []).length,
+          depth: 1, active: ui.activeSub === sub.id,
+          onclick: () => { ui.activeCat = c.id; ui.activeSub = sub.id; renderCats(); renderChips(); },
+        });
+        // 孙分类 (groups)
+        for (const g of sub.groups || []) {
+          mkRow(catsBox, {
+            id: g.id, name: g.name, count: (g.tags || []).length,
+            depth: 2, active: ui.activeSub === g.id, leaf: true,
+            onclick: () => { ui.activeCat = c.id; ui.activeSub = g.id; renderCats(); renderChips(); },
+          });
+        }
+      }
+    }
+  }
+
+  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron }) {
+    const el = document.createElement("div");
+    el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
+    el.style.color = color || (depth === 0 ? "#cfd6e4" : "#aab3c5");
+    if (depth === 1) el.style.paddingLeft = "22px";
+    if (depth === 2) el.style.paddingLeft = "38px";
+    el.innerHTML =
+      `${chevron ? `<span class="tp-chev">${open ? "▾" : "▸"}</span>` : (depth > 0 ? '<span class="tp-chev">·</span>' : "")}` +
+      `<span>${icon}</span><span class="nm">${name}</span><span class="ct">${count}</span>`;
+    el.onclick = onclick;
+    if (onchevron) {
+      el.querySelector(".tp-chev").onclick = (e) => { e.stopPropagation(); onchevron(); };
+    }
+    box.appendChild(el);
   }
 
   function findColor(id) {
@@ -522,24 +586,50 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
   function renderChips() {
     chipsBox.innerHTML = "";
     const existing = getExisting();
+    // activeSub 可以是子分类 id 或孙分类 id
+    const subFilter = ui.activeSub || null;
     const cats = libCats().filter((c) => !ui.activeCat || ui.activeCat === "__all__" || c.id === ui.activeCat);
     let shown = 0;
     for (const cat of cats) {
       const clr = cat.color || "#54a0ff";
       for (const sub of cat.subcategories || []) {
-        const hits = (sub.tags || []).filter(matches);
-        if (!hits.length) continue;
-        shown += hits.length;
-        const head = document.createElement("div");
-        head.className = "tp-sub";
-        head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name}`;
-        chipsBox.appendChild(head);
-        const grid = document.createElement("div");
-        grid.className = "tp-grid";
-        for (const t of hits) {
-          const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
-          const isExisting = existing.has(t.en.toLowerCase());
-          const el = document.createElement("span");
+        if (subFilter && sub.id !== subFilter && !(sub.groups || []).some((g) => g.id === subFilter)) continue;
+        const groups = sub.groups && sub.groups.length ? sub.groups : null;
+        if (groups) {
+          // 三级: 按 孙分类 分小节
+          for (const g of groups) {
+            if (subFilter && subFilter !== sub.id && g.id !== subFilter) continue;
+            const hits = (g.tags || []).filter(matches);
+            if (!hits.length) continue;
+            shown += hits.length;
+            const head = document.createElement("div");
+            head.className = "tp-sub";
+            head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name} / ${g.name}`;
+            chipsBox.appendChild(head);
+            appendGrid(hits, clr, existing);
+          }
+        } else {
+          const hits = (sub.tags || []).filter(matches);
+          if (!hits.length) continue;
+          shown += hits.length;
+          const head = document.createElement("div");
+          head.className = "tp-sub";
+          head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name}`;
+          chipsBox.appendChild(head);
+          appendGrid(hits, clr, existing);
+        }
+      }
+    }
+    if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
+  }
+
+  function appendGrid(hits, clr, existing) {
+    const grid = document.createElement("div");
+    grid.className = "tp-grid";
+    for (const t of hits) {
+      const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
+      const isExisting = existing.has(t.en.toLowerCase());
+      const el = document.createElement("span");
           el.className = "tp-tag" + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
           if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
           else {
@@ -556,9 +646,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
           grid.appendChild(el);
         }
         chipsBox.appendChild(grid);
-      }
-    }
-    if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
   }
 
   /* ---------- 排除类目视图 ---------- */
@@ -585,16 +672,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
     if (!up) return {};
     const hints = {};
     const RULE = [
-      ["头发", ["hair", "bangs", "ponytail", "twintails", "braid", "bob cut"]],
-      ["人物特征", ["eyes", "blue eyes", "green eyes", "red eyes", "pointed ears", "elf"]],
-      ["表情", ["smile", "smirk", "crying", "blush", "open mouth", "closed mouth", "angry"]],
-      ["服装", ["dress", "uniform", "hoodie", "kimono", "skirt", "bikini", "swimsuit", "jacket"]],
-      ["动作姿势", ["sitting", "standing", "lying", "kneeling", "arms", "walking"]],
-      ["配饰·道具", ["glasses", "hat", "necklace", "earrings", "sword", "bag"]],
-      ["镜头构图", ["close-up", "from above", "from below", "portrait", "wide shot", "cowboy shot"]],
-      ["光影", ["backlighting", "rim lighting", "dappled", "sunlight", "moonlight"]],
-      ["天气·时间", ["night", "sunset", "rain", "snow", "starry"]],
-      ["场景", ["bedroom", "classroom", "outdoors", "forest", "beach", "city"]],
+      ["发型发色", ["hair", "bangs", "ponytail", "twintails", "braid", "bob cut", "short hair", "long hair"]],
+      ["五官", ["eyes", "blue eyes", "green eyes", "red eyes", "pointed ears", "heterochromia"]],
+      ["表情情绪", ["smile", "smirk", "crying", "blush", "open mouth", "closed mouth", "angry", "sad"]],
+      ["服装系统", ["dress", "uniform", "hoodie", "kimono", "skirt", "bikini", "swimsuit", "jacket", "shirt"]],
+      ["姿势动作", ["sitting", "standing", "lying", "kneeling", "arms", "walking", "running"]],
+      ["配饰", ["glasses", "hat", "necklace", "earrings", "gloves", "ribbon"]],
+      ["构图镜头", ["close-up", "from above", "from below", "portrait", "wide shot", "cowboy shot"]],
+      ["光影氛围", ["backlighting", "rim light", "dappled", "sunlight", "moonlight", "neon"]],
+      ["场景环境", ["bedroom", "classroom", "outdoors", "forest", "beach", "city", "street"]],
+      ["风格媒介", ["anime style", "photorealistic", "oil painting", "watercolor"]],
     ];
     for (const [catName, keys] of RULE) {
       const hit = keys.filter((k) => up.includes(k));
@@ -603,20 +690,49 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
     return hints;
   }
 
+  /* ---------- 排除: 三级粒度 ----------
+     exclude_categories 里可放:
+       "大类名"          -> 整类排除
+       "大类名/子分类名"  -> 排除某个子分类
+       "大类名/子分类名/孙分类名" -> 排除某个孙分类
+  */
+  function excKeys() { return new Set(getExcluded ? getExcluded() : []); }
+
+  function catFullyExcluded(cat, ex) {
+    return ex.has(cat.name);
+  }
+
+  function subExcluded(cat, sub, ex) {
+    if (ex.has(cat.name)) return true;
+    return ex.has(`${cat.name}/${sub.name}`);
+  }
+
+  function groupExcluded(cat, sub, g, ex) {
+    if (subExcluded(cat, sub, ex)) return true;
+    return ex.has(`${cat.name}/${sub.name}/${g.name}`);
+  }
+
+  function tagExcluded(catName, sub, g, en_l, ex) {
+    if (ex.has(catName)) return true;
+    if (g && ex.has(`${catName}/${sub.name}/${g.name}`)) return true;
+    if (ex.has(`${catName}/${sub.name}`)) return true;
+    return false;
+  }
+
   function renderExclude() {
-    const excluded = new Set(getExcluded ? getExcluded() : []);
+    const ex = excKeys();
     const hints = suggestExcludes();
     excView.innerHTML = `
       <div class="tp-exc-hint">
-        勾选要<b>排除</b>的分类: 排除后<b>随机抽取</b>与<b>输出</b>都会跳过这些分类的标签。<br/>
-        用途: 上游提示词已经有发色/眼睛等描述时 (如 <code>blue hair, blue eyes</code>),
-        排除对应类目避免重复冲突。
-        ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下类目的内容, 已用 <span style="color:#f7a4b1">粉色标记</span>:' : ""}
+        勾选要<b>排除</b>的层级: 可排除<b>整类</b>, 也可展开后只排除<b>子分类</b>或<b>孙分类</b>。<br/>
+        排除后随机抽取与输出都会跳过对应标签。上游已有发色/眼睛等描述时 (如 <code>blue hair, blue eyes</code>),
+        排除对应层级避免冲突。
+        ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下内容 (粉色标记): ' + Object.entries(hints).map(([k, v]) => `<b>${k}</b>(${v.join(",")})`).join(" ") : ""}
       </div>
     `;
     for (const cat of libCats()) {
-      if (cat.id === "nsfwcat") continue;  // NSFW 由 nsfw_mode 管
-      const isEx = excluded.has(cat.name);
+      if (cat.id === "nsfwcat") continue;
+      const isEx = catFullyExcluded(cat, ex);
       const why = hints[cat.name] ? `上游已有: ${hints[cat.name].join(", ")}` : "";
       const card = document.createElement("div");
       card.className = "tp-exc-card" + (isEx ? " excluded" : "");
@@ -625,14 +741,85 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
         <span>${cat.icon || ""}</span>
         <span class="nm">${cat.name}<span style="color:#8b93a5;font-size:11px"> · ${countTags(cat)} 条</span></span>
         <span class="why">${why}</span>
+        <span class="tp-chev tp-exc-toggle">${ui.excOpen?.has(cat.id) ? "▾" : "▸"}</span>
       `;
       card.querySelector("input").onchange = (e2) => {
-        const cur = new Set(getExcluded ? getExcluded() : []);
-        e2.target.checked ? cur.add(cat.name) : cur.delete(cat.name);
+        const cur = excKeys();
+        if (e2.target.checked) {
+          cur.add(cat.name);
+          // 清掉该类下更细的排除项 (整类排除已覆盖)
+          for (const k of [...cur]) if (k.startsWith(cat.name + "/")) cur.delete(k);
+        } else {
+          cur.delete(cat.name);
+        }
         setExcluded([...cur]);
-        card.classList.toggle("excluded", e2.target.checked);
+        renderExclude();
+      };
+      card.querySelector(".tp-exc-toggle").onclick = () => {
+        if (!ui.excOpen) ui.excOpen = new Set();
+        ui.excOpen.has(cat.id) ? ui.excOpen.delete(cat.id) : ui.excOpen.add(cat.id);
+        renderExclude();
       };
       excView.appendChild(card);
+
+      // 子分类层 (展开时)
+      if (ui.excOpen?.has(cat.id) && !isEx) {
+        for (const sub of cat.subcategories || []) {
+          const subEx = subExcluded(cat, sub, ex);
+          const subCard = document.createElement("div");
+          subCard.className = "tp-exc-card" + (subEx ? " excluded" : "");
+          subCard.style.cssText = "margin-left:26px;padding:6px 12px;";
+          subCard.innerHTML = `
+            <input type="checkbox" ${subEx ? "checked" : ""} style="width:14px;height:14px;accent-color:#ff4757"/>
+            <span class="nm">${sub.name}<span style="color:#8b93a5;font-size:11px"> · ${(sub.tags || []).length}</span></span>
+            ${(sub.groups || []).length ? `<span class="tp-chev tp-exc-toggle2">${ui.excOpenSub?.has(sub.id) ? "▾" : "▸"}</span>` : ""}
+          `;
+          subCard.querySelector("input").onchange = (e2) => {
+            const cur = excKeys();
+            const key = `${cat.name}/${sub.name}`;
+            if (e2.target.checked) {
+              cur.add(key);
+              for (const k of [...cur]) if (k.startsWith(key + "/")) cur.delete(k);
+              // 整类勾会被此子项替代 -> 若全部子类都被排除提示用户可直接排除整类
+              cur.delete(cat.name);
+            } else {
+              cur.delete(key);
+            }
+            setExcluded([...cur]);
+            renderExclude();
+          };
+          excView.appendChild(subCard);
+          const t2 = subCard.querySelector(".tp-exc-toggle2");
+          if (t2) t2.onclick = () => {
+            if (!ui.excOpenSub) ui.excOpenSub = new Set();
+            ui.excOpenSub.has(sub.id) ? ui.excOpenSub.delete(sub.id) : ui.excOpenSub.add(sub.id);
+            renderExclude();
+          };
+          // 孙分类层
+          if (ui.excOpenSub?.has(sub.id) && !subEx) {
+            for (const g of sub.groups || []) {
+              const gEx = groupExcluded(cat, sub, g, ex);
+              const gCard = document.createElement("div");
+              gCard.className = "tp-exc-card" + (gEx ? " excluded" : "");
+              gCard.style.cssText = "margin-left:52px;padding:5px 10px;";
+              gCard.innerHTML = `
+                <input type="checkbox" ${gEx ? "checked" : ""} style="width:13px;height:13px;accent-color:#ff4757"/>
+                <span class="nm" style="font-size:12px">${g.name}<span style="color:#8b93a5"> · ${(g.tags || []).length}</span></span>
+              `;
+              gCard.querySelector("input").onchange = (e2) => {
+                const cur = excKeys();
+                const key = `${cat.name}/${sub.name}/${g.name}`;
+                e2.target.checked ? cur.add(key) : cur.delete(key);
+                cur.delete(`${cat.name}/${sub.name}`);
+                cur.delete(cat.name);
+                setExcluded([...cur]);
+                renderExclude();
+              };
+              excView.appendChild(gCard);
+            }
+          }
+        }
+      }
     }
   }
 

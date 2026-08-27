@@ -114,6 +114,25 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             tags = _merge_level(sub.get("tags") or [],
                                 _find_user_tags(user, sid))
             sub["tags"] = [t for t in tags if t.get("id") not in tombstones]
+            # 三级: 归并孙分类 groups (用户版本优先)
+            if "groups" in sub:
+                groups = _merge_level(sub.get("groups") or [],
+                                      _find_user_groups(user, sid))
+                clean_groups = []
+                for g in groups:
+                    if g.get("id") in tombstones:
+                        continue
+                    gtags = [t for t in (g.get("tags") or []) if t.get("id") not in tombstones]
+                    g = dict(g)
+                    g["tags"] = gtags
+                    clean_groups.append(g)
+                sub["groups"] = clean_groups
+                # 同步 tags 汇总 = groups 标签 + 子分类直属标签
+                g_en = {t.get("en", "").lower() for g in clean_groups for t in g.get("tags", [])}
+                sub["tags"] = [t for t in sub["tags"]
+                               if t.get("en", "").lower() not in g_en]
+                for g in clean_groups:
+                    sub["tags"].extend(g.get("tags", []))
             out_subs.append(sub)
         cat["subcategories"] = out_subs
         out_cats.append(cat)
@@ -174,31 +193,52 @@ def validate(library_data: dict) -> dict:
         for sub in subs:
             sid = _require_id(sub, f"{cid} 的子分类")
             _uniq(sid, sub_seen, "子分类")
-            tags = sub.setdefault("tags", [])
-            if not isinstance(tags, list):
-                raise LibraryError(f"子分类 {sid} 的 tags 必须是数组")
-            for i, tag in enumerate(tags):
-                if not isinstance(tag, dict):
-                    raise LibraryError(f"子分类 {sid} 第{i}项不是对象")
-                if not (tag.get("en") or "").strip():
-                    raise LibraryError(f"子分类 {sid} 存在缺少英文文本的标签")
-                w = tag.get("weight", 1.0)
-                try:
-                    w = float(w)
-                except (TypeError, ValueError):
-                    raise LibraryError(f"标签 {tag.get('en')} 权重必须是数字")
-                if not 0 < w <= 3:
-                    raise LibraryError(f"标签 {tag.get('en')} 权重须在 (0, 3]")
-                tag["weight"] = w
-                if not tag.get("id"):
-                    tag["id"] = _make_tag_id(sid, tag["en"], tags)
-                aliases = tag.setdefault("aliases", [])
-                if not isinstance(aliases, list):
-                    tag["aliases"] = []
-            _dedupe_tag_ids(tags)
+            # 三级: 子分类可再含孙分类 (groups) 或直接挂 tags
+            if "groups" in sub:
+                groups = sub.get("groups")
+                if not isinstance(groups, list):
+                    raise LibraryError(f"子分类 {sid} 的 groups 必须是数组")
+                g_seen: set[str] = set()
+                all_tags: list[dict] = []
+                for g in groups:
+                    gid = _require_id(g, f"{sid} 的孙分类")
+                    _uniq(gid, g_seen, "孙分类")
+                    gtags = g.setdefault("tags", [])
+                    if not isinstance(gtags, list):
+                        raise LibraryError(f"孙分类 {gid} 的 tags 必须是数组")
+                    _validate_tags(gid, gtags)
+                    all_tags.extend(gtags)
+                # tags 字段 = 全部孙分类标签的汇总 (运行时统一遍历用)
+                sub["tags"] = all_tags
+            else:
+                tags = sub.setdefault("tags", [])
+                _validate_tags(sid, tags)
     library_data.setdefault("version", 1)
     library_data.pop("_meta", None)
     return library_data
+
+
+def _validate_tags(owner_id: str, tags: list) -> None:
+    """校验一个标签数组 (就地补默认值)。"""
+    for i, tag in enumerate(tags):
+        if not isinstance(tag, dict):
+            raise LibraryError(f"{owner_id} 第{i}项不是对象")
+        if not (tag.get("en") or "").strip():
+            raise LibraryError(f"{owner_id} 存在缺少英文文本的标签")
+        w = tag.get("weight", 1.0)
+        try:
+            w = float(w)
+        except (TypeError, ValueError):
+            raise LibraryError(f"标签 {tag.get('en')} 权重必须是数字")
+        if not 0 < w <= 3:
+            raise LibraryError(f"标签 {tag.get('en')} 权重须在 (0, 3]")
+        tag["weight"] = w
+        if not tag.get("id"):
+            tag["id"] = _make_tag_id(owner_id, tag["en"], tags)
+        aliases = tag.setdefault("aliases", [])
+        if not isinstance(aliases, list):
+            tag["aliases"] = []
+    _dedupe_tag_ids(tags)
 
 
 def _require_id(obj: dict, what: str) -> str:
@@ -322,3 +362,12 @@ def invalidate_cache() -> None:
     global _cache
     with _lock:
         _cache = None
+
+
+def _find_user_groups(user: dict, sid: str) -> list[dict]:
+    """找到用户库中指定子分类的孙分类列表 (groups)。"""
+    for cat in user.get("categories", []):
+        for sub in cat.get("subcategories", []):
+            if sub.get("id") == sid:
+                return sub.get("groups") or []
+    return []

@@ -160,42 +160,96 @@ class TagLibraryNode:
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
         avoid_conflicts = bool(state.get("avoid_conflicts", True))
-        # 排除类目 (分类名): 随机抽不到; 手动启用标签若属于被排除类目也不输出
-        exclude_cats: set[str] = {str(x) for x in (state.get("exclude_categories") or [])}
+        # 排除类目: 支持 "大类名" / "大类名/子分类名" / "大类名/子分类名/孙分类名"
+        exclude_keys: set[str] = {str(x) for x in (state.get("exclude_categories") or [])}
 
-        if exclude_cats:
-            lib = {
-                "version": lib.get("version", 1),
-                "categories": [c for c in lib.get("categories", [])
-                               if c.get("name") not in exclude_cats],
-            }
+        def cat_excluded(cat: dict) -> bool:
+            return cat.get("name") in exclude_keys
+
+        def sub_excluded(cat: dict, sub: dict) -> bool:
+            n = cat.get("name", "")
+            return (f"{n}/{sub.get('name', '')}" in exclude_keys
+                    or cat_excluded(cat))
+
+        def group_excluded(cat: dict, sub: dict, g: dict) -> bool:
+            n = cat.get("name", "")
+            return (f"{n}/{sub.get('name', '')}/{g.get('name', '')}" in exclude_keys
+                    or sub_excluded(cat, sub))
+
+        def tag_excluded(cat_name: str, sub: dict, g, exclude_keys: set) -> bool:
+            """前端同名逻辑: 标签级排除判断。"""
+            if cat_name in exclude_keys:
+                return True
+            if g and f"{cat_name}/{sub.get('name', '')}/{g.get('name', '')}" in exclude_keys:
+                return True
+            if f"{cat_name}/{sub.get('name', '')}" in exclude_keys:
+                return True
+            return False
+
+        if exclude_keys:
+            def keep_sub(cat: dict, sub: dict) -> bool:
+                if sub_excluded(cat, sub):
+                    return False
+                groups = sub.get("groups") or []
+                if groups:
+                    # 只要有未排除的孙分类就保留该子分类, 但清除被排除的孙
+                    sub = dict(sub)
+                    sub["groups"] = [g for g in groups if not group_excluded(cat, sub, g)]
+                    if not sub["groups"]:
+                        return False
+                return True
+
+            kept_cats = []
+            for cat in lib.get("categories", []):
+                if cat_excluded(cat):
+                    continue
+                cat = dict(cat)
+                cat["subcategories"] = [s for s in cat.get("subcategories", [])
+                                        if keep_sub(cat, s)]
+                kept_cats.append(cat)
+            lib = {"version": lib.get("version", 1), "categories": kept_cats}
 
         tags: list[str] = []
 
         if mode == "manual":
-            # 未过滤库: fallback 标签用它继承 nsfw 属性
+            # 手动模式: 标签需要按来源层级判断是否被排除
+            # 建立 en -> (cat_name, sub, group) 的映射
             full_by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(library.get_merged())}
+            en_path: dict[str, tuple] = {}
+            for cat in library.get_merged().get("categories", []):
+                for sub in cat.get("subcategories", []):
+                    for t in sub.get("tags", []):
+                        en_l = str(t.get("en", "")).strip().lower()
+                        en_path[en_l] = (cat, sub, None)
+                        # groups 已被 validate 摊平进 sub.tags; 单独记录 group 归属
+                    for g in sub.get("groups", []) or []:
+                        for t in g.get("tags", []):
+                            en_l = str(t.get("en", "")).strip().lower()
+                            en_path[en_l] = (cat, sub, g)
+
             by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(lib)}
             chosen: list[dict] = []
-            # 新结构优先: state.tags = [{en, zh?, nsfw?, enabled, pinned?}]
             if state.get("tags"):
                 for st_tag in state["tags"]:
                     if not isinstance(st_tag, dict) or st_tag.get("enabled") is False:
                         continue
                     en_l = str(st_tag.get("en", "")).strip().lower()
+                    # 排除检查 (三级路径)
+                    path = en_path.get(en_l)
+                    if path:
+                        cat, sub, g = path
+                        if tag_excluded(cat.get("name"), sub, g, exclude_keys):
+                            continue
                     lib_t = by_en.get(en_l)
                     if lib_t is None:
-                        # 库里没有 (被过滤/外置导入后被删) -> 用完整库继承属性
                         lib_t = full_by_en.get(en_l)
                     if lib_t is None:
                         lib_t = {"en": st_tag.get("en", ""), "zh": st_tag.get("zh", ""),
                                  "weight": 1.0}
                     chosen.append(dict(lib_t))
             else:
-                # 旧结构兼容: selected ids
                 by_id = {t.get("id"): t for t, _ in self._flat(lib)}
                 chosen = [by_id[i] for i in selected_ids if i in by_id]
-            # nsfw_mode=off 时: 剔除 nsfw 标签 (fallback 保留了完整库的 nsfw 属性)
             if nsfw_mode == "off":
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
