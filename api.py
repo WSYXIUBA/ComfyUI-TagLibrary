@@ -8,8 +8,14 @@ import time
 
 from aiohttp import web
 
-import library
-from server import PromptServer
+try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
+    from . import library
+except ImportError:  # pragma: no cover
+    import library
+try:
+    from server import PromptServer
+except ModuleNotFoundError:  # 独立导入时不炸
+    PromptServer = None
 
 _WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 
@@ -71,9 +77,13 @@ async def reset_library(_request: web.Request) -> web.Response:
 
 
 def register_routes() -> None:
+    if PromptServer is None or PromptServer.instance is None:
+        return
     app = PromptServer.instance.app
     # 页面 + API 直接挂主应用 (PromptServer.app 是暴露的 aiohttp Application)
     app.router.add_get("/taglib", serve_manager_page)
+    # 管理页的 js/css 走静态子路径 (避免相对路径解析到根 404)
+    app.router.add_static("/taglib/static/", _WEB_DIR)
     app.router.add_get("/taglib/api/library", get_library)
     app.router.add_post("/taglib/api/library", save_library)
     app.router.add_delete("/taglib/api/library", reset_library)

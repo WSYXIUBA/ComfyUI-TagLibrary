@@ -6,7 +6,10 @@ import json
 import random
 from typing import Any
 
-import library
+try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
+    from . import library
+except ImportError:  # pragma: no cover
+    import library
 
 
 class TagLibraryNode:
