@@ -5,7 +5,7 @@
 
 const CSS = `
 /* ================= TagLibrary 节点面板 ================= */
-.taglib-widget-holder { all: initial; display: block; font-family: inherit; }
+.taglib-widget-holder { all: initial; display: block; font-family: inherit; min-width: 0; overflow: hidden; }
 .taglib-panel {
   --tl-bg: rgba(17,19,25,0.92);
   --tl-card: rgba(255,255,255,0.045);
