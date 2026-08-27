@@ -513,7 +513,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting }) {
               el.classList.toggle("picked", i < 0);
             };
           }
-          el.innerHTML = chipLabel ? chipLabel(t) : `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
+          el.innerHTML = `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
           grid.appendChild(el);
         }
         chipsBox.appendChild(grid);
@@ -651,11 +651,27 @@ app.registerExtension({
       const domW = node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
       node._taglibPanelApi = panelApi;
 
+      // 面板高度跟随节点: onDraw 每帧把 holder 高度同步为节点剩余空间
+      domW.onDraw = function (ctx) {
+        try {
+          const available = node.size[1] - (domW.last_y || w_lastY_fallback(node)) - 8;
+          const h = Math.max(90, Math.round(available));
+          if (holder.style.height !== h + "px") holder.style.height = h + "px";
+        } catch {}
+      };
+      function w_lastY_fallback(n) {
+        let y = 0;
+        for (const ww of n.widgets) {
+          if (ww === domW) break;
+          y += ww.computeSize ? ww.computeSize(n.size[0])[1] : 20;
+        }
+        return y + 30;
+      }
+
       // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
       domW.computeSize = function (width) {
         const w = Math.max(width || 0, PANEL_MIN_W);
-        const h = Math.ceil(holder.getBoundingClientRect().height) || 420;
-        return [w, h];
+        return [w, -2];  // -2 = DOM widget 自管高度 (官方约定), 由 onDraw 拉伸
       };
       // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
       panelApi.onChange = () => {

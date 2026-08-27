@@ -15,6 +15,9 @@ const CSS = `
   --tl-accent: #54a0ff;
   box-sizing: border-box;
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--tl-border);
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(30,34,44,0.94), var(--tl-bg));
@@ -138,7 +141,7 @@ const CSS = `
   border-radius: 9px;
   background: rgba(0,0,0,0.22);
   padding: 7px;
-  max-height: 168px;
+  flex: 1;
   min-height: 58px;
   overflow-y: auto;
   scrollbar-width: thin;
