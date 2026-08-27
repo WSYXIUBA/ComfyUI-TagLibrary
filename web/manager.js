@@ -222,6 +222,7 @@
     for (const tag of tags) {
       const tr = document.createElement("tr");
       if (tag.enabled === false) tr.classList.add("disabled-tag");
+      if (tag.nsfw) tr.classList.add("nsfw-row");
 
       const tdEn = mkCellInput(tag.en, (v) => { tag.en = v.trim(); touched(tr); }, "英文文本");
       const tdZh = mkCellInput(tag.zh || "", (v) => { tag.zh = v.trim(); touched(tr); }, "中文显示名");
@@ -241,6 +242,15 @@
       chk.onchange = () => { tag.enabled = chk.checked; touched(tr); tr.classList.toggle("disabled-tag", !chk.checked); renderStats(); };
       tdEn3.appendChild(chk);
 
+      const tdNsfw = document.createElement("td");
+      const nchk = document.createElement("input");
+      nchk.type = "checkbox";
+      nchk.className = "nsfw-chk";
+      nchk.checked = !!tag.nsfw;
+      nchk.title = "标记为 NSFW (节点 off 模式会排除)";
+      nchk.onchange = () => { tag.nsfw = nchk.checked || undefined; if (!nchk.checked) delete tag.nsfw; touched(tr); };
+      tdNsfw.appendChild(nchk);
+
       const tdDel = document.createElement("td");
       const delBtn = document.createElement("button");
       delBtn.className = "icon-btn del";
@@ -252,7 +262,7 @@
       };
       tdDel.appendChild(delBtn);
 
-      tr.append(tdEn, tdZh, tdW, tdAlias, tdEn3, tdDel);
+      tr.append(tdEn, tdZh, tdW, tdAlias, tdEn3, tdNsfw, tdDel);
       tbody.appendChild(tr);
     }
   }
@@ -395,8 +405,10 @@
       if (!en) { skipped++; continue; }
       const zh = parts[1] || "";
       const weight = Math.min(3, Math.max(0.05, parseFloat(parts[2]) || 1.0));
-      const id = uidIn(taken, `${sub.id}.${slugify(en)}`);
-      sub.tags.push({ id, en, zh, weight, aliases: [], enabled: true });
+      const nsfwFlag = (parts[3] || "").toLowerCase() === "nsfw" || undefined;
+      const tag = { id: uidIn(taken, `${sub.id}.${slugify(en)}`), en, zh, weight, aliases: [], enabled: true };
+      if (nsfwFlag) tag.nsfw = true;
+      sub.tags.push(tag);
       added++;
     }
     $("#pasteDialog").classList.add("hidden");

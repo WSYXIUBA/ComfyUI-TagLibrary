@@ -186,6 +186,17 @@ def main() -> None:
     ghost = node.build('{"selected":["no.such.tag","character.expression.smile"]}', "manual", 1)
     check("幽灵id跳过", ghost[0] == "smile", ghost[0])
 
+    # ---- NSFW 过滤三态
+    nsfw_state = '{"selected":["character.nsfw_body.example","character.expression.smile"],"pinned":[]}'
+    off = node.build(nsfw_state, "manual", 1, nsfw_mode="off")
+    check("nsfw off 剔除nsfw标签", off[0] == "smile" and "nsfw_example_tag" not in off[0], off[0])
+    on_ = node.build(nsfw_state, "manual", 1, nsfw_mode="on")
+    check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
+    only = node.build('{"selected":[],"pinned":[]}', "random_mix", 3, nsfw_mode="only",
+                      min_tags=2, max_tags=4)
+    check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
+          f"{only[0]}")
+
     clean_user_lib()
     print("\n== RESULT:", "ALL PASS ✅" if ok else "HAS FAILURES ❌")
     sys.exit(0 if ok else 1)

@@ -97,6 +97,13 @@
             { "id": "character.accessory.choker", "en": "choker", "zh": "颈环", "weight": 1.0 },
             { "id": "character.accessory.staff", "en": "holding staff", "zh": "持法杖", "weight": 1.0 }
           ]
+        },
+        {
+          "id": "character.nsfw_body",
+          "name": "NSFW·身体描述",
+          "tags": [
+            { "id": "character.nsfw_body.example", "en": "nsfw_example_tag", "zh": "示例标签(自行替换)", "weight": 1.0, "aliases": [], "nsfw": true }
+          ]
         }
       ]
     },
