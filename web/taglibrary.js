@@ -17,7 +17,7 @@ const SETTING_PREFIX = "TagLibrary.";
 /* settings keys */
 const SET_DEFAULT_MODE = SETTING_PREFIX + "default_mode";
 const SET_DEFAULT_NSFW = SETTING_PREFIX + "default_nsfw";
-const SET_PANEL_HEIGHT = SETTING_PREFIX + "panel_max_height";
+const SET_SCALE = SETTING_PREFIX + "chip_scale";
 const SET_LANG = SETTING_PREFIX + "display_lang";
 
 let LIB_CACHE = null;
@@ -66,13 +66,23 @@ function setSetting(id, value) {
 /* ---------------------------------------------------- state */
 
 function defaultState() {
-  return { selected: [], pinned: [], category_random: {}, nsfw: null };
+  return {
+    tags: [],
+    //            ^ { id, en, zh, nsfw, enabled, pinned, weight }
+    // 面板只显示这里 —— "已添加到本节点" 的标签
+    category_random: {},
+    avoid_conflicts: true,
+    nsfw: null,
+  };
 }
 
 function getState(node) {
   const w = node.widgets?.find((x) => x.name === "selection_state");
-  let st = defaultState();
-  try { st = { ...st, ...JSON.parse(w.value || "{}") }; } catch {}
+  let st = { ...defaultState(), tags: [] };
+  try {
+    const raw = JSON.parse(w.value || "{}");
+    st = { ...st, ...raw, tags: Array.isArray(raw.tags) ? raw.tags : [] };
+  } catch {}
   return st;
 }
 
@@ -104,7 +114,6 @@ export function buildPanelWidget(node, container) {
     <div class="tl-head">
       <span class="tl-logo">🏷</span>
       <span class="tl-title">标签库</span>
-      <span class="tl-hint tl-nsfw-state"></span>
       <span class="tl-head-spacer"></span>
       <label class="tl-hint" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"
              title="NSFW 标签显示与抽取">
@@ -112,25 +121,17 @@ export function buildPanelWidget(node, container) {
       </label>
       <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
       <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
-      <button class="tl-btn icon" data-act="manager" title="打开标签库管理页">⚙</button>
+      <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
     </div>
     <div class="tl-toolbar">
-      <input class="tl-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
+      <input class="tl-search" placeholder="🔍 过滤已添加的标签…" />
       <div class="tl-seg tl-mode-seg" title="工作模式">
         <button data-mode="manual">手动</button>
         <button data-mode="random_by_category">按类随机</button>
         <button data-mode="random_mix">组合随机</button>
       </div>
     </div>
-    <div class="tl-cats"></div>
     <div class="tl-chipzone"></div>
-    <div class="tl-selzone">
-      <div class="tl-zone-label">
-        <span>已选 <b class="tl-n">0</b> · 拖动排序 · 📌 随机必含</span>
-        <span class="tl-clearbtn">清空 ✕</span>
-      </div>
-      <div class="tl-selected"></div>
-    </div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
       <button class="tl-roll-btn" data-act="roll">🎲 ROLL</button>
@@ -138,14 +139,11 @@ export function buildPanelWidget(node, container) {
   `;
 
   const $ = (cls) => container.querySelector(cls);
-  const catsEl = $(".tl-cats");
   const chipzoneEl = $(".tl-chipzone");
-  const selectedEl = $(".tl-selected");
   const searchEl = $(".tl-search");
   const previewEl = $(".tl-preview");
   const modeSeg = $(".tl-mode-seg");
   const nsfwSw = $(".tl-nsfw-sw");
-  const nsfwStateEl = $(".tl-nsfw-state");
 
   /* ---------- mode ---------- */
   function syncModeWidgets() {
@@ -169,212 +167,109 @@ export function buildPanelWidget(node, container) {
   function renderNsfw() {
     const on = getNsfwEffective(node);
     nsfwSw.classList.toggle("on", on);
-    nsfwStateEl.textContent = on ? "" : "";
     container.dataset.nsfw = on ? "1" : "0";
   }
 
   function toggleNsfw() {
     const cur = getNsfwEffective(node);
-    setState(node, { nsfw: !cur });   // 显式写进状态 (跟工作流走)
+    setState(node, { nsfw: !cur });
     renderNsfw();
-    renderCats();
-    renderChips();
   }
   nsfwSw.parentElement.addEventListener("click", toggleNsfw);
 
-  /* ---------- helpers ---------- */
-  function visibleLib() {
-    const nsfwOn = getNsfwEffective(node);
-    if (!LIB_CACHE) return { categories: [] };
-    if (nsfwOn) return LIB_CACHE;
-    // off: 隐藏 nsfw 子分类/标签 (界面层面)
-    const cats = LIB_CACHE.categories.map((c) => ({
-      ...c,
-      subcategories: (c.subcategories || [])
-        .map((s) => ({ ...s, tags: (s.tags || []).filter((t) => !t.nsfw) }))
-        .filter((s) => s.tags.length),
-    })).filter((c) => c.subcategories.length);
-    return { categories: cats };
+  /* ----------Added-tags view ----------
+     chipzone 现在只渲染 state.tags —— 用户从 ➕窗口 添加进来的标签。
+     enabled=false -> 灰色停用 (不参与输出/随机); 点击变绿色启用。
+  */
+
+  // 缩放比例: 设置页 TagLibrary. chip_scale, 默认 100%
+  function getScale() {
+    const v = parseFloat(getSetting(SET_SCALE, 100));
+    return Number.isNaN(v) ? 1 : Math.min(2, Math.max(0.5, v / 100));
   }
 
-  function allTagsOf(cat) {
-    const rows = [];
-    for (const sub of cat.subcategories || []) rows.push(...(sub.tags || []));
-    return rows;
+  function applyScale() {
+    const s = getScale();
+    container.style.fontSize = `${12 * s}px`;
+    document.documentElement.style.setProperty("--taglib-chip-scale", s);
   }
 
-  /* ---------- cats row ---------- */
-  function renderCats() {
+  function renderTags() {
     const st = getState(node);
-    const lib = visibleLib();
-    const selSet = new Set(st.selected);
-    catsEl.innerHTML = "";
-
-    for (const cat of lib.categories) {
-      const pill = document.createElement("span");
-      pill.className = "tl-cat-pill" + (ui.activeCat === cat.id ? " active" : "");
-      pill.style.color = cat.color || "#54a0ff";
-
-      const n = allTagsOf(cat).filter((t) => selSet.has(t.id)).length;
-      pill.innerHTML =
-        `${cat.icon || "🏷"} ${cat.name} <span class="tl-badge">${n}</span>` +
-        (hasNsfwInCat(cat) ? ' <span title="含 NSFW 标签" style="font-size:9px">🔞</span>' : "");
-
-      // 按类随机模式下, pill 右侧内联参数
-      if (ui.mode === "random_by_category") {
-        const conf = (st.category_random || {})[cat.id] || {};
-        const cfg = document.createElement("span");
-        cfg.className = "tl-catcfg-inline";
-        cfg.style.cssText = "display:inline-flex;gap:4px;margin-left:4px;font-size:10px;color:#8b93a5;align-items:center";
-        cfg.innerHTML = `
-          <input type="checkbox" title="参与随机" ${conf.enabled ? "checked" : ""}/>
-          ×<input type="number" min="0" max="20" value="${conf.count ?? 1}"
-               style="width:34px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.14);border-radius:4px;color:#e3e7ee;font-size:10px;padding:0 3px"/>
-          空<input type="number" min="0" max="100" value="${conf.empty_chance ?? 0}" title="空抽概率%"
-               style="width:38px;background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.14);border-radius:4px;color:#e3e7ee;font-size:10px;padding:0 3px"/>%
-        `;
-        const [chk, cnt, emp] = cfg.querySelectorAll("input");
-        chk.onclick = (e) => e.stopPropagation();
-        cnt.onclick = emp.onclick = (e) => e.stopPropagation();
-        chk.onchange = () => updateCatConf(cat.id, { enabled: chk.checked });
-        cnt.onchange = () => updateCatConf(cat.id, { count: Math.max(0, parseInt(cnt.value || "0")) });
-        emp.onchange = () => updateCatConf(cat.id, { empty_chance: Math.min(100, Math.max(0, parseInt(emp.value || "0"))) });
-        pill.appendChild(cfg);
-      }
-
-      pill.onclick = () => {
-        ui.activeCat = ui.activeCat === cat.id ? null : cat.id;
-        renderCats(); renderChips();
-      };
-      catsEl.appendChild(pill);
-    }
-  }
-
-  function hasNsfwInCat(cat) {
-    return (cat.subcategories || []).some((s) => (s.tags || []).some((t) => t.nsfw));
-  }
-
-  function updateCatConf(catId, patch) {
-    const st = getState(node);
-    const conf = { ...(st.category_random || {}) };
-    conf[catId] = { enabled: false, count: 1, empty_chance: 0, ...conf[catId], ...patch };
-    setState(node, { category_random: conf });
-    renderCats();
-  }
-
-  /* ---------- chips zone ---------- */
-  function renderChips() {
-    const st = getState(node);
-    const lib = visibleLib();
     chipzoneEl.innerHTML = "";
     const q = ui.filter.trim().toLowerCase();
-    const cats = lib.categories.filter((c) => !ui.activeCat || c.id === ui.activeCat);
 
     let shown = 0;
-    for (const cat of cats) {
-      const clr = cat.color || "#54a0ff";
-      for (const sub of cat.subcategories || []) {
-        const hits = (sub.tags || []).filter(tagMatch);
-        if (!hits.length) continue;
-        shown += hits.length;
-
-        const head = document.createElement("div");
-        head.className = "tl-sub-head";
-        head.innerHTML = `<span class="tl-sub-name">${cat.icon || ""} ${sub.name}</span>`;
-        chipzoneEl.appendChild(head);
-
-        const wrap = document.createElement("div");
-        wrap.className = "tl-chips";
-        const selSet = new Set(st.selected);
-        for (const t of hits) {
-          const chip = document.createElement("span");
-          chip.className = "tl-chip" + (selSet.has(t.id) ? " sel" : "") + (t.nsfw ? " nsfw" : "");
-          chip.style.setProperty("--c", clr);
-          chip.innerHTML = chipLabel(t);
-          chip.title = `${t.en} · ${t.zh || ""}${t.aliases?.length ? "\n别名: " + t.aliases.join(", ") : ""}`;
-          chip.onclick = () => toggleTag(t.id);
-          wrap.appendChild(chip);
-        }
-        chipzoneEl.appendChild(wrap);
-      }
-    }
-    if (!shown) {
-      chipzoneEl.innerHTML =
-        `<div class="tl-empty">${q ? `没搜到 “${ui.filter}” — 去 ⚙管理页 添加` : "这个分类还没有标签"}</div>`;
-    }
-  }
-
-  function tagMatch(t) {
-    const q = ui.filter.trim().toLowerCase();
-    if (!q) return true;
-    return (
-      t.en.toLowerCase().includes(q) ||
-      (t.zh || "").toLowerCase().includes(q) ||
-      (t.aliases || []).some((a) => a.toLowerCase().includes(q))
-    );
-  }
-
-  function toggleTag(tagId) {
-    const st = getState(node);
-    const sel = new Set(st.selected);
-    sel.has(tagId) ? sel.delete(tagId) : sel.add(tagId);
-    setState(node, { selected: [...sel] });
-    renderCats(); renderChips(); renderSelected();
-  }
-
-  /* ---------- selected zone ---------- */
-  function tagIndex() {
-    const map = new Map();
-    for (const cat of visibleLib().categories) {
-      for (const t of allTagsOf(cat)) map.set(t.id, { ...t, _color: cat.color });
-    }
-    return map;
-  }
-
-  function renderSelected() {
-    const st = getState(node);
-    selectedEl.innerHTML = "";
-    $(".tl-n").textContent = st.selected.length;
-    const byId = tagIndex();
-
-    st.selected.forEach((id, idx) => {
-      const info = byId.get(id) || { en: id, _color: "#888" };
+    st.tags.forEach((t, idx) => {
+      if (q && !(
+        t.en.toLowerCase().includes(q) ||
+        (t.zh || "").toLowerCase().includes(q))) return;
+      shown++;
       const el = document.createElement("span");
-      el.className = "tl-sel-tag";
+      el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "");
       el.draggable = true;
-      el.style.setProperty("--c", info._color);
-      const pinned = (st.pinned || []).includes(id);
+      el.title = t.enabled === false
+        ? "已停用 — 点击启用"
+        : "已启用 · 拖动排序 / 📌随机必含 / ✕移除";
       el.innerHTML =
-        `<span class="tl-pin${pinned ? " pinned" : ""}" title="随机时必含">📌</span>` +
-        `${info.en}<span class="tl-x" title="移除">✕</span>`;
-      el.querySelector(".tl-pin").onclick = () => togglePin(id);
-      el.querySelector(".tl-x").onclick = () => toggleTag(id);
+        `<span class="tl-pin${t.pinned ? " pinned" : ""}" title="随机时必含">📌</span>` +
+        `<b>${chipLabel(t)}</b>` +
+        (t.zh && getLang() !== "zh" ? `<i class="t-zh">${t.zh}</i>` : "") +
+        `<span class="tl-x" title="移除">✕</span>`;
+      el.querySelector(".tl-pin").onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
+      el.querySelector(".tl-x").onclick = (e) => { e.stopPropagation(); removeTagIdx(idx); };
+      el.onclick = () => toggleEnabledIdx(idx);
       el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", String(idx)); el.classList.add("dragging"); };
-      el.ondragend = () => { el.classList.remove("dragging"); selectedEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); };
+      el.ondragend = () => { el.classList.remove("dragging"); chipzoneEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); };
       el.ondragover = (e) => { e.preventDefault(); el.classList.add("drop-target"); };
       el.ondragleave = () => el.classList.remove("drop-target");
       el.ondrop = (e) => {
         e.preventDefault();
         const from = parseInt(e.dataTransfer.getData("text/plain"));
         if (Number.isNaN(from) || from === idx) return;
-        const cur = getState(node).selected.slice();
+        const cur = getState(node).tags.slice();
         const [moved] = cur.splice(from, 1);
         cur.splice(idx, 0, moved);
-        setState(node, { selected: cur });
-        renderSelected();
+        setState(node, { tags: cur });
+        renderTags();
       };
-      selectedEl.appendChild(el);
+      chipzoneEl.appendChild(el);
     });
 
-    const texts = st.selected.map((id) => (byId.get(id)?.en) || id);
-    previewEl.textContent = texts.length ? "→ " + texts.join(", ") : "(未选任何标签)";
+    if (!shown) {
+      chipzoneEl.innerHTML = q
+        ? `<div class="tl-empty">没有匹配 “${ui.filter}” 的已添加标签</div>`
+        : `<div class="tl-empty">还没有添加标签<br/>点右上「➕ 添加标签」从库中挑选</div>`;
+    }
+    previewEl.textContent = outputPreview(st.tags);
   }
 
-  function togglePin(id) {
-    const pins = new Set(getState(node).pinned || []);
-    pins.has(id) ? pins.delete(id) : pins.add(id);
-    setState(node, { pinned: [...pins] });
-    renderSelected();
+  function outputPreview(tags) {
+    const parts = tags.filter((t) => t.enabled !== false).map((t) => t.en);
+    return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
+  }
+
+  function toggleEnabledIdx(idx) {
+    const st = getState(node);
+    if (!st.tags[idx]) return;
+    st.tags[idx].enabled = st.tags[idx].enabled === false;
+    setState(node, { tags: st.tags });
+    renderTags();
+  }
+
+  function removeTagIdx(idx) {
+    const st = getState(node);
+    st.tags.splice(idx, 1);
+    setState(node, { tags: st.tags });
+    renderTags();
+  }
+
+  function togglePinIdx(idx) {
+    const st = getState(node);
+    if (!st.tags[idx]) return;
+    st.tags[idx].pinned = !st.tags[idx].pinned;
+    setState(node, { tags: st.tags });
+    renderTags();
   }
 
   /* ---------- misc ---------- */
@@ -385,11 +280,6 @@ export function buildPanelWidget(node, container) {
       seedW.callback?.(seedW.value);
       node.setDirtyCanvas?.(true);
     }
-  }
-
-  function applyPanelHeight() {
-    const h = parseInt(getSetting(SET_PANEL_HEIGHT, 168));
-    if (!Number.isNaN(h)) chipzoneEl.style.maxHeight = h + "px";
   }
 
   /* ---------- 语言显示 ---------- */
@@ -423,11 +313,43 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderCats(); renderChips(); renderSelected(); renderNsfw(); renderConflictBtn();
+    renderTags(); renderNsfw(); renderConflictBtn();
+  }
+
+  /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
+  function openTagPicker() {
+    let dlg = document.getElementById("taglib-picker-dialog");
+    if (dlg) { dlg.close(); dlg.remove(); }
+    dlg = document.createElement("dialog");
+    dlg.id = "taglib-picker-dialog";
+    dlg.style.cssText =
+      "width:min(92vw,1200px);height:min(90vh,860px);border:none;border-radius:14px;" +
+      "padding:0;background:#15171d;color:#e3e7ee;max-width:none;max-height:none;";
+    dlg.innerHTML = `<div id="taglib-picker-root" style="width:100%;height:100%;overflow:hidden"></div>`;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    mountTagPicker(dlg.querySelector("#taglib-picker-root"), {
+      onCancel: () => { dlg.close(); dlg.remove(); },
+      onConfirm: (picked) => {
+        // picked: [{en, zh?, nsfw?}] -> 追加到 state.tags
+        const st = getState(node);
+        const have = new Set(st.tags.map((t) => t.en.toLowerCase()));
+        for (const p of picked) {
+          if (!have.has(p.en.toLowerCase())) {
+            st.tags.push({ ...p, enabled: true });
+            have.add(p.en.toLowerCase());
+          }
+        }
+        setState(node, { tags: st.tags });
+        renderTags();
+        dlg.close(); dlg.remove();
+      },
+      getExisting: () => new Set(getState(node).tags.map((t) => t.en.toLowerCase())),
+    });
   }
 
   /* ---------- events ---------- */
-  container.querySelector('[data-act="manager"]').onclick = () => openManagerDialog();
+  container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollSeed;
   container.querySelector('[data-act="lang"]').onclick = cycleLang;
   container.querySelector('[data-act="conflict"]').onclick = () => {
@@ -435,12 +357,11 @@ export function buildPanelWidget(node, container) {
     setState(node, { avoid_conflicts: !cur });
     renderConflictBtn();
   };
-  searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
+  searchEl.oninput = () => { ui.filter = searchEl.value; renderTags(); };
   modeSeg.querySelectorAll("button").forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
-  $(".tl-clearbtn").onclick = () => { setState(node, { selected: [], pinned: [] }); renderAll(); };
 
   /* ---------- init ---------- */
-  applyPanelHeight();
+  applyScale();
   syncModeWidgets();
   fetchLibrary()
     .then(renderAll)
@@ -450,10 +371,163 @@ export function buildPanelWidget(node, container) {
     refresh: async () => {
       invalidateLibraryCache();
       await fetchLibrary();
-      applyPanelHeight();
+      applyScale();
       renderAll();
     },
   };
+}
+
+/* --------------------------------------------- tag picker (全库挑选器) */
+
+function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting }) {
+  const ui = { activeCat: null, filter: "", picked: [] };  // picked: [{en,zh?,nsfw?}]
+
+  rootEl.innerHTML = `
+    <style>
+      .tp-wrap { display:flex; flex-direction:column; height:100%; font:12.5px/1.5 "Segoe UI","Microsoft YaHei",sans-serif; }
+      .tp-head { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.09); }
+      .tp-head h2 { margin:0; font-size:15px; }
+      .tp-search { flex:1; max-width:420px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.12);
+                   border-radius:8px; color:#e3e7ee; padding:6px 12px; outline:none; font-size:12.5px; }
+      .tp-cols { flex:1; display:flex; min-height:0; }
+      .tp-cats { width:200px; border-right:1px solid rgba(255,255,255,.08); overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:4px; }
+      .tp-cat {
+        display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:9px;
+        cursor:pointer; border:1px solid transparent; transition:.12s;
+      }
+      .tp-cat:hover { background:rgba(255,255,255,.05); }
+      .tp-cat.active { background:color-mix(in srgb, currentColor 14%, transparent); border-color:currentColor; }
+      .tp-cat .nm { flex:1; }
+      .tp-cat .ct { font-size:11px; color:#8b93a5; }
+      .tp-chips { flex:1; overflow-y:auto; padding:14px 16px; }
+      .tp-sub { font-size:11px; color:#8b93a5; margin:10px 0 6px; letter-spacing:.03em; }
+      .tp-grid { display:flex; flex-wrap:wrap; gap:5px; }
+      .tp-tag {
+        --c:#54a0ff;
+        border:1px solid color-mix(in srgb, var(--c) 30%, rgba(255,255,255,.13));
+        background:color-mix(in srgb, var(--c) 8%, rgba(255,255,255,.04));
+        border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px; transition:.12s;
+      }
+      .tp-tag:hover { background:color-mix(in srgb, var(--c) 20%, transparent); transform:translateY(-1px); }
+      .tp-tag.picked { background:var(--c); color:#fff; box-shadow:0 0 8px -2px var(--c); }
+      .tp-tag.picked::before { content:"✓ "; }
+      .tp-foot { display:flex; align-items:center; gap:10px; padding:11px 16px; border-top:1px solid rgba(255,255,255,.09); }
+      .tp-count { font-size:13px; font-weight:600; color:#54a0ff; }
+      .tp-btn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:inherit;
+                border-radius:8px; padding:7px 18px; cursor:pointer; font-size:13px; }
+      .tp-btn.primary { background:linear-gradient(135deg,rgba(84,160,255,.35),rgba(84,160,255,.2));
+                        border-color:rgba(84,160,255,.55); font-weight:600; }
+      .tp-btn:hover { filter:brightness(1.25); }
+    </style>
+    <div class="tp-wrap">
+      <div class="tp-head">
+        <h2>🏷 从标签库添加</h2>
+        <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
+        <span style="flex:1"></span>
+      </div>
+      <div class="tp-cols">
+        <aside class="tp-cats"></aside>
+        <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
+      </div>
+      <div class="tp-foot">
+        <span>已挑选 <b class="tp-count">0</b> 个</span>
+        <span style="flex:1"></span>
+        <button class="tp-btn tp-cancel">取消</button>
+        <button class="tp-btn primary tp-ok">✔ 添加到节点</button>
+      </div>
+    </div>
+  `;
+
+  const $ = (s) => rootEl.querySelector(s);
+  const catsBox = $(".tp-cats");
+  const chipsBox = $(".tp-chips");
+  const searchEl = $(".tp-search");
+  const countEl = $(".tp-count");
+
+  function libCats() { return (LIB_CACHE && LIB_CACHE.categories) || []; }
+
+  function renderCats() {
+    catsBox.innerHTML = "";
+    const mk = (id, label, count, icon) => {
+      const el = document.createElement("div");
+      el.className = "tp-cat" + (ui.activeCat === id ? " active" : "");
+      el.style.color = id === "__all__" ? "#9ecbff" : findColor(id) || "#888";
+      el.innerHTML = `<span>${icon || "📁"}</span><span class="nm">${label}</span><span class="ct">${count}</span>`;
+      el.onclick = () => { ui.activeCat = id; renderCats(); renderChips(); };
+      catsBox.appendChild(el);
+    };
+    let allCount = 0;
+    for (const c of libCats()) allCount += countTags(c);
+    mk("__all__", "全部", allCount, "🗂");
+    for (const c of libCats()) mk(c.id, `${c.icon || ""} ${c.name}`, countTags(c), "");
+  }
+
+  function findColor(id) {
+    return (libCats().find((c) => c.id === id) || {}).color;
+  }
+
+  function countTags(cat) {
+    let n = 0;
+    for (const s of cat.subcategories || []) n += (s.tags || []).length;
+    return n;
+  }
+
+  function matches(t) {
+    const q = ui.filter.trim().toLowerCase();
+    if (!q) return true;
+    return t.en.toLowerCase().includes(q) ||
+           (t.zh || "").toLowerCase().includes(q) ||
+           (t.aliases || []).some((a) => a.toLowerCase().includes(q));
+  }
+
+  function renderChips() {
+    chipsBox.innerHTML = "";
+    const existing = getExisting();
+    const cats = libCats().filter((c) => !ui.activeCat || ui.activeCat === "__all__" || c.id === ui.activeCat);
+    let shown = 0;
+    for (const cat of cats) {
+      const clr = cat.color || "#54a0ff";
+      for (const sub of cat.subcategories || []) {
+        const hits = (sub.tags || []).filter(matches);
+        if (!hits.length) continue;
+        shown += hits.length;
+        const head = document.createElement("div");
+        head.className = "tp-sub";
+        head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name}`;
+        chipsBox.appendChild(head);
+        const grid = document.createElement("div");
+        grid.className = "tp-grid";
+        for (const t of hits) {
+          const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
+          const isExisting = existing.has(t.en.toLowerCase());
+          const el = document.createElement("span");
+          el.className = "tp-tag" + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
+          if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
+          else {
+            el.title = t.nsfw ? "🔞 NSFW 标签" : "";
+            el.onclick = () => {
+              const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
+              if (i >= 0) ui.picked.splice(i, 1);
+              else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw });
+              countEl.textContent = ui.picked.length;
+              el.classList.toggle("picked", i < 0);
+            };
+          }
+          el.innerHTML = chipLabel ? chipLabel(t) : `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
+          grid.appendChild(el);
+        }
+        chipsBox.appendChild(grid);
+      }
+    }
+    if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
+  }
+
+  searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
+  $(".tp-cancel").onclick = onCancel;
+  $(".tp-ok").onclick = () => onConfirm(ui.picked);
+
+  renderCats();
+  renderChips();
 }
 
 /* ------------------------------------------------- manager dialog */
@@ -498,11 +572,12 @@ app.registerExtension({
       tooltip: "关闭时隐藏并排除 NSFW 标签；也可在每个节点上单独开关",
     },
     {
-      id: SET_PANEL_HEIGHT,
-      name: "标签库: 面板标签区最大高度 (px)",
+      id: SET_SCALE,
+      name: "标签库: 整体标签比例 (%)",
       type: "number",
-      attrs: { min: 60, max: 600, step: 8 },
-      defaultValue: 168,
+      attrs: { min: 50, max: 200, step: 5 },
+      defaultValue: 100,
+      tooltip: "100% = 默认大小; 面板高度自动跟随节点拉伸",
     },
     {
       id: SET_LANG,

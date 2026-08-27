@@ -265,8 +265,14 @@ def _collect_ids(lib: dict) -> set[str]:
     return ids
 
 
-def save_user_library(payload: dict, client_mtime: float | None = None) -> dict:
-    """校验 + 原子写入用户库。client_mtime 乐观锁防双开互相覆盖。"""
+def save_user_library(payload: dict, client_mtime: float | None = None,
+                      merge_base: dict | None = None) -> dict:
+    """校验 + 原子写入用户库。client_mtime 乐观锁防双开互相覆盖。
+
+    merge_base: 追加式导入时传入"提交前的完整底座"(如 默认库+已有用户库),
+    墓碑只对底座里消失的 id 记账 —— 提交树 = 底座的超集, 不会误删。
+    不传则为全量覆盖语义 (墓碑按提交树记账, 管理页整体保存用这个)。
+    """
     payload = validate(json.loads(json.dumps(payload)))  # 深拷贝后再改
     with _lock:
         server_mtime = _mtime(USER_PATH)
@@ -274,10 +280,14 @@ def save_user_library(payload: dict, client_mtime: float | None = None) -> dict:
             raise LibraryError(
                 "服务器上的用户库比你看到的更新 (可能在别处已修改), 请刷新页面后重试"
             )
+        if merge_base is None:
+            base_for_tombstones = load_default()
+        else:
+            base_for_tombstones = merge_base
         keep_ids = _collect_ids(payload)
         old = load_user_raw()
         old_tombs = set(old.get("_tombstones") or [])
-        gone = (_collect_ids(old) | _collect_ids(load_default())) - keep_ids
+        gone = _collect_ids(base_for_tombstones) - keep_ids
         new_tombs = (old_tombs | gone) - keep_ids  # 重新添加过的自动除名
 
         out = dict(payload)
