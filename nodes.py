@@ -8,8 +8,10 @@ from typing import Any
 
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import library
+    from . import tagconflicts
 except ImportError:  # pragma: no cover
     import library
+    import tagconflicts
 
 
 class TagLibraryNode:
@@ -145,6 +147,7 @@ class TagLibraryNode:
 
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
+        avoid_conflicts = bool(state.get("avoid_conflicts", True))
 
         tags: list[str] = []
 
@@ -157,6 +160,7 @@ class TagLibraryNode:
             rng = random.Random(seed)
             cat_conf = state.get("category_random") or {}
             weights_cfg = self._safe_json(category_weights)
+            chosen_en: list[str] = []
             for cat in lib.get("categories", []):
                 cid = cat.get("id")
                 conf = cat_conf.get(cid) or {}
@@ -170,13 +174,19 @@ class TagLibraryNode:
                 if not pool:
                     continue
                 n = int(conf.get("count", 1))
-                # 分类权重 -> 用加权随机决定实际抽取数在 [ceil(n*w*空抽), ...] 不搞复杂化:
                 empty_p = float(conf.get("empty_chance", 0)) / 100.0
                 if rng.random() < empty_p:
                     continue
                 cat_weight = float(weights_cfg.get(cid, 1.0))
                 effective = max(0, round(n * max(cat_weight, 0.0)))
-                picks = rng.sample(pool, k=min(effective, len(pool)))
+                # 冲突避让: 先剔除与已选中同组的候选, 再抽
+                if avoid_conflicts:
+                    pool, _blocked = tagconflicts.filter_conflicts(pool, chosen_en)
+                effective = min(effective, len(pool))
+                if effective <= 0:
+                    continue
+                picks = rng.sample(pool, k=effective)
+                chosen_en.extend(str(p.get("en", "")).strip().lower() for p in picks)
                 tags.extend(self._format_tag(t, use_weights_syntax) for t in picks)
 
         else:  # random_mix
@@ -187,16 +197,53 @@ class TagLibraryNode:
                 tags = []
             else:
                 weights_map = self._safe_json(category_weights)
+
                 def _weight(pair):
                     return max(float(weights_map.get(pair[1], 1.0)), 0.001)
+
                 lo, hi = min(min_tags, max_tags), max(min_tags, max_tags)
                 n = rng.randint(lo, hi)
-                # 钉选必含
                 pool_dict = {t.get("id"): t for t, _ in pool_all}
                 fixed = [pool_dict[i] for i in pinned_ids if i in pool_dict]
-                rest_pool = [p for p in pool_all if p[0].get("id") not in pinned_ids]
+                fixed_lower = [str(t.get("en", "")).strip().lower() for t in fixed]
+                rest_pool = [(t, c) for t, c in pool_all
+                             if t.get("id") not in pinned_ids
+                             and str(t.get("en", "")).strip().lower() not in fixed_lower]
                 remain = max(0, n - len(fixed)) if pinned_required else n
-                rest = [t for t, _ in weighted_sample(rest_pool, remain, _weight, rng)]
+                if avoid_conflicts:
+                    # 贪心抽取: 逐个抽、命中已占用互斥组的候选跳过补位
+                    rest: list[dict] = []
+                    banned: list[set] = []
+                    lowers_used = set(fixed_lower)
+                    attempts = 0
+                    guard = remain * 12 + 200  # 防死循环上限
+                    while len(rest) < remain and attempts < guard and rest_pool:
+                        attempts += 1
+                        pick_pair = weighted_sample(rest_pool, 1, _weight, rng)
+                        if not pick_pair:
+                            break
+                        pick = pick_pair[0][0]  # rest_pool 元素是 (tag, category_name)
+                        plo = str(pick.get("en", "")).strip().lower()
+                        hit_ban = any(plo in b for b in banned)
+                        if not hit_ban:
+                            for g in tagconflicts.get_groups():
+                                gs = set(g["tags"])
+                                if plo in gs:
+                                    if gs & lowers_used:
+                                        hit_ban = True
+                                    else:
+                                        banned.append(gs)
+                                    break
+                        if hit_ban:
+                            rest_pool = [(t, c) for t, c in rest_pool
+                                         if t.get("id") != pick.get("id")]
+                            continue
+                        rest.append(pick)
+                        lowers_used.add(plo)
+                        rest_pool = [(t, c) for t, c in rest_pool
+                                     if t.get("id") != pick.get("id")]
+                else:
+                    rest = [t for t, _ in weighted_sample(rest_pool, remain, _weight, rng)]
                 all_tags = fixed + rest if pinned_required else rest + fixed[:n]
                 tags = [self._format_tag(t, use_weights_syntax) for t in all_tags]
 

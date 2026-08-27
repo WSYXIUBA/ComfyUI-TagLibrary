@@ -19,6 +19,7 @@
     <div class="top-actions">
       <input id="globalSearch" class="search" placeholder="🔍 搜中文 / 英文 / 别名…" />
       <button id="btnAddCat" class="btn">➕ 新建分类</button>
+      <button id="btnFiles" class="btn">📂 标签文件</button>
       <button id="btnImport" class="btn">📥 导入</button>
       <button id="btnExport" class="btn">📤 导出</button>
       <button id="btnReset" class="btn danger">↺ 恢复默认库</button>
@@ -82,6 +83,24 @@
     <div class="modal-actions">
       <button id="pasteCancel" class="btn">取消</button>
       <button id="pasteOk" class="btn primary">导入这些行</button>
+    </div>
+  </div>
+</div>
+
+<div id="filesDialog" class="modal hidden">
+  <div class="modal-box wide">
+    <h3>📂 标签文件</h3>
+    <p class="muted">单文件 Markdown 格式: <code># 分类</code> / <code>## 子分类</code>, 标签逗号分隔,
+    支持 <code>英文(中文){权重}[nsfw]</code>。内置目录 <code id="builtinDir">…</code>,
+    外置目录(可选):</p>
+    <input id="extDirInput" class="search full-w" placeholder='例如 D:\mytags (留空 = 只看内置)' />
+    <div id="fileList" class="file-list"></div>
+    <div class="import-row">
+      <span>或直接上传文件:</span>
+      <input type="file" id="mdFileInput" accept=".md,.txt" multiple />
+    </div>
+    <div class="modal-actions">
+      <button id="filesCancel" class="btn">关闭</button>
     </div>
   </div>
 </div>

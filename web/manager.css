@@ -236,6 +236,23 @@ tr.nsfw-row:hover td { background: rgba(255,107,107,0.07) !important; }
   padding: 18px 20px;
   box-shadow: 0 18px 60px rgba(0,0,0,0.5), 0 0 0 1px rgba(84,160,255,0.12);
 }
+.modal-box.wide { width: min(94vw, 760px); max-height: 88vh; overflow-y: auto; }
+.full-w { width: 100%; margin-top: 6px; }
+
+.file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 4px; max-height: 320px; overflow-y: auto; }
+.file-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 9px; border-radius: 8px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.file-row .f-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.f-src {
+  font-size: 10.5px; padding: 0 6px; border-radius: 999px;
+  line-height: 1.6; flex: none;
+}
+.f-src.builtin { background: rgba(84,160,255,.18); color: #9ecbff; }
+.f-src.external { background: rgba(46,204,113,.16); color: #9fe8bf; }
+.import-row { display: flex; align-items: center; gap: 10px; margin-top: 12px; font-size: 12.5px; color: var(--muted); }
 .modal-box h3 { margin: 0 0 6px; font-size: 15px; }
 .modal-box textarea {
   width: 100%; margin-top: 10px;
