@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>🏷 标签库管理</title>
+<link rel="stylesheet" href="manager.css" />
+<script>
+  // embed 模式 (iframe 内嵌): 去掉外边距
+  if (new URLSearchParams(location.search).get("embed") === "1") {
+    document.documentElement.classList.add("embed");
+  }
+</script>
+</head>
+<body>
+<div id="app">
+  <header class="topbar">
+    <div class="brand">🏷 标签库管理</div>
+    <div class="top-actions">
+      <input id="globalSearch" class="search" placeholder="🔍 搜中文 / 英文 / 别名…" />
+      <button id="btnAddCat" class="btn">➕ 新建分类</button>
+      <button id="btnImport" class="btn">📥 导入</button>
+      <button id="btnExport" class="btn">📤 导出</button>
+      <button id="btnReset" class="btn danger">↺ 恢复默认库</button>
+    </div>
+  </header>
+
+  <main class="cols">
+    <!-- 左: 分类树 -->
+    <aside class="col-cats">
+      <div class="col-title">分类 <span class="hint">(拖拽排序)</span></div>
+      <ul id="catList"></ul>
+    </aside>
+
+    <!-- 中: 子分类页签 + 标签表格 -->
+    <section class="col-tags">
+      <div class="tabs-row">
+        <div id="subTabs" class="tabs"></div>
+        <button id="btnAddSub" class="btn small">➕ 子分类</button>
+        <button id="btnPaste" class="btn small">📋 批量粘贴</button>
+        <button id="btnAddTag" class="btn small primary">➕ 添加标签</button>
+      </div>
+      <div class="table-wrap">
+        <table id="tagTable">
+          <thead>
+            <tr><th style="width:34%">英文 (出图用)</th><th>中文</th><th style="width:70px">权重</th><th>别名</th><th style="width:44px">启用</th><th style="width:60px"></th></tr>
+          </thead>
+          <tbody id="tagRows"></tbody>
+        </table>
+        <div id="emptyHint" class="empty hidden">没有标签。点右上「➕ 添加标签」或「📋 批量粘贴」。格式每行一条: <code>english | 中文 | 权重</code></div>
+      </div>
+    </section>
+
+    <!-- 右: 统计 -->
+    <aside class="col-stats">
+      <div class="col-title">统计</div>
+      <div id="statsBox"></div>
+      <div class="stat-note">
+        <p>保存后立刻生效于所有工作流的下次生成。</p>
+        <p>删除分类/子分类/标签在「💾 保存更改」时落盘。</p>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="statusbar">
+    <span id="dirtyMark" class="hidden">● 有未保存修改</span>
+    <span id="saveMsg"></span>
+    <span class="flex-spacer"></span>
+    <span id="mtimeInfo" class="muted"></span>
+    <button id="btnCancel" class="btn">取消更改</button>
+    <button id="btnSave" class="btn primary big">💾 保存更改</button>
+  </footer>
+
+  <input type="file" id="fileInput" accept=".json" class="hidden" />
+</div>
+
+<div id="pasteDialog" class="modal hidden">
+  <div class="modal-box">
+    <h3>批量粘贴添加 → <span id="pasteTarget"></span></h3>
+    <p class="muted">每行一条: <code>english | 中文(可空) | 权重(可空,默认1.0)</code></p>
+    <textarea id="pasteArea" rows="12" placeholder="smile | 微笑&#10;blush | 脸红 | 1.1&#10;looking at viewer | 看向镜头"></textarea>
+    <div class="modal-actions">
+      <button id="pasteCancel" class="btn">取消</button>
+      <button id="pasteOk" class="btn primary">导入这些行</button>
+    </div>
+  </div>
+</div>
+
+<script src="manager.js"></script>
+</body>
+</html>

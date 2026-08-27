@@ -1,0 +1,7 @@
+# 用户库不进仓库（属于个人数据）
+data/tag_library.user.json
+
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
