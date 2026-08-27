@@ -160,12 +160,44 @@ class TagLibraryNode:
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
         avoid_conflicts = bool(state.get("avoid_conflicts", True))
+        # 排除类目 (分类名): 随机抽不到; 手动启用标签若属于被排除类目也不输出
+        exclude_cats: set[str] = {str(x) for x in (state.get("exclude_categories") or [])}
+
+        if exclude_cats:
+            lib = {
+                "version": lib.get("version", 1),
+                "categories": [c for c in lib.get("categories", [])
+                               if c.get("name") not in exclude_cats],
+            }
 
         tags: list[str] = []
 
         if mode == "manual":
-            by_id = {t.get("id"): t for t, _ in self._flat(lib)}
-            chosen = [by_id[i] for i in selected_ids if i in by_id]
+            # 未过滤库: fallback 标签用它继承 nsfw 属性
+            full_by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(library.get_merged())}
+            by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(lib)}
+            chosen: list[dict] = []
+            # 新结构优先: state.tags = [{en, zh?, nsfw?, enabled, pinned?}]
+            if state.get("tags"):
+                for st_tag in state["tags"]:
+                    if not isinstance(st_tag, dict) or st_tag.get("enabled") is False:
+                        continue
+                    en_l = str(st_tag.get("en", "")).strip().lower()
+                    lib_t = by_en.get(en_l)
+                    if lib_t is None:
+                        # 库里没有 (被过滤/外置导入后被删) -> 用完整库继承属性
+                        lib_t = full_by_en.get(en_l)
+                    if lib_t is None:
+                        lib_t = {"en": st_tag.get("en", ""), "zh": st_tag.get("zh", ""),
+                                 "weight": 1.0}
+                    chosen.append(dict(lib_t))
+            else:
+                # 旧结构兼容: selected ids
+                by_id = {t.get("id"): t for t, _ in self._flat(lib)}
+                chosen = [by_id[i] for i in selected_ids if i in by_id]
+            # nsfw_mode=off 时: 剔除 nsfw 标签 (fallback 保留了完整库的 nsfw 属性)
+            if nsfw_mode == "off":
+                chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
         elif mode == "random_by_category":

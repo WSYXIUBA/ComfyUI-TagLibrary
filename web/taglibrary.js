@@ -67,9 +67,11 @@ function setSetting(id, value) {
 
 function defaultState() {
   return {
+    // 面板只显示这里 —— "已添加到本节点" 的标签, 每条:
+    // { en, zh?, nsfw?, enabled:bool, pinned?:true }
     tags: [],
-    //            ^ { id, en, zh, nsfw, enabled, pinned, weight }
-    // 面板只显示这里 —— "已添加到本节点" 的标签
+    // 排除的类目 (分类名数组): 随机模式抽不到, 手动启用标签也不输出
+    exclude_categories: [],
     category_random: {},
     avoid_conflicts: true,
     nsfw: null,
@@ -251,7 +253,19 @@ export function buildPanelWidget(node, container) {
   }
 
   function outputPreview(tags) {
-    const parts = tags.filter((t) => t.enabled !== false).map((t) => t.en);
+    const st = getState(node);
+    const excl = new Set(st.exclude_categories || []);
+    // 排除类目的标签: 查库拿分类归属; 库未加载时按标签名匹配 (best effort)
+    const catOfTag = new Map();
+    for (const c of (LIB_CACHE?.categories || [])) {
+      for (const s of c.subcategories || []) {
+        for (const t of s.tags || []) catOfTag.set(t.en.toLowerCase(), c.name);
+      }
+    }
+    const parts = tags
+      .filter((t) => t.enabled !== false)
+      .filter((t) => !excl.has(catOfTag.get(t.en.toLowerCase())))
+      .map((t) => t.en);
     return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
   }
 
@@ -351,6 +365,9 @@ export function buildPanelWidget(node, container) {
         dlg.close(); dlg.remove();
       },
       getExisting: () => new Set(getState(node).tags.map((t) => t.en.toLowerCase())),
+      getExcluded: () => getState(node).exclude_categories || [],
+      setExcluded: (cats) => { setState(node, { exclude_categories: cats }); },
+      node,
     });
   }
 
@@ -385,8 +402,8 @@ export function buildPanelWidget(node, container) {
 
 /* --------------------------------------------- tag picker (全库挑选器) */
 
-function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting }) {
-  const ui = { activeCat: null, filter: "", picked: [] };  // picked: [{en,zh?,nsfw?}]
+function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded, setExcluded, node }) {
+  const ui = { activeCat: null, filter: "", picked: [], tab: "pick" };  // pick | exclude
 
   rootEl.innerHTML = `
     <style>
@@ -424,22 +441,38 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting }) {
       .tp-btn.primary { background:linear-gradient(135deg,rgba(84,160,255,.35),rgba(84,160,255,.2));
                         border-color:rgba(84,160,255,.55); font-weight:600; }
       .tp-btn:hover { filter:brightness(1.25); }
+      .tp-tabbtn {
+        border:1px solid rgba(255,255,255,.14); background:transparent; color:#aab3c5;
+        border-radius:8px; padding:5px 12px; cursor:pointer; font-size:12.5px;
+      }
+      .tp-tabbtn.active { background:rgba(84,160,255,.18); border-color:rgba(84,160,255,.5); color:#cfe4ff; }
+      .tp-exc-card {
+        display:flex; align-items:center; gap:10px; padding:9px 13px; margin-bottom:6px;
+        border:1px solid rgba(255,255,255,.10); border-radius:10px; background:rgba(255,255,255,.03);
+      }
+      .tp-exc-card.excluded { border-color: rgba(255,107,107,.55); background: rgba(255,71,87,.10); }
+      .tp-exc-card .nm { flex:1; font-size:13px; }
+      .tp-exc-card .why { font-size:11px; color:#f7a4b1; }
+      .tp-exc-hint { font-size:12px; color:#8b93a5; margin-bottom:12px; line-height:1.6; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
         <h2>🏷 从标签库添加</h2>
+        <button class="tp-tabbtn tp-picktab active">挑标签</button>
+        <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
         <span style="flex:1"></span>
       </div>
       <div class="tp-cols">
         <aside class="tp-cats"></aside>
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
+        <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
       </div>
       <div class="tp-foot">
-        <span>已挑选 <b class="tp-count">0</b> 个</span>
+        <span class="tp-footinfo">已挑选 <b class="tp-count">0</b> 个</span>
         <span style="flex:1"></span>
         <button class="tp-btn tp-cancel">取消</button>
-        <button class="tp-btn primary tp-ok">✔ 添加到节点</button>
+        <button class="tp-btn primary tp-ok">✔ 确定并保存</button>
       </div>
     </div>
   `;
@@ -527,6 +560,99 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting }) {
     }
     if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
   }
+
+  /* ---------- 排除类目视图 ---------- */
+  const excView = $(".tp-excview");
+  const pickCols = [".tp-cats", ".tp-chips"].map((s) => rootEl.querySelector(s));
+
+  function upstreamText() {
+    // 收集上游 prefix 文本 (已连线的输入 widget / 上游节点预览)
+    let text = "";
+    try {
+      for (const inp of node?.inputs || []) {
+        if (inp.name !== "prefix" || !inp.link) continue;
+        const link = window.app?.graph?.links?.get?.(inp.link) || window.app?.graph?.links?.[inp.link];
+        const srcNode = link ? window.app.graph._nodes.find((x) => x.id === link.origin_id) : null;
+        const srcW = srcNode?.widgets?.find((w) => w.name === "text" || w.name === "prompt");
+        if (srcW?.value) text += " " + srcW.value;
+      }
+    } catch {}
+    return text.toLowerCase();
+  }
+
+  function suggestExcludes() {
+    const up = upstreamText();
+    if (!up) return {};
+    const hints = {};
+    const RULE = [
+      ["头发", ["hair", "bangs", "ponytail", "twintails", "braid", "bob cut"]],
+      ["人物特征", ["eyes", "blue eyes", "green eyes", "red eyes", "pointed ears", "elf"]],
+      ["表情", ["smile", "smirk", "crying", "blush", "open mouth", "closed mouth", "angry"]],
+      ["服装", ["dress", "uniform", "hoodie", "kimono", "skirt", "bikini", "swimsuit", "jacket"]],
+      ["动作姿势", ["sitting", "standing", "lying", "kneeling", "arms", "walking"]],
+      ["配饰·道具", ["glasses", "hat", "necklace", "earrings", "sword", "bag"]],
+      ["镜头构图", ["close-up", "from above", "from below", "portrait", "wide shot", "cowboy shot"]],
+      ["光影", ["backlighting", "rim lighting", "dappled", "sunlight", "moonlight"]],
+      ["天气·时间", ["night", "sunset", "rain", "snow", "starry"]],
+      ["场景", ["bedroom", "classroom", "outdoors", "forest", "beach", "city"]],
+    ];
+    for (const [catName, keys] of RULE) {
+      const hit = keys.filter((k) => up.includes(k));
+      if (hit.length) hints[catName] = hit.slice(0, 3);
+    }
+    return hints;
+  }
+
+  function renderExclude() {
+    const excluded = new Set(getExcluded ? getExcluded() : []);
+    const hints = suggestExcludes();
+    excView.innerHTML = `
+      <div class="tp-exc-hint">
+        勾选要<b>排除</b>的分类: 排除后<b>随机抽取</b>与<b>输出</b>都会跳过这些分类的标签。<br/>
+        用途: 上游提示词已经有发色/眼睛等描述时 (如 <code>blue hair, blue eyes</code>),
+        排除对应类目避免重复冲突。
+        ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下类目的内容, 已用 <span style="color:#f7a4b1">粉色标记</span>:' : ""}
+      </div>
+    `;
+    for (const cat of libCats()) {
+      if (cat.id === "nsfwcat") continue;  // NSFW 由 nsfw_mode 管
+      const isEx = excluded.has(cat.name);
+      const why = hints[cat.name] ? `上游已有: ${hints[cat.name].join(", ")}` : "";
+      const card = document.createElement("div");
+      card.className = "tp-exc-card" + (isEx ? " excluded" : "");
+      card.innerHTML = `
+        <input type="checkbox" ${isEx ? "checked" : ""} style="width:16px;height:16px;accent-color:#ff4757"/>
+        <span>${cat.icon || ""}</span>
+        <span class="nm">${cat.name}<span style="color:#8b93a5;font-size:11px"> · ${countTags(cat)} 条</span></span>
+        <span class="why">${why}</span>
+      `;
+      card.querySelector("input").onchange = (e2) => {
+        const cur = new Set(getExcluded ? getExcluded() : []);
+        e2.target.checked ? cur.add(cat.name) : cur.delete(cat.name);
+        setExcluded([...cur]);
+        card.classList.toggle("excluded", e2.target.checked);
+      };
+      excView.appendChild(card);
+    }
+  }
+
+  function switchTab(tab) {
+    ui.tab = tab;
+    rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
+    rootEl.querySelector(".tp-excludetab").classList.toggle("active", tab === "exclude");
+    for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
+    excView.style.display = tab === "exclude" ? "block" : "none";
+    searchEl.style.visibility = tab === "pick" ? "visible" : "hidden";
+    $(".tp-footinfo").innerHTML = tab === "pick"
+      ? `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`
+      : (() => {
+          const n = (getExcluded ? getExcluded().length : 0);
+          return `已排除 <b style="color:#ff6b6b">${n}</b> 个分类`;
+        })();
+    if (tab === "exclude") renderExclude();
+  }
+  rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
+  rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
 
   searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
   $(".tp-cancel").onclick = onCancel;
@@ -624,12 +750,10 @@ app.registerExtension({
       const node = this;
 
       // 面板随节点宽度自适应: 监听节点 resize, 同步最小宽度 + 重算高度
-      const PANEL_MIN_W = 400;
+      const PANEL_MIN_W = 280;
       function syncPanelToNode() {
-        // 节点宽度过小则撑到面板需要的宽度; DOM widget 本身 width:100% 跟随节点
-        if (node.size[0] < PANEL_MIN_W) {
-          node.size[0] = PANEL_MIN_W;
-        }
+        // 宽度不再强制节点变宽 —— 面板 CSS (flex/min-width:0) 跟随节点实际宽度收缩,
+        // 避免"面板凸出节点"的错位。仅提醒画布重绘。
         node.setDirtyCanvas?.(true, true);
       }
       const origOnResize = nodeType.prototype.onResize;
@@ -775,8 +899,8 @@ app.registerExtension({
 
       // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
       domW.computeSize = function (width) {
-        const w = Math.max(width || 0, PANEL_MIN_W);
-        return [w, -2];  // -2 = DOM widget 自管高度 (官方约定), 由 rAF 同步拉伸
+        // 宽度永远跟随节点实际宽度 (不再强制最小宽, 面板 CSS 自适应收缩)
+        return [Math.max(width || 0, 200), -2];  // -2 = DOM widget 自管高度
       };
       // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
       panelApi.onChange = () => {
@@ -788,7 +912,11 @@ app.registerExtension({
       ro.observe(holder);
 
       syncPanelToNode();
-      node.setSize([Math.max(node.size[0], PANEL_MIN_W), node.size[1] + 420]);
+      // 默认尺寸: 只在宽度不足时撑到最小可用宽 (280), 高度尊重用户/前端默认, 不强加 420
+      node.setSize([
+        Math.max(node.size[0], 280),
+        Math.max(node.size[1], Math.round((domW.last_y || w_lastY_fallback(node)) + 240)),
+      ]);
 
       window.addEventListener("taglib-updated", () => panelApi.refresh());
       return r;

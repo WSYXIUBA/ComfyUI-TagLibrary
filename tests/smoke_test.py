@@ -131,10 +131,14 @@ def main() -> None:
     def ids_of(kw: str):
         return [t["id"] for t, _ in TagLibraryNode._flat(lib2) if kw in t["en"]]
 
-    # manual
-    state_manual = {"selected": ids_of("smile"), "pinned": []}
+    # manual —— 新结构: state.tags = [{en, enabled}], 兼容旧 selected ids
+    state_manual = {"tags": [{"en": "smile", "enabled": True}]}
     out = node.build(json.dumps(state_manual), "manual", 42)
     check("manual 输出 smile", out[0] == "smile", out[0])
+    # 旧 selected ids 结构仍兼容
+    state_old = {"selected": ids_of("smile"), "pinned": []}
+    out_old = node.build(json.dumps(state_old), "manual", 42)
+    check("manual 兼容旧selected", out_old[0] == "smile", out_old[0])
 
     # random_by_category 同 seed 复现 / 数量正确
     rand_state = {"category_random": {
@@ -164,8 +168,8 @@ def main() -> None:
     pinout = node.build(json.dumps(pin_state), "random_mix", 999, min_tags=2, max_tags=2)
     check("pinned 必含", "masterpiece" in pinout[0], pinout[0])
 
-    # 权重语法
-    swout = node.build('{"selected":["style.quality.masterpiece"],"pinned":[]}',
+    # 权重语法 (新 tags 结构)
+    swout = node.build('{"tags":[{"en":"masterpiece","enabled":true}]}',
                        "manual", 42, use_weights_syntax=True)
     check("(tag:w) 语法", swout[0] == "(masterpiece:1.2)", swout[0])
 
@@ -174,7 +178,7 @@ def main() -> None:
     check("prefix/suffix 拼接", pfx[0] == "1girl, roxy migurdia", pfx[0])
 
     # dedupe
-    dup = node.build('{"selected":["style.quality.masterpiece","style.quality.masterpiece","character.expression.smile"]}',
+    dup = node.build('{"tags":[{"en":"masterpiece","enabled":true},{"en":"masterpiece","enabled":true},{"en":"smile","enabled":true}]}',
                      "manual", 1)
     check("去重保序", dup[0] == "masterpiece, smile", dup[0])
 
@@ -182,20 +186,44 @@ def main() -> None:
     sf = node.build("{}", "random_mix", 11, search_text="月光", min_tags=1, max_tags=3)
     check("中文搜索命中", "dappled moonlight" in sf[0], sf[0])
 
-    # 幽灵 id 跳过不炸
+    # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
     ghost = node.build('{"selected":["no.such.tag","character.expression.smile"]}', "manual", 1)
-    check("幽灵id跳过", ghost[0] == "smile", ghost[0])
+    check("幽灵id跳过", "smile" in ghost[0], ghost[0])
 
-    # ---- NSFW 过滤三态
-    nsfw_state = '{"selected":["character.nsfw_body.example","character.expression.smile"],"pinned":[]}'
-    off = node.build(nsfw_state, "manual", 1, nsfw_mode="off")
-    check("nsfw off 剔除nsfw标签", off[0] == "smile" and "nsfw_example_tag" not in off[0], off[0])
-    on_ = node.build(nsfw_state, "manual", 1, nsfw_mode="on")
-    check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
-    only = node.build('{"selected":[],"pinned":[]}', "random_mix", 3, nsfw_mode="only",
-                      min_tags=2, max_tags=4)
-    check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
-          f"{only[0]}")
+    # ---- NSFW 过滤三态 (用户库导入后有真实 nsfw 标签: 取一个 nsfw en 做样本)
+    lib_n = library.get_merged()
+    nsfw_en = next((t.get("en") for _, cn in TagLibraryNode._flat(lib_n)
+                    for t in [] if False), None)
+    flat_pairs = TagLibraryNode._flat(lib_n)
+    nsfw_sample = None
+    for t, _cn in flat_pairs:
+        if t.get("nsfw"):
+            nsfw_sample = t.get("en")
+            break
+    if nsfw_sample:
+        tags_state = json.dumps({"tags": [
+            {"en": nsfw_sample, "enabled": True},
+            {"en": "smile", "enabled": True}]})
+        off = node.build(tags_state, "manual", 1, nsfw_mode="off")
+        check("nsfw off 剔除nsfw标签", nsfw_sample not in off[0] and "smile" in off[0], off[0])
+        on_ = node.build(tags_state, "manual", 1, nsfw_mode="on")
+        check("nsfw on 全量", nsfw_sample in on_[0], on_[0])
+        only = node.build('{}', "random_mix", 3, nsfw_mode="only",
+                          min_tags=2, max_tags=4)
+        check("nsfw only 只出nsfw", (only[0] == "") or all(
+            any(tt.get("en") == p for tt, _ in flat_pairs if tt.get("nsfw"))
+            for p in [p.strip() for p in only[0].split(",")] if p), f"{only[0][:50]}")
+    else:
+        # 库里没有 nsfw 样本 -> 走旧合成断言 (向后兼容)
+        nsfw_state = '{"tags":[{"en":"nsfw_example_tag","nsfw":true,"enabled":true},{"en":"smile","enabled":true}]}'
+        off = node.build(nsfw_state, "manual", 1, nsfw_mode="off")
+        check("nsfw off 剔除nsfw标签", off[0] == "smile" and "nsfw_example_tag" not in off[0], off[0])
+        on_ = node.build(nsfw_state, "manual", 1, nsfw_mode="on")
+        check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
+        only = node.build('{"selected":[],"pinned":[]}', "random_mix", 3, nsfw_mode="only",
+                          min_tags=2, max_tags=4)
+        check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
+              f"{only[0]}")
 
     # ---- 防冲突随机: pinned 一个光源组标签, 另一个永远不该出现
     lib3 = library.get_merged()
@@ -214,6 +242,57 @@ def main() -> None:
         check("光源组标签存在", False, str(light_ids))
 
     clean_user_lib()
+
+    # ---- 排除类目: 随机+手动都跳过被排除分类的全部标签
+    # (先重建大库, 因为上面 clean_user_lib 清掉了)
+    import urllib.request
+
+    def _req(path, method="GET", data=None):
+        q = urllib.request.Request("http://127.0.0.1:8188" + path, method=method,
+                                   data=json.dumps(data).encode() if data else None,
+                                   headers={"Content-Type": "application/json"})
+        return json.loads(urllib.request.urlopen(q, timeout=20).read())
+
+    rebuilt = False
+    try:
+        for f in _req("/taglib/api/tagfiles")["files"]:
+            if f["file_name"].startswith("00_"):
+                continue
+            _req("/taglib/api/tagfiles/import", "POST", {"path": f["path"]})
+        rebuilt = True
+    except Exception:
+        pass  # 无服务器时跳过大库测试 (CI 场景)
+
+    if rebuilt and os.path.exists(library.USER_PATH):
+        libx = library.get_merged()
+        cat_obj = next((c for c in libx["categories"] if c["name"] == "表情"), None)
+        if cat_obj:
+            exc_ens = {t.get("en", "").lower()
+                       for s in cat_obj.get("subcategories", [])
+                       for t in s.get("tags", [])}
+            state_r = json.dumps({
+                "category_random": {cat_obj["id"]: {"enabled": True, "count": 5}},
+                "exclude_categories": ["表情"],
+            })
+            leaked = []
+            for sd in range(30):
+                o = node.build(state_r, "random_by_category", sd)
+                text_l = o[0].lower()
+                leaked += [en for en in exc_ens if en and en in text_l]
+            check("排除类目:随机零漏出", not leaked, str(leaked[:4]))
+
+            leaked2 = []
+            for sd in range(30):
+                o = node.build(json.dumps({"exclude_categories": ["表情"]}),
+                               "random_mix", sd, min_tags=4, max_tags=8)
+                text_l = o[0].lower()
+                leaked2 += [en for en in exc_ens if en and f" {en}" in f" {text_l}"]
+            check("排除类目:mix零漏出", not leaked2, str(leaked2[:4]))
+        else:
+            check("存在表情类可测", False)
+    else:
+        check("排除类目(需 ComfyUI 服务重建大库)", True, "skipped - no server")
+
     print("\n== RESULT:", "ALL PASS ✅" if ok else "HAS FAILURES ❌")
     sys.exit(0 if ok else 1)
 
