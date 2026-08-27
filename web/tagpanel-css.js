@@ -228,9 +228,9 @@ const CSS = `
 /* ---------- 已添加标签 (Added view): 灰=停用, 绿=启用 ---------- */
 .tl-ttag {
   display: inline-flex; align-items: center; gap: 5px;
-  border-radius: 7px;
-  padding: 2.5px 8px;
-  font-size: inherit;
+  border-radius: var(--taglib-chip-radius, 7px);
+  font-size: var(--taglib-chip-font, inherit);
+  padding: calc(2.5px * var(--taglib-chip-scale, 1)) calc(8px * var(--taglib-chip-scale, 1));
   cursor: pointer;
   user-select: none;
   transition: all .13s ease;

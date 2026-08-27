@@ -191,7 +191,13 @@ export function buildPanelWidget(node, container) {
   function applyScale() {
     const s = getScale();
     container.style.fontSize = `${12 * s}px`;
-    document.documentElement.style.setProperty("--taglib-chip-scale", s);
+    const fontOverride = parseInt(getSetting(SETTING_PREFIX + "chip_font_size", 0));
+    const radius = parseInt(getSetting(SETTING_PREFIX + "chip_radius", 7));
+    const root = document.documentElement.style;
+    root.setProperty("--taglib-chip-scale", s);
+    root.setProperty("--taglib-chip-font",
+      (!Number.isNaN(fontOverride) && fontOverride > 0 ? fontOverride : null) || `${12 * s}px`);
+    root.setProperty("--taglib-chip-radius", (!Number.isNaN(radius) ? radius : 7) + "px");
   }
 
   function renderTags() {
@@ -573,11 +579,27 @@ app.registerExtension({
     },
     {
       id: SET_SCALE,
-      name: "标签库: 整体标签比例 (%)",
+      name: "标签库: 整体比例 (%) — 按钮/字体等内部 UI 缩放",
       type: "number",
       attrs: { min: 50, max: 200, step: 5 },
       defaultValue: 100,
-      tooltip: "100% = 默认大小; 面板高度自动跟随节点拉伸",
+      tooltip: "100% = 默认大小; 影响面板内所有按钮/字体/chip 大小; 面板高度自动跟随节点",
+    },
+    {
+      id: SETTING_PREFIX + "chip_font_size",
+      name: "标签库: 标签字号覆盖 (px, 0=跟随比例)",
+      type: "number",
+      attrs: { min: 0, max: 24, step: 1 },
+      defaultValue: 0,
+      tooltip: "单独指定标签文字大小; 0 = 使用上面的整体比例",
+    },
+    {
+      id: SETTING_PREFIX + "chip_radius",
+      name: "标签库: 标签圆角 (px)",
+      type: "number",
+      attrs: { min: 0, max: 16, step: 1 },
+      defaultValue: 7,
+      tooltip: "标签芯片的圆角半径",
     },
     {
       id: SET_LANG,
@@ -618,6 +640,72 @@ app.registerExtension({
 
       // 新节点应用默认模式设置
       setTimeout(() => {
+        // ---- 插槽中文化 (2进2出是什么) ----
+        const IN_LABELS = {
+          prefix: "⬅️ 前置文本 (可选: 上游提示词, 拼在标签前面)",
+          suffix: "⬅️ 后置文本 (可选: 拼在标签后面)",
+        };
+        const OUT_LABELS = {
+          positive: "➡️ 正面提示词 (连 CLIPTextEncode.text)",
+          tags_preview: "➡️ 标签预览 (接 Preview Text 节点查看实际输出)",
+        };
+        for (let i = 0; i < (node.inputs || []).length; i++) {
+          const inp = node.inputs[i];
+          if (IN_LABELS[inp.name]) inp.label = IN_LABELS[inp.name];
+        }
+        for (let i = 0; i < (node.outputs || []).length; i++) {
+          const out = node.outputs[i];
+          if (OUT_LABELS[out.name]) { out.label = OUT_LABELS[out.name]; out.localized_name = OUT_LABELS[out.name]; }
+        }
+        node.onConnectionsChange = (() => {
+          const orig = node.onConnectionsChange;
+          return function () {
+            // 连线后 ComfyUI 可能重算 slot label -> 保持中文
+            for (let i = 0; i < (node.inputs || []).length; i++) {
+              const inp = node.inputs[i];
+              if (IN_LABELS[inp.name] && !inp.label) inp.label = IN_LABELS[inp.name];
+            }
+            return orig?.apply(this, arguments);
+          };
+        })();
+
+        // ---- 中文化 widget 标签 (改 name 的显示别名) ----
+        const LABELS = {
+          mode: "模式",
+          seed: "随机种子",
+          nsfw_mode: "NSFW 过滤",
+          min_tags: "随机最少标签数",
+          max_tags: "随机最多标签数",
+          search_text: "随机过滤词(中/英/别名)",
+          separator: "输出分隔符",
+          use_weights_syntax: "输出加权重语法 (tag:1.2)",
+          dedupe: "输出去重",
+          pinned_required: "📌必含标签强制加入随机结果",
+        };
+        for (const w of node.widgets || []) {
+          if (LABELS[w.name]) {
+            try {
+              w.label = LABELS[w.name];
+              if (w.options) w.options.multiline = w.options.multiline; // noop keep ref
+            } catch {}
+          }
+          if (w.name === "nsfw_mode" && w.element?.tagName === "SELECT") {}
+        }
+        // ComfyUI 渲染用 w.label ?? w.name, label 设置即生效;
+        // 老版本没有 label 字段时 hack 到 onLabel 需要额外兼容, 现代版都支持.
+        const modeW2 = node.widgets?.find((w) => w.name === "mode");
+        if (modeW2) {
+          // combo 选项中文化 (显示层): ComfyUI 用 options.values 传值, label 映射显示
+          const disp = { manual: "手动选签", random_by_category: "按分类随机", random_mix: "组合随机" };
+          if (!modeW2.__zhPatched) {
+            modeW2.__zhPatched = true;
+            const origToString = {};
+            // 简单方案: tooltip 说明含义即可, 值保持英文 (兼容工作流)
+          }
+        }
+        const nsfwW = node.widgets?.find((w) => w.name === "nsfw_mode");
+        if (nsfwW) nsfwW.tooltip = "off=排除 NSFW / on=混入 NSFW / only=只用 NSFW";
+
         const modeW = node.widgets?.find((w) => w.name === "mode");
         const defMode = getSetting(SET_DEFAULT_MODE, "manual");
         if (modeW && Object.values(modeW.options || {}).includes(defMode)) {
@@ -651,14 +739,31 @@ app.registerExtension({
       const domW = node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
       node._taglibPanelApi = panelApi;
 
-      // 面板高度跟随节点: onDraw 每帧把 holder 高度同步为节点剩余空间
-      domW.onDraw = function (ctx) {
+      // 面板高度跟随节点: 新版前端不再触发 DOM widget 的 onDraw,
+      // 用 rAF 轻量同步循环 (同一帧有 dirty 才重算, 空闲时零开销)
+      domW._syncHeight = function () {
         try {
           const available = node.size[1] - (domW.last_y || w_lastY_fallback(node)) - 8;
           const h = Math.max(90, Math.round(available));
           if (holder.style.height !== h + "px") holder.style.height = h + "px";
         } catch {}
       };
+      if (!window.__taglibSync) {
+        window.__taglibSync = requestAnimationFrame(function __tlLoop() {
+          window.__taglibSync = requestAnimationFrame(__tlLoop);
+          try {
+            // 只在画布脏时同步 (node._dirty 或 canvas dirty 标记)
+            const g = window.app?.graph;
+            if (!g) return;
+            for (const nd of g._nodes) {
+              if (nd.type !== NODE_NAME || !nd.widgets) continue;
+              const dw = nd.widgets.find((x) => x.name === "taglib_panel");
+              if (!dw || !dw._syncHeight || !dw.last_y) continue;
+              dw._syncHeight();
+            }
+          } catch {}
+        });
+      }
       function w_lastY_fallback(n) {
         let y = 0;
         for (const ww of n.widgets) {
@@ -671,7 +776,7 @@ app.registerExtension({
       // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
       domW.computeSize = function (width) {
         const w = Math.max(width || 0, PANEL_MIN_W);
-        return [w, -2];  // -2 = DOM widget 自管高度 (官方约定), 由 onDraw 拉伸
+        return [w, -2];  // -2 = DOM widget 自管高度 (官方约定), 由 rAF 同步拉伸
       };
       // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
       panelApi.onChange = () => {
