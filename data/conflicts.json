@@ -1,0 +1,305 @@
+{
+ "version": 1,
+ "groups": [
+  {
+   "id": "mouth",
+   "name": "嘴部",
+   "strict": true,
+   "tags": [
+    ":3",
+    "biting lip",
+    "cat mouth",
+    "closed mouth",
+    "drinking",
+    "eating",
+    "open mouth",
+    "pout",
+    "screaming",
+    "shushing",
+    "singing",
+    "smirk",
+    "yelling"
+   ]
+  },
+  {
+   "id": "smile_mouth",
+   "name": "微笑系嘴型",
+   "strict": false,
+   "tags": [
+    "evil smile",
+    "gentle smile",
+    "grin",
+    "light smile",
+    "smile",
+    "smirk",
+    "wide grin"
+   ]
+  },
+  {
+   "id": "eyes",
+   "name": "眼睛开闭",
+   "strict": true,
+   "tags": [
+    "closed eyes",
+    "eyes visible through hair",
+    "half-closed eyes",
+    "looking afar",
+    "looking at viewer",
+    "looking away",
+    "looking back",
+    "looking down",
+    "looking up",
+    "one eye closed",
+    "wink"
+   ]
+  },
+  {
+   "id": "wink_eye",
+   "name": "眨眼组合",
+   "strict": true,
+   "tags": [
+    "both eyes open",
+    "wink"
+   ]
+  },
+  {
+   "id": "tears_vs_smile",
+   "name": "哭笑组合",
+   "strict": false,
+   "tags": [
+    "crying",
+    "giggle",
+    "laughing",
+    "sobbing",
+    "tears"
+   ]
+  },
+  {
+   "id": "pose_basic",
+   "name": "基础姿势",
+   "strict": true,
+   "tags": [
+    "all fours",
+    "crossed legs (standing)",
+    "crouching",
+    "floating",
+    "jumping",
+    "kneeling",
+    "leaning forward",
+    "lying on bed",
+    "lying on side",
+    "lying on stomach",
+    "running",
+    "seiza",
+    "sitting",
+    "squatting",
+    "standing",
+    "walking",
+    "wariza"
+   ]
+  },
+  {
+   "id": "facing",
+   "name": "朝向",
+   "strict": true,
+   "tags": [
+    "backturned",
+    "facing away",
+    "facing viewer",
+    "from behind",
+    "from side",
+    "over shoulder",
+    "profile",
+    "sideways glance"
+   ]
+  },
+  {
+   "id": "camera_angle",
+   "name": "相机角度",
+   "strict": true,
+   "tags": [
+    "dutch angle",
+    "eye-level shot",
+    "from above",
+    "from below",
+    "pov"
+   ]
+  },
+  {
+   "id": "camera_dist",
+   "name": "景别",
+   "strict": true,
+   "tags": [
+    "close-up",
+    "cowboy shot",
+    "extreme close-up",
+    "full body",
+    "portrait",
+    "upper body",
+    "wide shot"
+   ]
+  },
+  {
+   "id": "arms_pos",
+   "name": "手臂姿态",
+   "strict": false,
+   "tags": [
+    "arms behind back",
+    "arms crossed",
+    "arms up",
+    "covering eyes with hands",
+    "hand in own hair",
+    "hands on hips",
+    "hugging own legs",
+    "self hug"
+   ]
+  },
+  {
+   "id": "emotion_opp",
+   "name": "情绪对立",
+   "strict": false,
+   "tags": [
+    "angry",
+    "angry face",
+    "confident",
+    "embarrassed",
+    "happy",
+    "sad",
+    "scared",
+    "shy",
+    "smiling",
+    "smug",
+    "surprised"
+   ]
+  },
+  {
+   "id": "body_wet",
+   "name": "身体状态",
+   "strict": false,
+   "tags": [
+    "dirty",
+    "muddy",
+    "oiled skin",
+    "snow on skin",
+    "sweaty",
+    "wet",
+    "wet clothes",
+    "wet hair"
+   ]
+  },
+  {
+   "id": "headwear",
+   "name": "头饰占用",
+   "strict": false,
+   "tags": [
+    "animal ear headwear",
+    "baseball cap",
+    "beret",
+    "bunny ears headwear",
+    "flower crown",
+    "hairband",
+    "halo",
+    "headphones on head",
+    "straw hat",
+    "witch hat"
+   ]
+  },
+  {
+   "id": "eyewear_occ",
+   "name": "眼部位占用",
+   "strict": true,
+   "tags": [
+    "blindfold",
+    "eye mask",
+    "glasses",
+    "mask over eyes",
+    "reading glasses",
+    "sunglasses"
+   ]
+  },
+  {
+   "id": "weather_time",
+   "name": "天气时间",
+   "strict": false,
+   "tags": [
+    "clear sky",
+    "daytime",
+    "heavy rain",
+    "night",
+    "noon",
+    "overcast",
+    "rain",
+    "snowing",
+    "starry sky",
+    "sunrise",
+    "sunset"
+   ]
+  },
+  {
+   "id": "season",
+   "name": "季节",
+   "strict": true,
+   "tags": [
+    "autumn",
+    "spring (season)",
+    "summer",
+    "winter"
+   ]
+  },
+  {
+   "id": "location_indoor",
+   "name": "室内外场景",
+   "strict": true,
+   "tags": [
+    "beach",
+    "bedroom",
+    "cafe interior",
+    "city street",
+    "classroom",
+    "forest",
+    "indoors",
+    "laboratory",
+    "library",
+    "outdoors",
+    "rooftop"
+   ]
+  },
+  {
+   "id": "art_style_core",
+   "name": "核心画风",
+   "strict": true,
+   "tags": [
+    "anime screencap style",
+    "flat color",
+    "greyscale",
+    "lineart",
+    "monochrome",
+    "oil painting (medium)",
+    "sketch",
+    "watercolor (medium)"
+   ]
+  },
+  {
+   "id": "mono_pair",
+   "name": "黑白成对",
+   "strict": true,
+   "tags": [
+    "full color",
+    "greyscale",
+    "limited palette",
+    "monochrome"
+   ]
+  },
+  {
+   "id": "light_main",
+   "name": "主光源方向",
+   "strict": true,
+   "tags": [
+    "backlighting",
+    "front lighting",
+    "rim lighting",
+    "side lighting"
+   ]
+  }
+ ]
+}

@@ -469,6 +469,81 @@
     }
   }
 
+  /* ---------------- 标签文件导入 ---------------- */
+  async function refreshFileList() {
+    const dir = $("#extDirInput").value.trim();
+    const r = await fetch("/taglib/api/tagfiles" + (dir ? `?dir=${encodeURIComponent(dir)}` : ""));
+    const data = await r.json();
+    if (!data.ok) return;
+    $("#builtinDir").textContent = data.builtin_dir;
+    const box = $("#fileList");
+    box.innerHTML = "";
+    for (const f of data.files || []) {
+      const row = document.createElement("div");
+      row.className = "file-row";
+      const src = f.source === "builtin" ? "内置" : "外置";
+      row.innerHTML = `<span class="f-src ${f.source}">${src}</span>
+        <span class="f-name">${f.file_name}</span>
+        <span class="muted">${(f.size / 1024).toFixed(1)} KB</span>`;
+      const btn = document.createElement("button");
+      btn.className = "btn small primary";
+      btn.textContent = "⬇ 导入";
+      btn.onclick = async () => {
+        btn.disabled = true; btn.textContent = "导入中…";
+        try {
+          const body = { path: f.path };
+          if (dir) body.external_dir = dir;
+          const res = await fetch("/taglib/api/tagfiles/import", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
+            body: JSON.stringify(body),
+          });
+          const out = await res.json();
+          if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+          toast(`✅ 新增 ${out.imported_new_tags} 个标签, 去重 ${out.duplicates_removed} 条 (分类包 ${out.imported_categories} 个)`);
+          btn.textContent = "已导入";
+          await load();
+        } catch (err) {
+          toast(`导入失败: ${err.message}`, true);
+          btn.disabled = false; btn.textContent = "⬇ 导入";
+        }
+      };
+      row.appendChild(btn);
+      box.appendChild(row);
+    }
+    if (!(data.files || []).length)
+      box.innerHTML = `<div class="empty">该目录没有 .md/.txt 文件</div>`;
+  }
+
+  function openFilesDialog() {
+    $("#filesDialog").classList.remove("hidden");
+    refreshFileList();
+  }
+
+  async function uploadMdFiles(files) {
+    for (const file of files) {
+      const text = await file.text();
+      const res = await fetch("/taglib/api/tagfiles/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
+        body: JSON.stringify({ text }),
+      });
+      const out = await res.json();
+      if (!res.ok || !out.ok) { toast(`${file.name}: ${out.error || "导入失败"}`, true); continue; }
+      toast(`✅ ${file.name}: 新增 ${out.imported_new_tags}, 去重 ${out.duplicates_removed}`);
+    }
+    await load();
+    refreshFileList();
+  }
+
+  $("#btnFiles").onclick = openFilesDialog;
+  $("#filesCancel").onclick = () => $("#filesDialog").classList.add("hidden");
+  $("#extDirInput").onchange = refreshFileList;
+  $("#mdFileInput").onchange = (e) => {
+    if (e.target.files.length) uploadMdFiles([...e.target.files]);
+    e.target.value = "";
+  };
+
   /* ---------------- bind UI ---------------- */
   $("#btnAddCat").onclick = addCategory;
   $("#btnAddSub").onclick = addSubcategory;

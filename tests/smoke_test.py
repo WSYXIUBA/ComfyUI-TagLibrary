@@ -197,6 +197,22 @@ def main() -> None:
     check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
           f"{only[0]}")
 
+    # ---- 防冲突随机: pinned 一个光源组标签, 另一个永远不该出现
+    lib3 = library.get_merged()
+    light_ids = [t["id"] for t, _ in TagLibraryNode._flat(lib3)
+                 if t.get("en") in ("backlighting", "rim lighting")]
+    if len(light_ids) == 2:
+        pin_mix = {"selected": [], "pinned": [light_ids[0]], "avoid_conflicts": True}
+        bad = 0
+        for s in range(40):
+            o = node.build(json.dumps(pin_mix), "random_mix", s, min_tags=4, max_tags=9)
+            parts_lower = [p.strip().lower() for p in o[0].split(",")]
+            if "backlighting" in parts_lower and "rim lighting" in parts_lower:
+                bad += 1
+        check("防冲突:同组不双出", bad == 0, f"{bad}/40 次同时出现")
+    else:
+        check("光源组标签存在", False, str(light_ids))
+
     clean_user_lib()
     print("\n== RESULT:", "ALL PASS ✅" if ok else "HAS FAILURES ❌")
     sys.exit(0 if ok else 1)

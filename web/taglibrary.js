@@ -18,6 +18,7 @@ const SETTING_PREFIX = "TagLibrary.";
 const SET_DEFAULT_MODE = SETTING_PREFIX + "default_mode";
 const SET_DEFAULT_NSFW = SETTING_PREFIX + "default_nsfw";
 const SET_PANEL_HEIGHT = SETTING_PREFIX + "panel_max_height";
+const SET_LANG = SETTING_PREFIX + "display_lang";
 
 let LIB_CACHE = null;
 let LIB_FETCHING = null;
@@ -107,6 +108,8 @@ export function buildPanelWidget(node, container) {
              title="NSFW 标签显示与抽取">
         <span>NSFW</span><span class="tl-switch tl-nsfw-sw"></span>
       </label>
+      <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
+      <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
       <button class="tl-btn icon" data-act="manager" title="打开标签库管理页">⚙</button>
     </div>
     <div class="tl-toolbar">
@@ -285,7 +288,7 @@ export function buildPanelWidget(node, container) {
           const chip = document.createElement("span");
           chip.className = "tl-chip" + (selSet.has(t.id) ? " sel" : "") + (t.nsfw ? " nsfw" : "");
           chip.style.setProperty("--c", clr);
-          chip.innerHTML = `${t.en}${t.zh ? `<span style="opacity:.55;font-size:10px">${t.zh}</span>` : ""}`;
+          chip.innerHTML = chipLabel(t);
           chip.title = `${t.en} · ${t.zh || ""}${t.aliases?.length ? "\n别名: " + t.aliases.join(", ") : ""}`;
           chip.onclick = () => toggleTag(t.id);
           wrap.appendChild(chip);
@@ -387,13 +390,49 @@ export function buildPanelWidget(node, container) {
     if (!Number.isNaN(h)) chipzoneEl.style.maxHeight = h + "px";
   }
 
+  /* ---------- 语言显示 ---------- */
+  function getLang() { return getSetting(SET_LANG, "bilingual"); }
+
+  function cycleLang() {
+    const order = ["bilingual", "en", "zh"];
+    const cur = getLang();
+    const next = order[(order.indexOf(cur) + 1) % order.length];
+    setSetting(SET_LANG, next);
+    container.querySelector(".tl-lang-btn").textContent =
+      next === "bilingual" ? "文A" : next === "en" ? "EN" : "中";
+    renderChips();
+    renderSelected();
+  }
+
+  function chipLabel(t) {
+    const lang = getLang();
+    if (lang === "en") return t.en;
+    if (lang === "zh") return (t.zh || t.en);
+    return `${t.en}${t.zh ? `<span style="opacity:.55;font-size:10px">${t.zh}</span>` : ""}`;
+  }
+
+  function renderConflictBtn() {
+    const on = getState(node).avoid_conflicts !== false;
+    const b = container.querySelector(".tl-conflict-btn");
+    b.textContent = on ? "🚫" : "⚔";
+    b.title = on ? "防冲突已开启 (随机时同组互斥) — 点击关闭"
+                 : "防冲突已关闭 — 点击开启";
+    b.style.opacity = on ? "1" : ".45";
+  }
+
   function renderAll() {
-    renderCats(); renderChips(); renderSelected(); renderNsfw();
+    renderCats(); renderChips(); renderSelected(); renderNsfw(); renderConflictBtn();
   }
 
   /* ---------- events ---------- */
   container.querySelector('[data-act="manager"]').onclick = () => openManagerDialog();
   container.querySelector('[data-act="roll"]').onclick = rollSeed;
+  container.querySelector('[data-act="lang"]').onclick = cycleLang;
+  container.querySelector('[data-act="conflict"]').onclick = () => {
+    const cur = getState(node).avoid_conflicts !== false;
+    setState(node, { avoid_conflicts: !cur });
+    renderConflictBtn();
+  };
   searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
   modeSeg.querySelectorAll("button").forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
   $(".tl-clearbtn").onclick = () => { setState(node, { selected: [], pinned: [] }); renderAll(); };
@@ -463,6 +502,18 @@ app.registerExtension({
       attrs: { min: 60, max: 600, step: 8 },
       defaultValue: 168,
     },
+    {
+      id: SET_LANG,
+      name: "标签库: 标签文字显示",
+      type: "combo",
+      options: [
+        { text: "双语 (英文+中文)", value: "bilingual" },
+        { text: "仅英文", value: "en" },
+        { text: "仅中文", value: "zh" },
+      ],
+      defaultValue: "bilingual",
+      tooltip: "输出永远只有英文; 这里只控制面板里标签按钮的显示文字",
+    },
   ],
 
   async beforeRegisterNodeDef(nodeType, nodeData) {
@@ -472,6 +523,21 @@ app.registerExtension({
     nodeType.prototype.onNodeCreated = function () {
       const r = onNodeCreated?.apply(this, arguments);
       const node = this;
+
+      // 面板随节点宽度自适应: 监听节点 resize, 同步最小宽度 + 重算高度
+      const PANEL_MIN_W = 400;
+      function syncPanelToNode() {
+        // 节点宽度过小则撑到面板需要的宽度; DOM widget 本身 width:100% 跟随节点
+        if (node.size[0] < PANEL_MIN_W) {
+          node.size[0] = PANEL_MIN_W;
+        }
+        node.setDirtyCanvas?.(true, true);
+      }
+      const origOnResize = nodeType.prototype.onResize;
+      nodeType.prototype.onResize = function (size) {
+        syncPanelToNode();
+        return origOnResize?.call(this, size);
+      };
 
       // 新节点应用默认模式设置
       setTimeout(() => {
@@ -505,9 +571,26 @@ app.registerExtension({
       const holder = document.createElement("div");
       holder.className = "taglib-widget-holder";
       const panelApi = buildPanelWidget(node, holder);
-      node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
+      const domW = node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
       node._taglibPanelApi = panelApi;
-      node.setSize([Math.max(node.size[0], 400), node.size[1] + 380]);
+
+      // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
+      domW.computeSize = function (width) {
+        const w = Math.max(width || 0, PANEL_MIN_W);
+        const h = Math.ceil(holder.getBoundingClientRect().height) || 420;
+        return [w, h];
+      };
+      // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
+      panelApi.onChange = () => {
+        if (node.onResize) node.onResize(node.size);
+        else node.setDirtyCanvas?.(true, true);
+        app.canvas?.setDirty?.(true, true);
+      };
+      const ro = new ResizeObserver(() => panelApi.onChange && panelApi.onChange());
+      ro.observe(holder);
+
+      syncPanelToNode();
+      node.setSize([Math.max(node.size[0], PANEL_MIN_W), node.size[1] + 420]);
 
       window.addEventListener("taglib-updated", () => panelApi.refresh());
       return r;
