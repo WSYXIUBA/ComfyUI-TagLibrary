@@ -35,6 +35,7 @@ class TagLibraryNode:
                 "mode": (["manual", "random_by_category", "random_mix"],),
                 "seed": ("INT", {"default": 0, "min": 0,
                                  "max": 0xffffffffffffffff}),
+                "nsfw_mode": (["off", "on", "only"],),
             },
             "optional": {
                 "prefix": ("STRING", {"forceInput": True,
@@ -91,11 +92,39 @@ class TagLibraryNode:
             return f"({text}:{w:g})"
         return text
 
+    @staticmethod
+    def _apply_nsfw(lib: dict, nsfw_mode: str) -> dict:
+        """off=剔除nsfw标签; on=全量; only=只要nsfw (分类含任一nsfw子分类即保留)。"""
+        if nsfw_mode == "on":
+            return lib
+        want = None if nsfw_mode == "only" else False
+
+        def keep_tag(t: dict) -> bool:
+            is_nsfw = bool(t.get("nsfw", False))
+            if want is None:
+                return is_nsfw
+            return is_nsfw == want
+
+        out_cats = []
+        for cat in lib.get("categories", []):
+            cat = dict(cat)
+            subs = []
+            for sub in cat.get("subcategories", []):
+                sub = dict(sub)
+                sub["tags"] = [t for t in sub.get("tags", []) if keep_tag(t)]
+                if sub["tags"] or not want:
+                    subs.append(sub)
+            cat["subcategories"] = subs
+            if subs or not want:
+                out_cats.append(cat)
+        return {**lib, "categories": out_cats}
+
     def build(
         self,
         selection_state: str,
         mode: str,
         seed: int,
+        nsfw_mode: str = "off",
         prefix: str | None = None,
         suffix: str | None = None,
         min_tags: int = 3,
@@ -108,6 +137,7 @@ class TagLibraryNode:
         pinned_required: bool = True,
     ):
         lib = library.get_merged()
+        lib = self._apply_nsfw(lib, nsfw_mode)
         try:
             state = json.loads(selection_state or "{}")
         except json.JSONDecodeError:
