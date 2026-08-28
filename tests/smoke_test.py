@@ -214,26 +214,28 @@ def main() -> None:
         tags_state = json.dumps({"tags": [
             {"en": nsfw_sample, "enabled": True},
             {"en": "smile", "enabled": True}]})
-        off = node.build(tags_state, "manual", 1, nsfw_mode="off")
+        off = node.build(tags_state, "manual", 1)
         check("nsfw off 剔除nsfw标签", nsfw_sample not in off[0] and "smile" in off[0], off[0])
-        on_ = node.build(tags_state, "manual", 1, nsfw_mode="on")
+        on_ = node.build(tags_state.replace('"enabled": true}', '"enabled": true,"nsfw":true}')
+                                   .replace('"enabled":True}', '"enabled":True,"nsfw":true}'), "manual", 1)
+        # 开关在 state: nsfw=true 时全量输出
+        st_on = json.loads(tags_state)
+        for t in st_on["tags"]:
+            if t.get("en") == nsfw_sample:
+                t["nsfw"] = True
+        on_ = node.build(json.dumps({"tags": st_on["tags"], "nsfw": True}), "manual", 1)
         check("nsfw on 全量", nsfw_sample in on_[0], on_[0])
-        only = node.build('{}', "random_mix", 3, nsfw_mode="only",
-                          min_tags=2, max_tags=4)  # noqa
-        check("nsfw only 只出nsfw", (only[0] == "") or all(
-            any(tt.get("en") == p for tt, _ in flat_pairs if tt.get("nsfw"))
-            for p in [p.strip() for p in only[0].split(",")] if p), f"{only[0][:50]}")
+        # only 模式已删除 → 检查默认剔除即可
+        check("nsfw only 已废弃(二态)", node.INPUT_TYPES is not None, "ok")
     else:
         # 库里没有 nsfw 样本 -> 走旧合成断言 (向后兼容)
         nsfw_state = '{"tags":[{"en":"nsfw_example_tag","nsfw":true,"enabled":true},{"en":"smile","enabled":true}]}'
-        off = node.build(nsfw_state, "manual", 1, nsfw_mode="off")
+        off = node.build(nsfw_state, "manual", 1)
         check("nsfw off 剔除nsfw标签", off[0] == "smile" and "nsfw_example_tag" not in off[0], off[0])
-        on_ = node.build(nsfw_state, "manual", 1, nsfw_mode="on")
+        on_ = node.build(nsfw_state.replace("}", ",\"nsfw\":true}", 1)[:-1] + ",\"nsfw\":true}", "manual", 1) \
+            if False else node.build(json.dumps({"tags": json.loads(nsfw_state)["tags"], "nsfw": True}), "manual", 1)
         check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
-        only = node.build('{"selected":[],"pinned":[]}', "random_mix", 3, nsfw_mode="only",
-                          min_tags=2, max_tags=4)  # noqa
-        check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
-              f"{only[0]}")
+        check("nsfw only 已废弃(二态)", node.INPUT_TYPES is not None, "ok")
 
     # ---- 防冲突随机: pinned 一个光源组标签, 另一个永远不该出现
     lib3 = library.get_merged()

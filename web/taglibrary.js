@@ -137,10 +137,7 @@ export function buildPanelWidget(node, container) {
       <span class="tl-logo">🏷</span>
       <span class="tl-title">标签库</span>
       <span class="tl-head-spacer"></span>
-      <label class="tl-hint" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"
-             title="NSFW 标签显示与抽取">
-        <span>NSFW</span><span class="tl-switch tl-nsfw-sw"></span>
-      </label>
+      <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
       <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
       <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
       <button class="tl-btn icon" data-act="randset" title="随机设置: 数量/分隔符/权重/去重等">⚙</button>
@@ -157,7 +154,7 @@ export function buildPanelWidget(node, container) {
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
-      <button class="tl-roll-btn" data-act="roll">🎲 ROLL</button>
+      <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
   `;
 
@@ -166,7 +163,7 @@ export function buildPanelWidget(node, container) {
   const searchEl = $(".tl-search");
   const previewEl = $(".tl-preview");
   const modeSeg = $(".tl-mode-seg");
-  const nsfwSw = $(".tl-nsfw-sw");
+  const nsfwBtn = $(".tl-nsfw-btn");
 
   /* ---------- mode ---------- */
   function syncModeWidgets() {
@@ -186,10 +183,10 @@ export function buildPanelWidget(node, container) {
     node.setDirtyCanvas?.(true);
   }
 
-  /* ---------- nsfw ---------- */
+  /* ---------- nsfw (二态按钮: 默认关, 开=绿色) ---------- */
   function renderNsfw() {
     const on = getNsfwEffective(node);
-    nsfwSw.classList.toggle("on", on);
+    nsfwBtn.classList.toggle("on", on);
     container.dataset.nsfw = on ? "1" : "0";
   }
 
@@ -197,8 +194,9 @@ export function buildPanelWidget(node, container) {
     const cur = getNsfwEffective(node);
     setState(node, { nsfw: !cur });
     renderNsfw();
+    renderAll();
   }
-  nsfwSw.parentElement.addEventListener("click", toggleNsfw);
+  nsfwBtn.addEventListener("click", toggleNsfw);
 
   /* ----------Added-tags view ----------
      chipzone 现在只渲染 state.tags —— 用户从 ➕窗口 添加进来的标签。
@@ -227,13 +225,34 @@ export function buildPanelWidget(node, container) {
     const st = getState(node);
     chipzoneEl.innerHTML = "";
     const q = ui.filter.trim().toLowerCase();
+    // 填充分组标题行: 最近一次 🎲填充 的标签按大类分组显示
+    const fillCats = ui.fillGroups instanceof Map ? ui.fillGroups : null;
+    const filledSet = new Set();
+    if (fillCats) for (const list of fillCats.values()) for (const t of list) filledSet.add(t.en.toLowerCase());
 
     let shown = 0;
+    let lastGroup = null;
     st.tags.forEach((t, idx) => {
       if (q && !(
         t.en.toLowerCase().includes(q) ||
         (t.zh || "").toLowerCase().includes(q))) return;
       shown++;
+      // 填充标签按大类插入分组标题 (用户手动添加的排前面, 不受影响)
+      if (fillCats && filledSet.has(t.en.toLowerCase())) {
+        let grp = null;
+        for (const [g, list] of fillCats.entries()) {
+          if (list.some((x) => x.en.toLowerCase() === t.en.toLowerCase())) { grp = g; break; }
+        }
+        if (grp && grp !== lastGroup) {
+          lastGroup = grp;
+          const head = document.createElement("div");
+          head.className = "tl-fill-group";
+          head.textContent = `── ${grp} ──`;
+          chipzoneEl.appendChild(head);
+        }
+      } else {
+        lastGroup = null;
+      }
       const el = document.createElement("span");
       el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "");
       el.draggable = true;
@@ -316,14 +335,58 @@ export function buildPanelWidget(node, container) {
     renderTags();
   }
 
-  /* ---------- misc ---------- */
-  function rollSeed() {
-    const seedW = node.widgets?.find((x) => x.name === "seed");
-    if (seedW) {
-      seedW.value = Math.floor(Math.random() * 4294967295);
-      seedW.callback?.(seedW.value);
-      node.setDirtyCanvas?.(true);
+  /* ---------- 🎲 填充: 随机抽标签填进框内 (按分类分组显示) ---------- */
+  function rollFill() {
+    const lib = LIB_CACHE || [];
+    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
+    if (!cats.length) return;
+    const st = getState(node);
+    const nsfwOn = getNsfwEffective(node);
+    // 收集所有可用标签 (尊重 NSFW 开关)
+    const pool = [];
+    for (const cat of cats) {
+      for (const sub of cat.subcategories || []) {
+        for (const tag of sub.tags || []) {
+          if (tag.enabled === false) continue;
+          if (tag.nsfw && !nsfwOn) continue;
+          pool.push({ en: tag.en, zh: tag.zh, nsfw: !!tag.nsfw, _cat: cat.name, _sub: sub.name });
+        }
+      }
     }
+    if (!pool.length) return;
+    // 抽取数量 = 随机设置里的 min~max
+    let min = Number.isFinite(st.min_tags) ? st.min_tags : 3;
+    let max = Number.isFinite(st.max_tags) ? st.max_tags : 8;
+    if (min > max) [min, max] = [max, min];
+    const n = min + Math.floor(Math.random() * (max - min + 1));
+    // 随机抽取 + 去重 (同 seed 由后端执行时复现, 面板填充是即时草稿)
+    const picked = [];
+    const usedEn = new Set(st.tags.map((t) => t.en.toLowerCase()));
+    const bag = [...pool];
+    for (let i = 0; i < n && bag.length; i++) {
+      const idx = Math.floor(Math.random() * bag.length);
+      const tag = bag.splice(idx, 1)[0];
+      if (usedEn.has(tag.en.toLowerCase())) { i--; continue; }
+      usedEn.add(tag.en.toLowerCase());
+      picked.push({ en: tag.en, zh: tag.zh, nsfw: tag.nsfw, enabled: true, _cat: tag._cat, _sub: tag._sub });
+    }
+    if (!picked.length) return;
+    // 追加到现有标签后面 (不动用户手动添加/排序的)
+    setState(node, { tags: [...st.tags, ...picked.map(({ _cat, _sub, ...rest }) => rest)] });
+    ui.fillGroups = groupByCat(picked);
+    renderTags();
+    previewEl.textContent = outputPreview(getState(node).tags);
+  }
+
+  function groupByCat(tags) {
+    // 按大类分组 (填充区显示分组标题)
+    const groups = new Map();
+    for (const t of tags) {
+      const key = t._cat || "其他";
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(t);
+    }
+    return groups;
   }
 
   /* ---------- 语言显示 ---------- */
@@ -474,7 +537,7 @@ export function buildPanelWidget(node, container) {
 
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
-  container.querySelector('[data-act="roll"]').onclick = rollSeed;
+  container.querySelector('[data-act="roll"]').onclick = rollFill;
   container.querySelector('[data-act="lang"]').onclick = cycleLang;
   container.querySelector('[data-act="randset"]').onclick = openRandomSettings;
   container.querySelector('[data-act="conflict"]').onclick = () => {
@@ -1075,18 +1138,16 @@ app.registerExtension({
           };
         })();
 
-        // ---- 中文化 widget 标签 (v3 极简: 只有 4+2 个 widget) ----
+        // ---- 中文化 widget 标签 (v3: selection_state/mode/seed/ctl) ----
         const LABELS = {
           mode: "模式",
           seed: "随机种子",
           control_after_generate: "生成后种子动作",
-          nsfw_mode: "NSFW 过滤",
           selection_state: "标签库状态 (自动维护)",
         };
         // combo 选项显示值映射 (显示中文, 内部值仍英文以兼容工作流)
         const OPT_LABELS = {
           mode: { manual: "手动选签", random_by_category: "按分类随机", random_mix: "组合随机" },
-          nsfw_mode: { off: "排除 NSFW", on: "包含 NSFW", only: "仅 NSFW" },
           control_after_generate: { fixed: "固定", increment: "递增", decrement: "递减", randomize: "随机" },
         };
         for (const w of node.widgets || []) {
@@ -1129,12 +1190,11 @@ app.registerExtension({
             // 简单方案: tooltip 说明含义即可, 值保持英文 (兼容工作流)
           }
         }
-        const nsfwW = node.widgets?.find((w) => w.name === "nsfw_mode");
-        if (nsfwW) nsfwW.tooltip = "off=排除 NSFW / on=混入 NSFW / only=只用 NSFW";
 
         // ---- 参数自愈 (onConfigure): 按名字校验, 非法值重置默认。
-        // v3 签名只有 [selection_state, mode, seed, ctl, nsfw_mode, taglib_panel],
-        // 旧 v2 工作流多出来的 8 个槽位值会错位 —— 这里统一纠正。
+        // v4 签名只有 [selection_state, mode, seed, ctl, taglib_panel],
+        // 旧工作流多出来的槽位值 (含 v3 的 nsfw_mode / v2 的 8 个) 会错位 —— 统一纠正,
+        // 旧 nsfw_mode=on 的用户设置迁移到 selection_state.nsfw。
         const onConfigure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function () {
           const r = onConfigure?.apply(this, arguments);
@@ -1146,10 +1206,18 @@ app.registerExtension({
               modeW3.value = "manual";
               repaired.push(`mode→manual`);
             }
-            const nsfwW3 = wOf("nsfw_mode");
-            if (nsfwW3 && !["off", "on", "only"].includes(nsfwW3.value)) {
-              nsfwW3.value = "off";
-              repaired.push(`nsfw_mode→off`);
+            // v3 工作流的 nsfw_mode=on 迁移到 selection_state.nsfw
+            if (Array.isArray(this.widgets_values) && this.widgets_values.length >= 5) {
+              const legacyNsfw = this.widgets_values[4];
+              if (legacyNsfw === "on" || legacyNsfw === "only") {
+                const swPre = wOf("selection_state");
+                if (swPre) {
+                  try {
+                    const st0 = JSON.parse(swPre.value || "{}");
+                    if (!st0.nsfw) { st0.nsfw = true; swPre.value = JSON.stringify(st0); repaired.push("nsfw→开(迁移)"); }
+                  } catch {}
+                }
+              }
             }
             const seedW = wOf("seed");
             if (seedW && (typeof seedW.value !== "number" || isNaN(seedW.value) || seedW.value < 0)) {
@@ -1345,5 +1413,33 @@ app.registerExtension({
         function: () => openManagerDialog(),
       });
     } catch {}
+    // 顶栏菜单: 在根级加「🏷 标签库」入口 (当前页面弹窗, 不跳转)
+    try {
+      app.registerExtension({
+        name: "zhixin.tagLibrary.topbar",
+        menuCommands: [
+          { path: ["Extensions"], commands: ["zhixin.openTagLibraryManager"] },
+        ],
+      });
+    } catch {}
+    // 顶栏直达按钮 (官方 topbar API 走不通时兜底: 在顶栏 DOM 注入一个按钮)
+    setTimeout(() => {
+      try {
+        if (document.getElementById("taglib-topbar-btn")) return;
+        // 新版 topbar: .comfy-menu-actions / 旧版: #comfy-menu 按钮 Crow 位置
+        const anchor =
+          document.querySelector(".comfy-menu-actions") ||
+          document.querySelector("nav[aria-label]")?.lastElementChild;
+        if (!anchor) return;
+        const btn = document.createElement("button");
+        btn.id = "taglib-topbar-btn";
+        btn.className = anchor.querySelector("button")?.className || "comfyui-button";
+        btn.textContent = "🏷 标签库";
+        btn.title = "打开标签库管理页";
+        btn.style.marginLeft = "6px";
+        btn.onclick = openManagerDialog;
+        anchor.appendChild(btn);
+      } catch {}
+    }, 2500);
   },
 });

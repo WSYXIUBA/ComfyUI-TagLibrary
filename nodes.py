@@ -47,8 +47,6 @@ class TagLibraryNode:
                 "seed": ("INT", {"default": 0, "min": 0,
                                  "max": 0xffffffffffffffff,
                                  "tooltip": "随机种子, 同 seed 同结果; 面板 🎲ROLL 换随机数"}),
-                "nsfw_mode": (["off", "on", "only"],
-                              {"tooltip": "off=排除 NSFW 标签 / on=普通+NSFW 混合 / only=只出 NSFW"}),
             },
             "optional": {
                 "prefix": ("STRING", {"forceInput": True,
@@ -102,17 +100,13 @@ class TagLibraryNode:
         return text
 
     @staticmethod
-    def _apply_nsfw(lib: dict, nsfw_mode: str) -> dict:
-        """off=剔除nsfw标签; on=全量; only=只要nsfw (分类含任一nsfw子分类即保留)。"""
-        if nsfw_mode == "on":
+    def _apply_nsfw(lib: dict, nsfw_on: bool) -> dict:
+        """nsfw_on=False 剔除 nsfw 标签; True 全量。"""
+        if nsfw_on:
             return lib
-        want = None if nsfw_mode == "only" else False
 
         def keep_tag(t: dict) -> bool:
-            is_nsfw = bool(t.get("nsfw", False))
-            if want is None:
-                return is_nsfw
-            return is_nsfw == want
+            return not bool(t.get("nsfw", False))
 
         out_cats = []
         for cat in lib.get("categories", []):
@@ -121,21 +115,17 @@ class TagLibraryNode:
             for sub in cat.get("subcategories", []):
                 sub = dict(sub)
                 sub["tags"] = [t for t in sub.get("tags", []) if keep_tag(t)]
-                if sub["tags"] or not want:
-                    subs.append(sub)
+                subs.append(sub)
             cat["subcategories"] = subs
-            if subs or not want:
-                out_cats.append(cat)
+            out_cats.append(cat)
         return {**lib, "categories": out_cats}
 
     def build(self, selection_state: str, mode: str, seed: int,
-              nsfw_mode: str = "off", prefix: str | None = None,
+              prefix: str | None = None,
               suffix: str | None = None, **legacy):
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
         if mode not in ("manual", "random_by_category", "random_mix"):
             mode = "manual"
-        if nsfw_mode not in ("off", "on", "only"):
-            nsfw_mode = "off"
         try:
             seed = int(seed)
         except (TypeError, ValueError):
@@ -185,7 +175,9 @@ class TagLibraryNode:
             pinned_required = True
 
         lib = library.get_merged()
-        lib = self._apply_nsfw(lib, nsfw_mode)
+        # NSFW 二态开关: 面板 nsfw=true → 显示/输出 NSFW 标签; false(默认) → 剔除
+        nsfw_on = bool(state.get("nsfw", False))
+        lib = self._apply_nsfw(lib, nsfw_on)
 
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
@@ -280,7 +272,7 @@ class TagLibraryNode:
             else:
                 by_id = {t.get("id"): t for t, _ in self._flat(lib)}
                 chosen = [by_id[i] for i in selected_ids if i in by_id]
-            if nsfw_mode == "off":
+            if not nsfw_on:
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
