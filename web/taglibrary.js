@@ -1058,6 +1058,56 @@ app.registerExtension({
         const nsfwW = node.widgets?.find((w) => w.name === "nsfw_mode");
         if (nsfwW) nsfwW.tooltip = "off=排除 NSFW / on=混入 NSFW / only=只用 NSFW";
 
+        // ---- 参数错位自愈 (onConfigure): 旧工作流的 widgets_values 是按位置存的,
+        // 插件历史上在 seed 后插入过 nsfw_mode、seed 还附带 control_after_generate,
+        // 位置对不上就会把 'comma'/数字 喂给错误的参数 => 校验报错。
+        // 这里在每次加载工作流 (configure) 后按名字做一次合法性检查, 错位就重置为默认。
+        const onConfigure = nodeType.prototype.onConfigure;
+        nodeType.prototype.onConfigure = function () {
+          const r = onConfigure?.apply(this, arguments);
+          try {
+            const WIDGET_DEFAULTS = {
+              mode: "manual",
+              nsfw_mode: "off",
+              separator: "comma",
+              min_tags: 3,
+              max_tags: 8,
+              use_weights_syntax: false,
+              dedupe: true,
+              pinned_required: true,
+            };
+            let repaired = [];
+            for (const [name, def] of Object.entries(WIDGET_DEFAULTS)) {
+              const w = this.widgets?.find((x) => x.name === name);
+              if (!w) continue;
+              let v = w.value;
+              let bad = false;
+              if (name === "mode") bad = !["manual", "random_by_category", "random_mix"].includes(v);
+              else if (name === "nsfw_mode") bad = !["off", "on", "only"].includes(v);
+              else if (name === "separator") bad = !["comma", "space"].includes(v);
+              else if (name === "min_tags" || name === "max_tags")
+                bad = typeof v !== "number" || isNaN(v) || v < 0 || v > 60;
+              else bad = typeof v !== "boolean";
+              if (bad) {
+                w.value = def;
+                repaired.push(`${name}=${JSON.stringify(v)}→${def}`);
+              }
+            }
+            // selection_state 必须是 JSON 对象
+            const sw = this.widgets?.find((x) => x.name === "selection_state");
+            if (sw && typeof sw.value === "string" && sw.value.trim()) {
+              try {
+                const p = JSON.parse(sw.value);
+                if (typeof p !== "object" || p === null) { sw.value = "{}"; repaired.push("selection_state→{}"); }
+              } catch { sw.value = "{}"; repaired.push("selection_state(broken)→{}"); }
+            }
+            if (repaired.length) {
+              console.warn("[TagLibrary] 检测到旧工作流参数错位, 已自动修复:", repaired.join(", "));
+            }
+          } catch {}
+          return r;
+        };
+
         const modeW = node.widgets?.find((w) => w.name === "mode");
         const defMode = getSetting(SET_DEFAULT_MODE, "manual");
         // 只对"新建节点"应用默认模式: widgets_values 还没被工作流填充时值为原型默认。
