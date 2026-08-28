@@ -1090,74 +1090,25 @@ app.registerExtension({
       const holder = document.createElement("div");
       holder.className = "taglib-widget-holder";
       const panelApi = buildPanelWidget(node, holder);
+      // ---- 官方高度机制 (前端 1.48+): DOM widget 通过 CSS 变量声明高度 ----
+      //   --comfy-widget-min-height : 节点最小高度下限 (面板永远完整可见)
+      //   --comfy-widget-height     : 期望高度, 支持 "60%" 百分比 = 按节点高度折算
+      // 前端 _arrangeWidgets 自动把节点剩余空间分给面板 (min~max 弹性),
+      // 不需要任何手动 onDraw/rAF 同步 —— 面板原生嵌入节点, 随节点缩放。
+      holder.style.setProperty("--comfy-widget-min-height", "160px");
+      holder.style.setProperty("--comfy-widget-height", "60%");
       const domW = node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
       node._taglibPanelApi = panelApi;
 
-      // 面板高度跟随节点: 新版前端不再触发 DOM widget 的 onDraw,
-      // 用 rAF 轻量同步循环 (同一帧有 dirty 才重算, 空闲时零开销)
-      domW._syncHeight = function () {
-        try {
-          const lastY = domW.last_y || w_lastY_fallback(node);
-          const available = node.size[1] - lastY - 6;
-          // 高度夹在 [90, available]: 节点缩小时面板收缩到贴合, 永不溢出节点
-          const h = Math.max(60, Math.min(Math.round(available), Math.round(holder.scrollHeight || available)));
-          if (holder.style.height !== h + "px") holder.style.height = h + "px";
-          // 同步面板自身高度标记, 让 computeSize 拿到真实值
-          holder.dataset.h = String(h);
-        } catch {}
-      };
-      if (!window.__taglibSync) {
-        window.__taglibSync = requestAnimationFrame(function __tlLoop() {
-          window.__taglibSync = requestAnimationFrame(__tlLoop);
-          try {
-            // 只在画布脏时同步 (node._dirty 或 canvas dirty 标记)
-            const g = window.app?.graph;
-            if (!g) return;
-            for (const nd of g._nodes) {
-              if (nd.type !== NODE_NAME || !nd.widgets) continue;
-              const dw = nd.widgets.find((x) => x.name === "taglib_panel");
-              if (!dw || !dw._syncHeight || !dw.last_y) continue;
-              dw._syncHeight();
-            }
-          } catch {}
-        });
-      }
-      function w_lastY_fallback(n) {
-        let y = 0;
-        for (const ww of n.widgets) {
-          if (ww === domW) break;
-          y += ww.computeSize ? ww.computeSize(n.size[0])[1] : 20;
-        }
-        return y + 30;
-      }
-
-      // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
-      // 同时它决定节点的最小可缩尺寸 —— 节点缩到不能再小时面板仍完全在节点内。
-      domW.computeSize = function (width) {
-        const w = Math.max(width || 0, 220);
-        // 高度: 读 holder 实际渲染高度 (DOM widget 自管高度), 缓存避免每帧 layout 抖动
-        let h = 120;
-        try {
-          const r = holder.getBoundingClientRect();
-          if (r.height > 40) h = r.height;
-        } catch {}
-        return [w, Math.max(h, 90)];
-      };
-      // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
+      // 内容变化(分类展开/chips 渲染)时让画布重排一次
       panelApi.onChange = () => {
-        if (node.onResize) node.onResize(node.size);
-        else node.setDirtyCanvas?.(true, true);
         app.canvas?.setDirty?.(true, true);
       };
-      const ro = new ResizeObserver(() => panelApi.onChange && panelApi.onChange());
-      ro.observe(holder);
 
       syncPanelToNode();
-      // ---- 默认尺寸: 出生即达到最小限制 (节点不会出现"比最小还小, 一拖就跳大"的问题) ----
-      // 前端给新节点的默认 size 往往偏小 (例如 [220, 130]); 这里一次性撑到面板可用大小,
-      // 之后用户可以自由缩小/放大 (LiteGraph 的最小值由 computeSize 决定)。
+      // ---- 新节点初始尺寸 (lora-manager 同款): 出生即达到面板可用大小 ----
       const minW = Math.max(PANEL_MIN_W, 320);
-      const minH = Math.max(PANEL_MIN_H, Math.round((domW.last_y || w_lastY_fallback(node)) + 200));
+      const minH = Math.max(PANEL_MIN_H, 340);
       if (node.size[0] < minW || node.size[1] < minH) {
         node.setSize([
           Math.max(node.size[0], minW),
