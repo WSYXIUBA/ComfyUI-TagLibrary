@@ -1215,6 +1215,44 @@ app.registerExtension({
       const holder = document.createElement("div");
       holder.className = "taglib-widget-holder";
       const panelApi = buildPanelWidget(node, holder);
+      // ---- 主题适配: ComfyUI 会在 html 上切 dark-theme 类; 内置主题共 6 套 ----
+      // arc/dark/github/solarized/nord = 深色, light = 浅色。
+      // 监听设置变化, 把当前主题 id 写到面板 data-theme 上, CSS 按此切换配色。
+      const applyTheme = () => {
+        try {
+          // 官方主题切换机制: html.dark-theme 类 (light 主题移除, 其余添加)。
+          // getSetting 只能拿到 id, 但部分主题 (github/nord/solarized) 都是深色,
+          // 用类存在性区分明暗最可靠; 具体配色差异再用 data-theme 细分。
+          let pid = getSetting("Comfy.ColorPalette", "dark");
+          if (typeof pid !== "string") pid = pid?.id || "dark";
+          const isLightTheme = !document.documentElement.classList.contains("dark-theme");
+          // holder 自身就是 .taglib-panel (buildPanelWidget 在 container 上加类)
+          const panel = holder.classList.contains("taglib-panel") ? holder : holder.querySelector(".taglib-panel");
+          if (panel) {
+            panel.dataset.theme = pid;
+            panel.classList.toggle("tl-light", isLightTheme);
+            // 同步面板内弹窗 (挑选器/设置) 的主题
+            for (const dlg of document.querySelectorAll("dialog.taglib-dialog, #taglib-picker-dialog")) {
+              dlg.dataset.theme = pid;
+              dlg.classList.toggle("tl-light", isLightTheme);
+            }
+          }
+        } catch {}
+      };
+      applyTheme();
+      try {
+        app.extensionManager?.settings?.addEventListener?.("change", (e) => {
+          if (e?.detail?.id === "Comfy.ColorPalette") { applyTheme(); }
+        });
+      } catch {}
+      // 设置页可能还没就绪, 延迟再刷一次; 并监听 html 主题类变化 (官方切主题就靠它)
+      setTimeout(applyTheme, 1500);
+      setTimeout(applyTheme, 4000);
+      try {
+        new MutationObserver(applyTheme).observe(document.documentElement, {
+          attributes: true, attributeFilter: ["class"],
+        });
+      } catch {}
       // ---- 官方高度机制 (前端 1.48+): DOM widget 通过 CSS 变量声明高度 ----
       //   --comfy-widget-min-height : 节点最小高度下限 (面板永远完整可见)
       //   --comfy-widget-height     : 期望高度, 支持 "60%" 百分比 = 按节点高度折算
