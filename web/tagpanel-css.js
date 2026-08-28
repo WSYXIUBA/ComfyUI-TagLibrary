@@ -121,6 +121,29 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
   padding: 4px 0 1px;
   user-select: none;
 }
+/* 手动模式分类范围栏 */
+.tl-catbar { padding: 4px 10px 2px; border-bottom: 1px solid var(--tl-border); background: rgba(255,255,255,.02); }
+.tl-catbar-row { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tl-catbar-row + .tl-catbar-row { margin-top: 4px; }
+.tl-fillmode {
+  border: 1px solid var(--tl-border); background: transparent; color: var(--tl-muted);
+  border-radius: 999px; padding: 2px 9px; font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.tl-fillmode:hover { color: var(--tl-text); border-color: rgba(84,160,255,.5); }
+.tl-fillmode.active {
+  background: linear-gradient(135deg, rgba(84,160,255,.3), rgba(84,160,255,.15));
+  border-color: rgba(84,160,255,.6); color: var(--tl-text);
+}
+.tl-catchip {
+  border: 1px solid var(--tl-border); background: rgba(255,255,255,.03); color: var(--tl-muted);
+  border-radius: 999px; padding: 2px 9px; font-size: 11px; cursor: pointer; transition: all .15s;
+}
+.tl-catchip:hover { color: var(--tl-text); }
+.tl-catchip.on {
+  background: linear-gradient(135deg, rgba(46,204,113,.28), rgba(46,204,113,.14));
+  border-color: rgba(46,204,113,.6); color: #7dffb0;
+}
+.tl-catbar-hint { font-size: 10px; color: var(--tl-muted); opacity: .7; }
 
 .tl-switch {
   position: relative; width: 30px; height: 16px; flex: none;
