@@ -370,11 +370,16 @@ class TagLibraryNode:
         text = sep.join(parts) if parts else ""
         # auto 模式: 把实际抽到的标签回传给前端面板 (executed 事件 → 面板自动刷新显示)
         if mode == "auto":
-            en_list = [str(t.get("en", "")) for t in _auto_chosen] if _auto_chosen else \
-                      [p.strip() for p in tags]
+            if _auto_chosen:
+                echo_items = [{"en": str(t.get("en", "")),
+                               "zh": t.get("zh") or "",
+                               "cat": t.get("_cat", ""),
+                               "enabled": True} for t in _auto_chosen]
+            else:
+                echo_items = [{"en": p.strip(), "zh": "", "cat": "", "enabled": True}
+                              for p in tags]
             return {
-                "ui": {"taglib_echo": json.dumps([{"en": en, "enabled": True} for en in en_list],
-                                                 ensure_ascii=False)},
+                "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False)},
                 "result": (text, text),
             }
         return (text, text)

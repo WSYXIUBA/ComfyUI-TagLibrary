@@ -29,28 +29,28 @@
               "en": "ultra detailed",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "超精细",
               "id": "quality.s1.ultra-detailed"
             },
             {
               "en": "highres",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "高清修复",
               "id": "quality.s1.highres"
             },
             {
               "en": "8k",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "8k画质",
               "id": "quality.s1.8k"
             },
             {
               "en": "extremely detailed",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "极致细节",
               "id": "quality.s1.extremely-detailed"
             }
           ]
@@ -63,28 +63,28 @@
               "en": "photorealistic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "照片级真实",
               "id": "quality.s2.photorealistic"
             },
             {
               "en": "realistic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "写实",
               "id": "quality.s2.realistic"
             },
             {
               "en": "hyperrealistic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "超写实",
               "id": "quality.s2.hyperrealistic"
             },
             {
               "en": "raw photo",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "原图质感",
               "id": "quality.s2.raw-photo"
             }
           ]
@@ -97,14 +97,14 @@
               "en": "sharp focus",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "锐利聚焦",
               "id": "quality.s3.sharp-focus"
             },
             {
               "en": "crisp details",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "细节清晰",
               "id": "quality.s3.crisp-details"
             },
             {
@@ -124,42 +124,42 @@
               "en": "lowres",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "低分辨率",
               "id": "quality.s4.lowres"
             },
             {
               "en": "worst quality",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "最差质量",
               "id": "quality.s4.worst-quality"
             },
             {
               "en": "low quality",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "低质量",
               "id": "quality.s4.low-quality"
             },
             {
               "en": "blurry",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "模糊",
               "id": "quality.s4.blurry"
             },
             {
               "en": "jpeg artifacts",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "压缩伪影",
               "id": "quality.s4.jpeg-artifacts"
             },
             {
               "en": "noise",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "噪点",
               "id": "quality.s4.noise"
             }
           ]
@@ -180,70 +180,35 @@
               "en": "1girl",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "单女孩",
               "id": "subject.s1.g1.1girl"
             },
             {
               "en": "1boy",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "单男孩",
               "id": "subject.s1.g1.1boy"
             },
             {
               "en": "2girls",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "双女孩",
               "id": "subject.s1.g1.2girls"
             },
             {
               "en": "solo",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "单人",
               "id": "subject.s1.g1.solo"
             },
             {
               "en": "multiple girls",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g1.multiple-girls"
-            },
-            {
-              "en": "1girl",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g1.1girl"
-            },
-            {
-              "en": "1boy",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g1.1boy"
-            },
-            {
-              "en": "2girls",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g1.2girls"
-            },
-            {
-              "en": "solo",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g1.solo"
-            },
-            {
-              "en": "multiple girls",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
+              "zh": "多女孩",
               "id": "subject.s1.g1.multiple-girls"
             }
           ]
@@ -256,7 +221,7 @@
               "en": "child",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "儿童",
               "id": "subject.s1.g2.child"
             },
             {
@@ -270,56 +235,21 @@
               "en": "young adult",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "青年",
               "id": "subject.s1.g2.young-adult"
             },
             {
               "en": "mature",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "熟龄",
               "id": "subject.s1.g2.mature"
             },
             {
               "en": "elderly",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g2.elderly"
-            },
-            {
-              "en": "child",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g2.child"
-            },
-            {
-              "en": "teen",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "少女",
-              "id": "subject.s1.g2.teen"
-            },
-            {
-              "en": "young adult",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g2.young-adult"
-            },
-            {
-              "en": "mature",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s1.g2.mature"
-            },
-            {
-              "en": "elderly",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
+              "zh": "老年",
               "id": "subject.s1.g2.elderly"
             }
           ]
@@ -353,63 +283,7 @@
               "en": "twin tails",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
-              "id": "subject.s2.g1.twin-tails"
-            },
-            {
-              "en": "black hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "黑发",
-              "id": "subject.s2.g1.black-hair"
-            },
-            {
-              "en": "blonde hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "金发",
-              "id": "subject.s2.g1.blonde-hair"
-            },
-            {
-              "en": "silver hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "银发",
-              "id": "subject.s2.g1.silver-hair"
-            },
-            {
-              "en": "pink hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "粉发",
-              "id": "subject.s2.g1.pink-hair"
-            },
-            {
-              "en": "long hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "长发",
-              "id": "subject.s2.g1.long-hair"
-            },
-            {
-              "en": "short hair",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "短发",
-              "id": "subject.s2.g1.short-hair"
-            },
-            {
-              "en": "ponytail",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "马尾",
-              "id": "subject.s2.g1.ponytail"
-            },
-            {
-              "en": "twin tails",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
+              "zh": "双马尾",
               "id": "subject.s2.g1.twin-tails"
             },
             {
@@ -444,7 +318,7 @@
         },
         {
           "id": "subject.s2.g2",
-          "name": "五官",
+          "name": "眼部",
           "tags": [
             {
               "en": "blue eyes",
@@ -471,42 +345,7 @@
               "en": "beautiful detailed eyes",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
-              "id": "subject.s2.g2.beautiful-detailed-eyes"
-            },
-            {
-              "en": "glowing eyes",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "发光眼",
-              "id": "subject.s2.g2.glowing-eyes"
-            },
-            {
-              "en": "blue eyes",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "蓝眼",
-              "id": "subject.s2.g2.blue-eyes"
-            },
-            {
-              "en": "red eyes",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "红瞳",
-              "id": "subject.s2.g2.red-eyes"
-            },
-            {
-              "en": "heterochromia",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "异色瞳",
-              "id": "subject.s2.g2.heterochromia"
-            },
-            {
-              "en": "beautiful detailed eyes",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
+              "zh": "精致美瞳",
               "id": "subject.s2.g2.beautiful-detailed-eyes"
             },
             {
@@ -548,50 +387,14 @@
               "en": "athletic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "健美",
               "id": "subject.s2.g3.athletic"
             },
             {
               "en": "muscular",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
-              "id": "subject.s2.g3.muscular"
-            },
-            {
-              "en": "slim",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "纤细",
-              "id": "subject.s2.g3.slim"
-            },
-            {
-              "en": "petite",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "娇小",
-              "id": "subject.s2.g3.petite"
-            },
-            {
-              "en": "curvy",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "丰满曲线",
-              "nsfw": true,
-              "id": "subject.s2.g3.curvy"
-            },
-            {
-              "en": "athletic",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
-              "id": "subject.s2.g3.athletic"
-            },
-            {
-              "en": "muscular",
-              "weight": 1.0,
-              "aliases": [],
-              "zh": "",
+              "zh": "肌肉",
               "id": "subject.s2.g3.muscular"
             }
           ]
@@ -639,7 +442,7 @@
               "en": "blush",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "脸红",
               "id": "subject.s3.blush"
             },
             {
@@ -5653,7 +5456,7 @@
         },
         {
           "id": "subject.extended",
-          "name": "扩展",
+          "name": "身体特征",
           "tags": [
             {
               "en": "nude",
@@ -6158,7 +5961,7 @@
               "en": "armor",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "盔甲",
               "id": "outfit.s1.armor"
             },
             {
@@ -6233,7 +6036,7 @@
               "en": "suit",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "西装",
               "id": "outfit.s3.suit"
             },
             {
@@ -6261,7 +6064,7 @@
               "en": "hat",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "帽子",
               "id": "outfit.s4.hat"
             },
             {
@@ -6303,7 +6106,7 @@
               "en": "bag",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "包袋",
               "id": "outfit.s4.bag"
             }
           ]
@@ -6338,7 +6141,7 @@
               "en": "lying",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "躺卧",
               "id": "pose.s1.lying"
             },
             {
@@ -6352,7 +6155,7 @@
               "en": "leaning",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "倚靠",
               "id": "pose.s1.leaning"
             }
           ]
@@ -6393,7 +6196,7 @@
               "en": "reaching out",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "伸手",
               "id": "pose.s2.reaching-out"
             }
           ]
@@ -6406,7 +6209,7 @@
               "en": "hand on hip",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "叉腰",
               "id": "pose.s3.hand-on-hip"
             },
             {
@@ -6427,7 +6230,7 @@
               "en": "holding object",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "持物",
               "id": "pose.s3.holding-object"
             }
           ]
@@ -6544,14 +6347,14 @@
               "en": "front view",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "正面视角",
               "id": "camerawork.s2.front-view"
             },
             {
               "en": "back view",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "背面视角",
               "id": "camerawork.s2.back-view"
             }
           ]
@@ -6564,7 +6367,7 @@
               "en": "depth of field",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "景深",
               "id": "camerawork.s3.depth-of-field"
             },
             {
@@ -6578,14 +6381,14 @@
               "en": "wide angle",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "广角",
               "id": "camerawork.s3.wide-angle"
             },
             {
               "en": "telephoto",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "长焦",
               "id": "camerawork.s3.telephoto"
             },
             {
@@ -6613,7 +6416,7 @@
               "en": "natural lighting",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "自然光",
               "id": "lighting.s1.natural-lighting"
             },
             {
@@ -6634,14 +6437,14 @@
               "en": "rim light",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "轮廓光",
               "id": "lighting.s1.rim-light"
             },
             {
               "en": "backlight",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "逆光",
               "id": "lighting.s1.backlight"
             },
             {
@@ -6727,14 +6530,14 @@
               "en": "moody",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "情绪感",
               "id": "lighting.s3.moody"
             },
             {
               "en": "dramatic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "戏剧化",
               "id": "lighting.s3.dramatic"
             },
             {
@@ -6748,14 +6551,14 @@
               "en": "high contrast",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "高对比",
               "id": "lighting.s3.high-contrast"
             },
             {
               "en": "dark atmosphere",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "暗调氛围",
               "id": "lighting.s3.dark-atmosphere"
             }
           ]
@@ -6804,7 +6607,7 @@
               "en": "cafe",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "咖啡馆",
               "id": "scene.s1.cafe"
             }
           ]
@@ -6817,14 +6620,14 @@
               "en": "street",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "街道",
               "id": "scene.s2.street"
             },
             {
               "en": "park",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "公园",
               "id": "scene.s2.park"
             },
             {
@@ -6846,14 +6649,14 @@
               "en": "cityscape",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "城市景观",
               "id": "scene.s2.cityscape"
             },
             {
               "en": "mountain",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "山岳",
               "id": "scene.s2.mountain"
             }
           ]
@@ -6873,28 +6676,28 @@
               "en": "fantasy landscape",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "幻想风景",
               "id": "scene.s3.fantasy-landscape"
             },
             {
               "en": "ruins",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "废墟",
               "id": "scene.s3.ruins"
             },
             {
               "en": "space station",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "太空站",
               "id": "scene.s3.space-station"
             },
             {
               "en": "castle",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "城堡",
               "id": "scene.s3.castle"
             }
           ]
@@ -6921,14 +6724,14 @@
               "en": "detailed background",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "精细背景",
               "id": "scene.s4.detailed-background"
             },
             {
               "en": "blurry background",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "背景虚化",
               "id": "scene.s4.blurry-background"
             }
           ]
@@ -6949,21 +6752,21 @@
               "en": "photorealistic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "照片级真实",
               "id": "stylemed.s1.photorealistic"
             },
             {
               "en": "realistic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "写实",
               "id": "stylemed.s1.realistic"
             },
             {
               "en": "cinematic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "电影感",
               "id": "stylemed.s1.cinematic"
             }
           ]
@@ -6976,28 +6779,28 @@
               "en": "anime style",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "动漫风",
               "id": "stylemed.s2.anime-style"
             },
             {
               "en": "manga style",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "漫画风",
               "id": "stylemed.s2.manga-style"
             },
             {
               "en": "cel shading",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "赛璐璐",
               "id": "stylemed.s2.cel-shading"
             },
             {
               "en": "illustration",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "插画",
               "id": "stylemed.s2.illustration"
             }
           ]
@@ -7010,28 +6813,28 @@
               "en": "oil painting",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "油画",
               "id": "stylemed.s3.oil-painting"
             },
             {
               "en": "watercolor",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "水彩",
               "id": "stylemed.s3.watercolor"
             },
             {
               "en": "ink drawing",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "水墨",
               "id": "stylemed.s3.ink-drawing"
             },
             {
               "en": "digital art",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "数字艺术",
               "id": "stylemed.s3.digital-art"
             }
           ]
@@ -7044,35 +6847,35 @@
               "en": "cyberpunk",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "赛博朋克",
               "id": "stylemed.s4.cyberpunk"
             },
             {
               "en": "steampunk",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "蒸汽朋克",
               "id": "stylemed.s4.steampunk"
             },
             {
               "en": "fantasy",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "奇幻",
               "id": "stylemed.s4.fantasy"
             },
             {
               "en": "sci-fi",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "科幻",
               "id": "stylemed.s4.sci-fi"
             },
             {
               "en": "horror",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "恐怖",
               "id": "stylemed.s4.horror"
             }
           ]
@@ -7093,42 +6896,42 @@
               "en": "metallic",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "金属",
               "id": "material.s1.metallic"
             },
             {
               "en": "glass",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "玻璃",
               "id": "material.s1.glass"
             },
             {
               "en": "fabric",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "织物",
               "id": "material.s1.fabric"
             },
             {
               "en": "leather",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "皮革",
               "id": "material.s1.leather"
             },
             {
               "en": "wet skin",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "湿身",
               "id": "material.s1.wet-skin"
             },
             {
               "en": "skin texture",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "皮肤质感",
               "id": "material.s1.skin-texture"
             }
           ]
@@ -7141,14 +6944,14 @@
               "en": "glowing",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "发光",
               "id": "material.s2.glowing"
             },
             {
               "en": "particles",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "粒子",
               "id": "material.s2.particles"
             },
             {
@@ -7162,7 +6965,7 @@
               "en": "light rays",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "光线",
               "id": "material.s2.light-rays"
             },
             {
@@ -7189,35 +6992,35 @@
               "en": "lace",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "蕾丝",
               "id": "material.s3.lace"
             },
             {
               "en": "frills",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "荷叶边",
               "id": "material.s3.frills"
             },
             {
               "en": "embroidery",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "刺绣",
               "id": "material.s3.embroidery"
             },
             {
               "en": "transparent",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "透明",
               "id": "material.s3.transparent"
             },
             {
               "en": "ripped",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "破损",
               "id": "material.s3.ripped"
             }
           ]
@@ -7238,42 +7041,42 @@
               "en": "bad anatomy",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "结构错误",
               "id": "negative.s1.bad-anatomy"
             },
             {
               "en": "deformed",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "畸形",
               "id": "negative.s1.deformed"
             },
             {
               "en": "extra limbs",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "多余肢体",
               "id": "negative.s1.extra-limbs"
             },
             {
               "en": "mutated hands",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "手部畸变",
               "id": "negative.s1.mutated-hands"
             },
             {
               "en": "poorly drawn hands",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "画手崩坏",
               "id": "negative.s1.poorly-drawn-hands"
             },
             {
               "en": "extra fingers",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "多指",
               "id": "negative.s1.extra-fingers"
             }
           ]
@@ -7286,69 +7089,69 @@
               "en": "ugly face",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "丑脸",
               "id": "negative.s2.ugly-face"
             },
             {
               "en": "deformed face",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "面部畸变",
               "id": "negative.s2.deformed-face"
             },
             {
               "en": "bad eyes",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "眼睛崩坏",
               "id": "negative.s2.bad-eyes"
             },
             {
               "en": "cross-eyed",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "对眼",
               "id": "negative.s2.cross-eyed"
             }
           ]
         },
         {
           "id": "negative.s3",
-          "name": "其他常见",
+          "name": "通用问题",
           "tags": [
             {
               "en": "watermark",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "水印",
               "id": "negative.s3.watermark"
             },
             {
               "en": "text",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "文字",
               "id": "negative.s3.text"
             },
             {
               "en": "signature",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "签名",
               "id": "negative.s3.signature"
             },
             {
               "en": "cropped",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "裁切",
               "id": "negative.s3.cropped"
             },
             {
               "en": "out of frame",
               "weight": 1.0,
               "aliases": [],
-              "zh": "",
+              "zh": "出框",
               "id": "negative.s3.out-of-frame"
             }
           ]
