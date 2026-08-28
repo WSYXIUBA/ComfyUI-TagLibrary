@@ -143,6 +143,7 @@ export function buildPanelWidget(node, container) {
       </label>
       <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
       <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
+      <button class="tl-btn icon" data-act="randset" title="随机设置: 数量/分隔符/权重/去重等">⚙</button>
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
     </div>
     <div class="tl-toolbar">
@@ -394,10 +395,88 @@ export function buildPanelWidget(node, container) {
     });
   }
 
+  /* ---------- 随机设置弹窗 (⚙): 数量/分隔符/权重/去重/必含/过滤词 ---------- */
+  function openRandomSettings() {
+    let old = document.getElementById("taglib-randset-dialog");
+    if (old) old.remove();
+    const st = getState(node);
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-randset-dialog";
+    dlg.style.cssText = "background:#161920;color:#e3e7ee;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:0;width:min(420px,92vw)";
+    const row = (label, inner, hint) => `
+      <div style="margin-bottom:14px">
+        <div style="font-size:12px;color:#8b93a5;margin-bottom:4px">${label}</div>
+        ${inner}
+        ${hint ? `<div style="font-size:11px;color:#6b7385;margin-top:3px">${hint}</div>` : ""}
+      </div>`;
+    dlg.innerHTML = `
+      <div style="padding:18px 20px">
+        <div style="font-size:15px;font-weight:600;margin-bottom:14px">⚙ 随机设置</div>
+        ${row("随机数量范围 (最少 ~ 最多)", `
+          <div style="display:flex;gap:8px;align-items:center">
+            <input id="rs-min" type="number" min="0" max="60" value="${st.min_tags ?? 3}"
+              style="width:80px;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>
+            <span style="color:#8b93a5">~</span>
+            <input id="rs-max" type="number" min="0" max="60" value="${st.max_tags ?? 8}"
+              style="width:80px;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>
+          </div>`, "每次随机在最少~最多之间抽几条 (组合随机模式下生效)")}
+        ${row("📌 钉选标签必含", `
+          <input id="rs-pinned" type="checkbox" ${st.pinned_required !== false ? "checked" : ""}
+            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
+          "开启后带 📌 的标签随机时一定出现")}
+        ${row("输出分隔符", `
+          <select id="rs-sep" style="background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px">
+            <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
+            <option value="space" ${st.separator === "space" ? "selected" : ""}>空格</option>
+          </select>`)}
+        ${row("权重语法 (tag:1.2)", `
+          <input id="rs-w" type="checkbox" ${st.use_weights_syntax ? "checked" : ""}
+            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
+          "开启后权重≠1 的标签输出为 (tag:权重) 形式")}
+        ${row("去重", `
+          <input id="rs-dd" type="checkbox" ${st.dedupe !== false ? "checked" : ""}
+            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
+          "相同标签只输出一次")}
+        ${row("组合随机过滤词", `
+          <input id="rs-search" type="text" value="${(st.search_text || "").replace(/"/g, "&quot;")}"
+            placeholder="留空 = 全库抽取"
+            style="width:100%;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>`,
+          "只从匹配的标签里随机 (支持中文/英文/别名)")}
+        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
+          <button id="rs-cancel" style="background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#aab3c5;padding:7px 16px;cursor:pointer">取消</button>
+          <button id="rs-ok" style="background:linear-gradient(135deg,#0071e3,#54a0ff);border:0;border-radius:8px;color:#fff;padding:7px 18px;cursor:pointer;font-weight:600">保存</button>
+        </div>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.showModal();
+    dlg.querySelector("#rs-cancel").onclick = () => dlg.close();
+    dlg.querySelector("#rs-ok").onclick = () => {
+      const num = (id, def) => {
+        const v = parseInt(dlg.querySelector(id).value);
+        return Number.isNaN(v) ? def : Math.min(60, Math.max(0, v));
+      };
+      let min = num("#rs-min", 3);
+      let max = num("#rs-max", 8);
+      if (min > max) [min, max] = [max, min];
+      setState(node, {
+        min_tags: min,
+        max_tags: max,
+        pinned_required: dlg.querySelector("#rs-pinned").checked,
+        separator: dlg.querySelector("#rs-sep").value,
+        use_weights_syntax: dlg.querySelector("#rs-w").checked,
+        dedupe: dlg.querySelector("#rs-dd").checked,
+        search_text: dlg.querySelector("#rs-search").value.trim(),
+      });
+      dlg.close();
+      renderTags();
+    };
+  }
+
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollSeed;
   container.querySelector('[data-act="lang"]').onclick = cycleLang;
+  container.querySelector('[data-act="randset"]').onclick = openRandomSettings;
   container.querySelector('[data-act="conflict"]').onclick = () => {
     const cur = getState(node).avoid_conflicts !== false;
     setState(node, { avoid_conflicts: !cur });
