@@ -286,6 +286,7 @@ class TagLibraryNode:
             pool_all = [(t, c, s) for c in lib.get("categories", [])
                         if c.get("name") not in exclude_keys
                         for s in c.get("subcategories", [])
+                        if f"{c.get('name')}/{s.get('name')}" not in exclude_keys  # 二级排除
                         for t in s.get("tags", [])
                         if t.get("enabled", True) and self._tag_matches(t, search_text)]
             if not pool_all:
@@ -372,8 +373,8 @@ class TagLibraryNode:
             en_list = [str(t.get("en", "")) for t in _auto_chosen] if _auto_chosen else \
                       [p.strip() for p in tags]
             return {
-                "ui": {"tags": json.dumps([{"en": en, "enabled": True} for en in en_list],
-                                          ensure_ascii=False)},
+                "ui": {"taglib_echo": json.dumps([{"en": en, "enabled": True} for en in en_list],
+                                                 ensure_ascii=False)},
                 "result": (text, text),
             }
         return (text, text)

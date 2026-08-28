@@ -374,13 +374,14 @@ export function buildPanelWidget(node, container) {
   }
 
   function buildSubPools(nsfwOn) {
-    // [{catName, subId, subName, tags:[...]}]  排除类目跳过
+    // [{catName, subId, subName, tags:[...]}]  排除类目跳过 (一级"大类" 或 二级"大类/子分类")
     const excluded = new Set(getState(node).exclude_categories || []);
     const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
     const subs = [];
     for (const cat of cats) {
       if (excluded.has(cat.name)) continue;
       for (const sub of cat.subcategories || []) {
+        if (excluded.has(`${cat.name}/${sub.name}`)) continue; // 二级排除同样不填充
         const tags = (sub.tags || []).filter((t) =>
           t.enabled !== false && (nsfwOn || !t.nsfw));
         if (tags.length) subs.push({ catName: cat.name, subId: sub.id, subName: sub.name, tags });
@@ -1564,11 +1565,14 @@ app.registerExtension({
           const detail = event?.detail || {};
           const nodeId = String(detail.node ?? "");
           const output = detail.output || {};
-          if (!output.tags) return;
+          if (!output.taglib_echo) return;
           const node = app.graph?.getNodeById?.(Number(nodeId))
             || app.graph?._nodes_by_id?.[nodeId];
           if (!node || node.type !== "TagLibraryNode") return;
-          const parsed = JSON.parse(output.tags);
+          // 服务器可能把 str 值拆成字符数组 → join 还原
+          const echoRaw = Array.isArray(output.taglib_echo)
+            ? output.taglib_echo.join("") : output.taglib_echo;
+          const parsed = JSON.parse(echoRaw);
           if (!Array.isArray(parsed)) return;
           const w = node.widgets?.find((x) => x.name === "selection_state");
           if (!w) return;
