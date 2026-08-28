@@ -439,8 +439,8 @@ export function buildPanelWidget(node, container) {
     setSetting(SET_LANG, next);
     container.querySelector(".tl-lang-btn").textContent =
       next === "bilingual" ? "文A" : next === "en" ? "EN" : "中";
-    renderChips();
-    renderSelected();
+    // 全量重渲染: 已选标签 chip、填充分组、预览全部跟随语言
+    renderAll();
   }
 
   function chipLabel(t) {
@@ -515,14 +515,6 @@ export function buildPanelWidget(node, container) {
     dlg.innerHTML = `
       <div style="padding:18px 20px">
         <div style="font-size:15px;font-weight:600;margin-bottom:14px">⚙ 随机设置</div>
-        ${row("随机数量范围 (最少 ~ 最多)", `
-          <div style="display:flex;gap:8px;align-items:center">
-            <input id="rs-min" type="number" min="0" max="60" value="${st.min_tags ?? 3}"
-              style="width:80px;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>
-            <span style="color:#8b93a5">~</span>
-            <input id="rs-max" type="number" min="0" max="60" value="${st.max_tags ?? 8}"
-              style="width:80px;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>
-          </div>`, "每次随机在最少~最多之间抽几条 (组合随机模式下生效)")}
         ${row("📌 钉选标签必含", `
           <input id="rs-pinned" type="checkbox" ${st.pinned_required !== false ? "checked" : ""}
             style="width:16px;height:16px;accent-color:#54a0ff"/>`,
@@ -554,16 +546,7 @@ export function buildPanelWidget(node, container) {
     dlg.showModal();
     dlg.querySelector("#rs-cancel").onclick = () => dlg.close();
     dlg.querySelector("#rs-ok").onclick = () => {
-      const num = (id, def) => {
-        const v = parseInt(dlg.querySelector(id).value);
-        return Number.isNaN(v) ? def : Math.min(60, Math.max(0, v));
-      };
-      let min = num("#rs-min", 3);
-      let max = num("#rs-max", 8);
-      if (min > max) [min, max] = [max, min];
       setState(node, {
-        min_tags: min,
-        max_tags: max,
         pinned_required: dlg.querySelector("#rs-pinned").checked,
         separator: dlg.querySelector("#rs-sep").value,
         use_weights_syntax: dlg.querySelector("#rs-w").checked,
@@ -831,6 +814,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
   }
 
   function matches(t) {
+    // NSFW 关 = 挑选器直接隐藏 nsfw 标签 (与填充/输出同规则)
+    if (t.nsfw && !getNsfwEffective(node)) return false;
     const q = ui.filter.trim().toLowerCase();
     if (!q) return true;
     return t.en.toLowerCase().includes(q) ||
