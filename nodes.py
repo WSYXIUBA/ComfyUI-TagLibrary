@@ -51,9 +51,11 @@ class TagLibraryNode:
                 "suffix": ("STRING", {"forceInput": True,
                                       "tooltip": "⬅️ 可选: 上游文本拼在标签后面"}),
                 "min_tags": ("INT", {"default": 3, "min": 0, "max": 60,
+                                     "control_after_generate": False,
                                      "tooltip": "随机模式最少输出标签数"}),
-                "max_tags": ("INT", {"default": 8, "min": 1, "max": 60,
-                                     "tooltip": "随机模式最多输出标签数"}),
+                "max_tags": ("INT", {"default": 8, "min": 0, "max": 60,
+                                     "control_after_generate": False,
+                                     "tooltip": "随机模式最多输出标签数 (实际取 min~max 随机, 0=只用 min_tags)"}),
                 "category_weights": ("STRING", {"default": "{}",
                                                 "tooltip": "分类权重 (面板自动维护)"}),
                 "search_text": ("STRING", {"default": "",
@@ -150,6 +152,37 @@ class TagLibraryNode:
         dedupe: bool = True,
         pinned_required: bool = True,
     ):
+        # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
+        if mode not in ("manual", "random_by_category", "random_mix"):
+            mode = "manual"
+        if nsfw_mode not in ("off", "on", "only"):
+            nsfw_mode = "off"
+        if separator not in ("comma", "space"):
+            separator = "comma"
+        try:
+            seed = int(seed)
+        except (TypeError, ValueError):
+            seed = 0
+        try:
+            min_tags = max(0, int(min_tags))
+        except (TypeError, ValueError):
+            min_tags = 3
+        try:
+            max_tags = max(0, int(max_tags))
+        except (TypeError, ValueError):
+            max_tags = 8
+        # max_tags=0 视为 "只用 min_tags"; lo==hi 时随机退化成固定数量
+        if max_tags == 0:
+            max_tags = max(min_tags, 1)
+        if min_tags > max_tags:
+            min_tags, max_tags = max_tags, min_tags
+        if not isinstance(use_weights_syntax, bool):
+            use_weights_syntax = bool(use_weights_syntax)
+        if not isinstance(dedupe, bool):
+            dedupe = True
+        if not isinstance(pinned_required, bool):
+            pinned_required = True
+
         lib = library.get_merged()
         lib = self._apply_nsfw(lib, nsfw_mode)
         try:
