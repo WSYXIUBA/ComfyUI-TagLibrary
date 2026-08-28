@@ -126,6 +126,7 @@ class TagLibraryNode:
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
         if mode not in ("manual", "auto"):
             mode = "auto" if mode == "random_mix" else "manual"  # 旧值迁移
+        _auto_chosen = None  # auto 模式抽取的原始标签 (回传前端面板用)
         try:
             seed = int(seed)
         except (TypeError, ValueError):
@@ -350,6 +351,7 @@ class TagLibraryNode:
                 rest = chosen_pairs
                 all_tags = fixed + rest if pinned_required else rest + fixed[:len(fixed)]
                 tags = [self._format_tag(t, use_weights_syntax) for t in all_tags]
+                _auto_chosen = all_tags
 
         # 去重保序
         if dedupe:
@@ -365,6 +367,15 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
+        # auto 模式: 把实际抽到的标签回传给前端面板 (executed 事件 → 面板自动刷新显示)
+        if mode == "auto":
+            en_list = [str(t.get("en", "")) for t in _auto_chosen] if _auto_chosen else \
+                      [p.strip() for p in tags]
+            return {
+                "ui": {"tags": json.dumps([{"en": en, "enabled": True} for en in en_list],
+                                          ensure_ascii=False)},
+                "result": (text, text),
+            }
         return (text, text)
 
     @staticmethod
