@@ -103,6 +103,24 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 }
 .tl-btn.primary:hover { box-shadow: 0 0 10px -2px rgba(84,160,255,.5); }
 .tl-btn.icon { padding: 3px 6px; }
+/* NSFW 二态按钮: 默认关(灰), 开=绿色 */
+.tl-nsfw-btn { padding: 3px 8px; font-weight: 600; letter-spacing: .3px; }
+.tl-nsfw-btn.on {
+  background: linear-gradient(135deg, rgba(46,204,113,.35), rgba(46,204,113,.18));
+  border-color: rgba(46,204,113,.65);
+  color: #7dffb0;
+}
+.tl-nsfw-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.55); }
+/* 🎲填充标签的分组标题 */
+.tl-fill-group {
+  flex-basis: 100%;
+  text-align: center;
+  font-size: 10px;
+  color: var(--tl-muted);
+  opacity: .85;
+  padding: 4px 0 1px;
+  user-select: none;
+}
 
 .tl-switch {
   position: relative; width: 30px; height: 16px; flex: none;
