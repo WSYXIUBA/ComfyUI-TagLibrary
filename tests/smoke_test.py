@@ -165,8 +165,8 @@ def main() -> None:
     check("空抽100%输出空", e[0] == "", repr(e[0]))
 
     # random_mix
-    mixA = node.build("{}", "random_mix", 123, min_tags=4, max_tags=6)
-    mixB = node.build("{}", "random_mix", 123, min_tags=4, max_tags=6)
+    mixA = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
+    mixB = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
     print(f"      sample(mix seed123): {mixA[0]}")
     check("mix 同seed复现", mixA[0] == mixB[0])
     cnt = len([p for p in mixA[0].split(", ") if p])
@@ -174,16 +174,17 @@ def main() -> None:
 
     # pinned 必含
     pin_state = {"selected": [], "pinned": ids_of("masterpiece")}
-    pinout = node.build(json.dumps(pin_state), "random_mix", 999, min_tags=2, max_tags=2)
+    pin_state["min_tags"] = 2; pin_state["max_tags"] = 2
+    pinout = node.build(json.dumps(pin_state), "random_mix", 999)
     check("pinned 必含", "masterpiece" in pinout[0], pinout[0])
 
     # 权重语法 (新 tags 结构)
-    swout = node.build('{"tags":[{"en":"masterpiece","enabled":true}]}',
-                       "manual", 42, use_weights_syntax=True)
+    swout = node.build('{"tags":[{"en":"masterpiece","enabled":true}],"use_weights_syntax":true}',
+                       "manual", 42)
     check("(tag:w) 语法", swout[0] == "(masterpiece:1.2)", swout[0])
 
     # prefix/suffix
-    pfx = node.build("{}", "manual", 1, prefix="1girl", suffix="roxy migurdia")
+    pfx = node.build("{}", "manual", 1, prefix="1girl", suffix="roxy migurdia")  # prefix/suffix 仍是正式参数
     check("prefix/suffix 拼接", pfx[0] == "1girl, roxy migurdia", pfx[0])
 
     # dedupe
@@ -192,7 +193,7 @@ def main() -> None:
     check("去重保序", dup[0] == "masterpiece, smile", dup[0])
 
     # 中文搜索命中别名
-    sf = node.build("{}", "random_mix", 11, search_text="月光", min_tags=1, max_tags=3)
+    sf = node.build('{"search_text":"月光","min_tags":1,"max_tags":3}', "random_mix", 11)
     check("中文搜索命中", "dappled moonlight" in sf[0], sf[0])
 
     # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
@@ -218,7 +219,7 @@ def main() -> None:
         on_ = node.build(tags_state, "manual", 1, nsfw_mode="on")
         check("nsfw on 全量", nsfw_sample in on_[0], on_[0])
         only = node.build('{}', "random_mix", 3, nsfw_mode="only",
-                          min_tags=2, max_tags=4)
+                          min_tags=2, max_tags=4)  # noqa
         check("nsfw only 只出nsfw", (only[0] == "") or all(
             any(tt.get("en") == p for tt, _ in flat_pairs if tt.get("nsfw"))
             for p in [p.strip() for p in only[0].split(",")] if p), f"{only[0][:50]}")
@@ -230,7 +231,7 @@ def main() -> None:
         on_ = node.build(nsfw_state, "manual", 1, nsfw_mode="on")
         check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
         only = node.build('{"selected":[],"pinned":[]}', "random_mix", 3, nsfw_mode="only",
-                          min_tags=2, max_tags=4)
+                          min_tags=2, max_tags=4)  # noqa
         check("nsfw only 只出nsfw", ("nsfw_example_tag" in only[0]) or (only[0] == ""),
               f"{only[0]}")
 
@@ -253,7 +254,7 @@ def main() -> None:
         pin_mix = {"selected": [], "pinned": [conflict_pair[0]], "avoid_conflicts": True}
         bad = 0
         for s in range(40):
-            o = node.build(json.dumps(pin_mix), "random_mix", s, min_tags=4, max_tags=9)
+            o = node.build(json.dumps({**pin_mix, "min_tags": 4, "max_tags": 9}), "random_mix", s)
             parts_lower = [p.strip().lower() for p in o[0].split(",")]
             pair_ens = [str(t.get("en","").lower()) for t,_ in TagLibraryNode._flat(lib3)
                         if t.get("id") in conflict_pair]

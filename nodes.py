@@ -30,6 +30,11 @@ class TagLibraryNode:
 
     @classmethod
     def INPUT_TYPES(cls):
+        """v3 极简签名: 节点参数区只留 [模式/种子/NSFW] + selection_state。
+
+        其余可调项 (数量/分隔符/权重语法/去重/过滤词/排除类目等) 全部收纳进
+        selection_state JSON, 由节点内面板管理 —— 单一数据源, 无重复参数。
+        """
         return {
             "required": {
                 "selection_state": ("STRING", {
@@ -50,26 +55,14 @@ class TagLibraryNode:
                                       "tooltip": "⬅️ 可选: 上游文本会拼在标签前面 (如质量词/LoRA触发词)"}),
                 "suffix": ("STRING", {"forceInput": True,
                                       "tooltip": "⬅️ 可选: 上游文本拼在标签后面"}),
-                "min_tags": ("INT", {"default": 3, "min": 0, "max": 60,
-                                     "control_after_generate": False,
-                                     "tooltip": "随机模式最少输出标签数"}),
-                "max_tags": ("INT", {"default": 8, "min": 0, "max": 60,
-                                     "control_after_generate": False,
-                                     "tooltip": "随机模式最多输出标签数 (实际取 min~max 随机, 0=只用 min_tags)"}),
-                "category_weights": ("STRING", {"default": "{}",
-                                                "tooltip": "分类权重 (面板自动维护)"}),
-                "search_text": ("STRING", {"default": "",
-                                           "tooltip": "random_mix 的过滤词 (支持中文/英文/别名)"}),
-                "separator": (["comma", "space"],
-                              {"tooltip": "comma=逗号分隔(推荐) / space=空格分隔"}),
-                "use_weights_syntax": ("BOOLEAN", {"default": False,
-                                                   "tooltip": "开启后带权重的标签输出为 (tag:1.2) 语法"}),
-                "dedupe": ("BOOLEAN", {"default": True,
-                                       "tooltip": "相同标签只输出一次"}),
-                "pinned_required": ("BOOLEAN", {"default": True,
-                                                "tooltip": "📌 钉选标签在随机模式下必定包含"}),
             },
         }
+
+    # 旧版参数 → 新 selection_state 字段的映射 (兼容旧工作流, 值并入 state 不丢)
+    LEGACY_OPT_KEYS = (
+        "min_tags", "max_tags", "category_weights", "search_text",
+        "separator", "use_weights_syntax", "dedupe", "pinned_required",
+    )
 
     # ------------------------------------------------------------------ engine
 
@@ -135,47 +128,55 @@ class TagLibraryNode:
                 out_cats.append(cat)
         return {**lib, "categories": out_cats}
 
-    def build(
-        self,
-        selection_state: str,
-        mode: str,
-        seed: int,
-        nsfw_mode: str = "off",
-        prefix: str | None = None,
-        suffix: str | None = None,
-        min_tags: int = 3,
-        max_tags: int = 8,
-        category_weights: str = "{}",
-        search_text: str = "",
-        separator: str = "comma",
-        use_weights_syntax: bool = False,
-        dedupe: bool = True,
-        pinned_required: bool = True,
-    ):
+    def build(self, selection_state: str, mode: str, seed: int,
+              nsfw_mode: str = "off", prefix: str | None = None,
+              suffix: str | None = None, **legacy):
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
         if mode not in ("manual", "random_by_category", "random_mix"):
             mode = "manual"
         if nsfw_mode not in ("off", "on", "only"):
             nsfw_mode = "off"
-        if separator not in ("comma", "space"):
-            separator = "comma"
         try:
             seed = int(seed)
         except (TypeError, ValueError):
             seed = 0
+
+        # ---- 解析面板状态 ----
         try:
-            min_tags = max(0, int(min_tags))
+            state = json.loads(selection_state or "{}")
+        except json.JSONDecodeError:
+            state = {}
+        if not isinstance(state, dict):
+            state = {}
+
+        # ---- v2 旧工作流兼容: 老参数若以 kwargs 传入, 并入 state (不丢用户设置) ----
+        for key in self.LEGACY_OPT_KEYS:
+            if key in legacy and legacy[key] is not None:
+                state.setdefault(key, legacy[key])
+
+        separator = state.get("separator", "comma")
+        if separator not in ("comma", "space"):
+            separator = "comma"
+        try:
+            min_tags = max(0, int(state.get("min_tags", 3)))
         except (TypeError, ValueError):
             min_tags = 3
         try:
-            max_tags = max(0, int(max_tags))
+            max_tags = max(0, int(state.get("max_tags", 8)))
         except (TypeError, ValueError):
             max_tags = 8
-        # max_tags=0 视为 "只用 min_tags"; lo==hi 时随机退化成固定数量
         if max_tags == 0:
             max_tags = max(min_tags, 1)
         if min_tags > max_tags:
             min_tags, max_tags = max_tags, min_tags
+        use_weights_syntax = bool(state.get("use_weights_syntax", False))
+        dedupe = bool(state.get("dedupe", True))
+        pinned_required = bool(state.get("pinned_required", True))
+        category_weights = state.get("category_weights", "{}")
+        if not isinstance(category_weights, str):
+            category_weights = "{}"
+        search_text = str(state.get("search_text", "") or "")
+        exclude_keys_state = state.get("exclude_categories") or []
         if not isinstance(use_weights_syntax, bool):
             use_weights_syntax = bool(use_weights_syntax)
         if not isinstance(dedupe, bool):
@@ -185,10 +186,6 @@ class TagLibraryNode:
 
         lib = library.get_merged()
         lib = self._apply_nsfw(lib, nsfw_mode)
-        try:
-            state = json.loads(selection_state or "{}")
-        except json.JSONDecodeError:
-            state = {}
 
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
