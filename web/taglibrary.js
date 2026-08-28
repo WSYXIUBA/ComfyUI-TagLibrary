@@ -1469,6 +1469,7 @@ app.registerExtension({
       domW.serialize = false;
       try { domW.serializeValue = () => undefined; } catch {}
       node._taglibPanelApi = panelApi;
+      node._taglibGetLibPath = () => LIB_PATH; // executed 回显用 (模块内 LIB_PATH)
 
       // 内容变化(分类展开/chips 渲染)时让画布重排一次
       panelApi.onChange = () => {
@@ -1556,5 +1557,36 @@ app.registerExtension({
     };
     setTimeout(injectTopbarBtn, 2500);
     setTimeout(injectTopbarBtn, 6000);
+    // ---- 自动模式队列回显: 监听 executed 事件, 把 auto 节点实际抽到的标签写回面板 ----
+    try {
+      app.api?.addEventListener?.("executed", (event) => {
+        try {
+          const detail = event?.detail || {};
+          const nodeId = String(detail.node ?? "");
+          const output = detail.output || {};
+          if (!output.tags) return;
+          const node = app.graph?.getNodeById?.(Number(nodeId))
+            || app.graph?._nodes_by_id?.[nodeId];
+          if (!node || node.type !== "TagLibraryNode") return;
+          const parsed = JSON.parse(output.tags);
+          if (!Array.isArray(parsed)) return;
+          const w = node.widgets?.find((x) => x.name === "selection_state");
+          if (!w) return;
+          const st = (() => { try { return JSON.parse(w.value || "{}"); } catch { return {}; } })();
+          // 只替换填充部分: 排除类目的保留标签 + 引擎抽到的标签
+          const excluded = new Set(st.exclude_categories || []);
+          const libPath = node._taglibGetLibPath?.() || new Map();
+          const kept = (st.tags || []).filter((t) => {
+            const p = libPath.get(String(t.en).toLowerCase());
+            return p && excluded.has(p[0]);
+          });
+          const have = new Set(kept.map((t) => t.en.toLowerCase()));
+          const fresh = parsed.filter((t) => t.en && !have.has(t.en.toLowerCase()));
+          w.value = JSON.stringify({ ...st, tags: [...kept, ...fresh] });
+          node._taglibPanelApi?.refresh?.();
+          node.setDirtyCanvas?.(true, true);
+        } catch {}
+      });
+    } catch {}
   },
 });

@@ -149,7 +149,9 @@ def main() -> None:
 
     # auto 模式: 总控制 1~3 → 每子分类抽 1~3 个 (35 子分类 → 数量远超旧 min/max)
     mixA = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    mixA = mixA["result"] if isinstance(mixA, dict) else mixA
     mixB = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    mixB = mixB["result"] if isinstance(mixB, dict) else mixB
     print(f"      sample(auto seed123): {mixA[0][:60]}...")
     check("auto 同seed复现", mixA[0] == mixB[0])
     cntA = len([p for p in mixA[0].split(", ") if p])
@@ -158,7 +160,8 @@ def main() -> None:
     # (大类下每个子分类都设 0~0, 模拟 UI 里用户给每个子分类单独设 0)
     q_subs = next(c for c in library.get_merged()["categories"] if c["name"] == "质量与技术")
     zero_ranges = {s["id"]: {"min": 0, "max": 0} for s in q_subs["subcategories"]}
-    mixC = node.build(json.dumps({"fill_master": False, "fill_sub_ranges": zero_ranges}), "auto", 7)
+    __r_mixC = node.build(json.dumps({"fill_master": False, "fill_sub_ranges": zero_ranges}), "auto", 7)
+    mixC = __r_mixC["result"] if isinstance(__r_mixC, dict) else __r_mixC
     flat_all = TagLibraryNode._flat(library.get_merged())
     # 只判定"仅在质量与技术"存在的独有词 (同名标签在别类出现属合法)
     q_only = {t.get("en","").lower() for t, cn in flat_all if cn == "质量与技术"}
@@ -169,7 +172,8 @@ def main() -> None:
     check("子分类独立0~0 跳过", not leaked_q, str(leaked_q[:3]))
 
     # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
-    scoped = node.build('{"min_tags":2,"max_tags":3,"exclude_categories":["人物主体","服装系统","姿势动作","构图镜头","场景环境","风格媒介","材质特效","负面标签库","质量与技术"]}', "auto", 42)
+    __r_scoped = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":2,"exclude_categories":["人物主体","服装系统","姿势动作","构图镜头","场景环境","风格媒介","材质特效","负面标签库","质量与技术"]}', "auto", 42)
+    scoped = __r_scoped["result"] if isinstance(__r_scoped, dict) else __r_scoped
     print(f"      sample(mix scoped): {scoped[0]}")
     lib_pairs = dict()
     for t, cname in TagLibraryNode._flat(library.get_merged()):
@@ -182,12 +186,14 @@ def main() -> None:
     legacy = node.build("{}", "random_by_category", 1)
     check("by_category 退化为 manual(不炸)", isinstance(legacy, tuple), "ok")
     legacy2 = node.build("{}", "random_mix", 1)
+    legacy2 = legacy2["result"] if isinstance(legacy2, dict) else legacy2
     check("random_mix 迁移为 auto(不炸)", isinstance(legacy2, tuple), "ok")
 
     # pinned 必含
     pin_state = {"selected": [], "pinned": ids_of("masterpiece")}
     pin_state["min_tags"] = 2; pin_state["max_tags"] = 2
-    pinout = node.build(json.dumps(pin_state), "auto", 999)
+    __r_pinout = node.build(json.dumps(pin_state), "auto", 999)
+    pinout = __r_pinout["result"] if isinstance(__r_pinout, dict) else __r_pinout
     check("pinned 必含", "masterpiece" in pinout[0], pinout[0])
 
     # 权重语法 (新 tags 结构)
@@ -205,7 +211,8 @@ def main() -> None:
     check("去重保序", dup[0] == "masterpiece, smile", dup[0])
 
     # 中文搜索命中别名
-    sf = node.build('{"search_text":"月光","min_tags":1,"max_tags":3}', "auto", 11)
+    __r_sf = node.build('{"search_text":"月光","fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 11)
+    sf = __r_sf["result"] if isinstance(__r_sf, dict) else __r_sf
     check("中文搜索命中", "dappled moonlight" in sf[0], sf[0])
 
     # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
@@ -269,7 +276,8 @@ def main() -> None:
                    "fill_master": True, "fill_master_min": 1, "fill_master_max": 1}
         bad = 0
         for s in range(40):
-            o = node.build(json.dumps({**pin_mix, "min_tags": 4, "max_tags": 9}), "auto", s)
+            o = node.build(json.dumps({**pin_mix, "fill_master": True, "fill_master_min": 1, "fill_master_max": 1}), "auto", s)
+            o = o["result"] if isinstance(o, dict) else o
             parts_lower = [p.strip().lower() for p in o[0].split(",")]
             pair_ens = [str(t.get("en","").lower()) for t,_ in TagLibraryNode._flat(lib3)
                         if t.get("id") in conflict_pair]
@@ -308,54 +316,42 @@ def main() -> None:
         libx = library.get_merged()
         subj_cat = next((c for c in libx["categories"] if c["name"] == "人物主体"), None)
         if subj_cat:
-            wg_sub = next((s for s in subj_cat["subcategories"] if s.get("groups")), None)
-            if wg_sub:
-                g0 = wg_sub["groups"][0]
-                g0_ens = {t.get("en", "").lower() for t in g0.get("tags", [])}
+            # 库已扁平化为二级: 直接取一个子分类做排除测试
+            wg_sub = subj_cat["subcategories"][1] if len(subj_cat["subcategories"]) > 1 else subj_cat["subcategories"][0]
+            sub_ens = {t.get("en", "").lower() for t in wg_sub.get("tags", [])}
 
-                # 1) 排除孙分类 (人物主体/外貌/发型发色 等)
-                exc_key = f"人物主体/{wg_sub['name']}/{g0['name']}"
-                state_x = json.dumps({"tags": [
-                    {"en": en, "enabled": True} for en in list(g0_ens)[:2]
-                ] + [{"en": "closed mouth", "enabled": True}],
-                    "exclude_categories": [exc_key]})
-                o1 = node.build(state_x, "manual", 1)
-                leaked1 = [en for en in g0_ens if en and en in o1[0].lower()]
-                check("排除孙类[" + g0["name"] + "]", not leaked1
-                      and "closed mouth" in o1[0], o1[0][:50])
+            # 1) 排除子分类 (人物主体/<名>)
+            state_x = json.dumps({"tags": [
+                {"en": en, "enabled": True} for en in list(sub_ens)[:2]
+            ] + [{"en": "closed mouth", "enabled": True}],
+                "exclude_categories": [f"人物主体/{wg_sub['name']}"]})
+            o1 = node.build(state_x, "manual", 1)
+            leaked1 = [en for en in sub_ens if en and en in o1[0].lower()]
+            check("排除子分类[" + wg_sub["name"] + "]", not leaked1
+                  and "closed mouth" in o1[0], o1[0][:50])
 
-                # 2) 排除子分类 (人物主体/外貌 = 该子分类全部 groups + tags)
-                sub_ens = {t.get("en", "").lower() for t in wg_sub.get("tags", [])}
-                state_y = json.dumps({"tags": [
-                    {"en": en, "enabled": True} for en in list(sub_ens)[:2]],
-                    "exclude_categories": [f"人物主体/{wg_sub['name']}"]})
-                o2 = node.build(state_y, "manual", 1)
-                leaked2 = [en for en in sub_ens if en and en in o2[0].lower()]
-                check("排除子类[" + wg_sub["name"] + "]", not leaked2, o2[0][:50])
-
-                # 3) 随机模式: 排除整个大类 -> 该大类零漏出
-                state_r = json.dumps({
-                    "min_tags": 5, "max_tags": 8,
-                    "exclude_categories": ["人物主体"]})
-                big_ens = {t.get("en", "").lower()
-                           for s in subj_cat.get("subcategories", [])
-                           for t in s.get("tags", [])}
-                # 同名标签可能存在于多个分类 (如 dappled moonlight 双处),
-                # 泄漏判定 = 输出含【只在人物主体】的独有标签
-                flat_all = TagLibraryNode._flat(library.get_merged())
-                exclusive = {t.get("en", "").lower()
-                             for t, cn in flat_all
-                             if cn == "人物主体"
-                             and not any(cn2 == "人物主体" or t2.get("en","").lower() == t.get("en","").lower()
-                                         and cn2 != "人物主体" for t2, cn2 in flat_all)}
-                leaked3 = []
-                for sd in range(20):
-                    o = node.build(state_r, "auto", sd)
-                    parts_l = [p.strip().lower() for p in o[0].split(",")]
-                    leaked3 += [en for en in exclusive if en and en in parts_l]
-                check("排除大类:随机零漏出", not leaked3, str(leaked3[:4]))
-            else:
-                check("存在 groups 的子分类", False)
+            # 2) 随机模式: 排除整个大类 -> 该大类零漏出
+            state_r = json.dumps({
+                "fill_master": True, "fill_master_min": 1, "fill_master_max": 1,
+                "exclude_categories": ["人物主体"]})
+            big_ens = {t.get("en", "").lower()
+                       for s in subj_cat.get("subcategories", [])
+                       for t in s.get("tags", [])}
+            # 同名标签可能存在于多个分类 (如 dappled moonlight 双处),
+            # 泄漏判定 = 输出含【只在人物主体】的独有标签
+            flat_all = TagLibraryNode._flat(library.get_merged())
+            exclusive = {t.get("en", "").lower()
+                         for t, cn in flat_all
+                         if cn == "人物主体"
+                         and not any(t2.get("en","").lower() == t.get("en","").lower()
+                                     and cn2 != "人物主体" for t2, cn2 in flat_all)}
+            leaked3 = []
+            for sd in range(20):
+                o = node.build(state_r, "auto", sd)
+                o = o["result"] if isinstance(o, dict) else o
+                parts_l = [p.strip().lower() for p in o[0].split(",")]
+                leaked3 += [en for en in exclusive if en and en in parts_l]
+            check("排除大类:随机零漏出", not leaked3, str(leaked3[:4]))
         else:
             check("存在人物主体大类", False)
     else:
