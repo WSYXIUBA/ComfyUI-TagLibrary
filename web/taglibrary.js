@@ -1033,20 +1033,35 @@ app.registerExtension({
       setTimeout(() => {
         // ---- 插槽中文化 (2进2出是什么) ----
         const IN_LABELS = {
-          prefix: "⬅️ 前置文本 (可选: 上游提示词, 拼在标签前面)",
-          suffix: "⬅️ 后置文本 (可选: 拼在标签后面)",
+          prefix: "⬅️ 前置文本",
+          suffix: "⬅️ 后置文本",
+        };
+        const IN_TOOLTIPS = {
+          prefix: "上游提示词会拼在标签前面 (如质量词/LoRA触发词)",
+          suffix: "上游文本会拼在标签后面",
         };
         const OUT_LABELS = {
-          positive: "➡️ 正面提示词 (连 CLIPTextEncode.text)",
-          tags_preview: "➡️ 标签预览 (接 Preview Text 节点查看实际输出)",
+          positive: "➡️ 正面提示词",
+          tags_preview: "➡️ 标签预览",
+        };
+        const OUT_TOOLTIPS = {
+          positive: "连接 CLIPTextEncode 的 text 输入",
+          tags_preview: "接 Preview Text 节点可查看实际输出内容",
         };
         for (let i = 0; i < (node.inputs || []).length; i++) {
           const inp = node.inputs[i];
-          if (IN_LABELS[inp.name]) inp.label = IN_LABELS[inp.name];
+          if (IN_LABELS[inp.name]) {
+            inp.label = IN_LABELS[inp.name];
+            if (IN_TOOLTIPS[inp.name]) inp.tooltip = IN_TOOLTIPS[inp.name];
+          }
         }
         for (let i = 0; i < (node.outputs || []).length; i++) {
           const out = node.outputs[i];
-          if (OUT_LABELS[out.name]) { out.label = OUT_LABELS[out.name]; out.localized_name = OUT_LABELS[out.name]; }
+          if (OUT_LABELS[out.name]) {
+            out.label = OUT_LABELS[out.name];
+            out.localized_name = OUT_LABELS[out.name];
+            if (OUT_TOOLTIPS[out.name]) out.tooltip = OUT_TOOLTIPS[out.name];
+          }
         }
         node.onConnectionsChange = (() => {
           const orig = node.onConnectionsChange;
@@ -1278,25 +1293,44 @@ app.registerExtension({
       };
 
       syncPanelToNode();
-      // ---- 声明面板所需尺寸, 让出生尺寸 = 最小限制 (拖拽不会再跳变) ----
-      // 高度: LGraphNode.computeSize 会 clamp 到 constructor.min_height
-      // 宽度: computeSize 宽度只由 slots/title 推算 (最小 210), 没有 min_width clamp。
-      // 前端 node.size 是 Float32Array backing 的 getter (boundingRect.size),
-      // setSize 会把值拷进 rect 再回调 onResize(sizeRef) —— 在回调里【就地】改
-      // sizeRef[0]/sizeRef[1] 即可钳制 (换引用/改 this.size 都会被渲染层覆盖)。
+      // ---- 出生尺寸 = 最小限制 (computeSize 的地板值) ----
+      // 高度: computeSize 会 clamp 到 constructor.min_height (DOM widget 不参与高度累计)
+      // 宽度: computeSize 宽度由 slots/title/widgets 推算 (比我们想要的 420 宽, 无妨 ——
+      //       它就是"最小限制", 出生=它, 用户点缩放/拖拽都不会再跳变)
+      // 前端 node.size 是 Float32Array backing 的 getter; prototype.onResize 就地改
+      // sizeRef 可以做硬下限钳制。
       node.constructor.min_height = Math.max(PANEL_MIN_H, 560);
       const minW = Math.max(PANEL_MIN_W, 420);
-      if (node.size[0] < minW || node.size[1] < node.constructor.min_height) {
-        node.setSize([
-          Math.max(node.size[0], minW),
-          Math.max(node.size[1], node.constructor.min_height),
-        ]);
-      }
       node.constructor.prototype.onResize = function (size) {
-        // sizeRef 是 node.boundingRect.size 的 subarray (引用语义, 就地改生效)
+        // sizeRef 是 node.boundingRect.size 的 subarray (引用语义, 就地改生效)。
+        // 下限 = computeSize() 即时值 → 与"点缩放按钮"完全一致, 拖拽不可能低于它。
+        try {
+          const cs = this.computeSize();
+          if (size[0] < cs[0]) size[0] = cs[0];
+          if (size[1] < cs[1]) size[1] = cs[1];
+        } catch {}
         if (size[0] < minW) size[0] = minW;
         if (size[1] < node.constructor.min_height) size[1] = node.constructor.min_height;
       };
+      // 出生即达到 computeSize() (含 min_height clamp) —— 与"点缩放按钮"的结果一致。
+      // 注意: onNodeCreated 时 widgets 可能还没 arrange, computeSize 会偏小;
+      // 所以再延迟补一次 (arrange 后 computeSize 变大, 出生尺寸跟着到位)。
+      const fitNow = node.computeSize();
+      node.setSize([
+        Math.max(fitNow[0], minW),
+        Math.max(fitNow[1], node.constructor.min_height),
+      ]);
+      setTimeout(() => {
+        try {
+          if (node.graph?._nodes?.includes(node)) {
+            const fit = node.computeSize();
+            node.setSize([
+              Math.max(fit[0], minW),
+              Math.max(fit[1], node.constructor.min_height),
+            ]);
+          }
+        } catch {}
+      }, 400);
 
       window.addEventListener("taglib-updated", () => panelApi.refresh());
       return r;
