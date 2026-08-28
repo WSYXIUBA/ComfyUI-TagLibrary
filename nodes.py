@@ -42,8 +42,8 @@ class TagLibraryNode:
                     "multiline": False,
                     "tooltip": "节点面板状态 (自动维护, 勿手改)",
                 }),
-                "mode": (["manual", "random_by_category", "random_mix"],
-                         {"tooltip": "manual=手动点选的启用标签 / random_by_category=每分类抽N条 / random_mix=全库混合抽取"}),
+                "mode": (["manual", "random_mix"],
+                         {"tooltip": "manual=手动选签+填充 / random_mix=全库随机组合"}),
                 "seed": ("INT", {"default": 0, "min": 0,
                                  "max": 0xffffffffffffffff,
                                  "tooltip": "随机种子, 同 seed 同结果; 面板 🎲ROLL 换随机数"}),
@@ -124,8 +124,8 @@ class TagLibraryNode:
               prefix: str | None = None,
               suffix: str | None = None, **legacy):
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
-        if mode not in ("manual", "random_by_category", "random_mix"):
-            mode = "manual"
+        if mode not in ("manual", "random_mix"):
+            mode = "manual"  # 旧 random_by_category 一律退回 manual
         try:
             seed = int(seed)
         except (TypeError, ValueError):
@@ -276,46 +276,14 @@ class TagLibraryNode:
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
-        elif mode == "random_by_category":
-            rng = random.Random(seed)
-            cat_conf = state.get("category_random") or {}
-            weights_cfg = self._safe_json(category_weights)
-            chosen_en: list[str] = []
-            for cat in lib.get("categories", []):
-                cid = cat.get("id")
-                conf = cat_conf.get(cid) or {}
-                if not conf.get("enabled"):
-                    continue
-                pool: list[dict] = []
-                for sub in cat.get("subcategories", []):
-                    for tag in sub.get("tags", []):
-                        if tag.get("enabled", True) and self._tag_matches(tag, search_text):
-                            pool.append(tag)
-                if not pool:
-                    continue
-                n = int(conf.get("count", 1))
-                empty_p = float(conf.get("empty_chance", 0)) / 100.0
-                if rng.random() < empty_p:
-                    continue
-                cat_weight = float(weights_cfg.get(cid, 1.0))
-                effective = max(0, round(n * max(cat_weight, 0.0)))
-                # 冲突避让: 先剔除与已选中同组的候选, 再抽
-                if avoid_conflicts:
-                    pool, _blocked = tagconflicts.filter_conflicts(pool, chosen_en)
-                effective = min(effective, len(pool))
-                if effective <= 0:
-                    continue
-                picks = rng.sample(pool, k=effective)
-                chosen_en.extend(str(p.get("en", "")).strip().lower() for p in picks)
-                tags.extend(self._format_tag(t, use_weights_syntax) for t in picks)
-
         else:  # random_mix
             rng = random.Random(seed)
             # 组合随机范围: state.mix_scope = ["大类名", ...] (空/缺省 = 全覆盖)
             mix_scope = {str(x) for x in (state.get("mix_scope") or [])}
             pool_all = [(t, c) for t, c in self._flat(lib)
                         if self._tag_matches(t, search_text)
-                        and (not mix_scope or c in mix_scope)]
+                        and (not mix_scope or c in mix_scope)
+                        and c not in exclude_keys]
             if not pool_all:
                 tags = []
             else:

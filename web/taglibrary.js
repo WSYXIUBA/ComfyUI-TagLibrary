@@ -92,9 +92,13 @@ function defaultState() {
     tags: [],
     // 排除的类目 (分类名数组): 随机模式抽不到, 手动启用标签也不输出
     exclude_categories: [],
-    category_random: {},
     avoid_conflicts: true,
     nsfw: null,
+    // 手动模式填充: fill_mode = missing(默认)/full/pinned_cat; fill_scope = 指定分类名数组
+    fill_mode: "missing",
+    fill_scope: [],
+    // 组合随机范围: 大类名数组 (空 = 全覆盖)
+    mix_scope: [],
   };
 }
 
@@ -147,10 +151,10 @@ export function buildPanelWidget(node, container) {
       <input class="tl-search" placeholder="🔍 过滤已添加的标签…" />
       <div class="tl-seg tl-mode-seg" title="工作模式">
         <button data-mode="manual">手动</button>
-        <button data-mode="random_by_category">按类随机</button>
         <button data-mode="random_mix">组合随机</button>
       </div>
     </div>
+    <div class="tl-catbar"></div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
@@ -165,13 +169,15 @@ export function buildPanelWidget(node, container) {
   const modeSeg = $(".tl-mode-seg");
   const nsfwBtn = $(".tl-nsfw-btn");
 
-  /* ---------- mode ---------- */
+  /* ---------- mode (二态: 手动 / 组合随机) ---------- */
   function syncModeWidgets() {
     const modeW = node.widgets?.find((x) => x.name === "mode");
-    if (modeW) ui.mode = modeW.value;
+    if (modeW) ui.mode = modeW.value === "random_by_category" ? "manual" : modeW.value;
     modeSeg.querySelectorAll("button").forEach((b) =>
       b.classList.toggle("active", b.dataset.mode === ui.mode));
+    // 组合随机: 标签框内容完全由引擎生成 → 隐藏手动区; 手动模式显示框+分类栏
     chipzoneEl.style.display = ui.mode === "random_mix" ? "none" : "";
+    renderCatBar();
   }
 
   function setMode(m) {
@@ -335,44 +341,77 @@ export function buildPanelWidget(node, container) {
     renderTags();
   }
 
-  /* ---------- 🎲 填充: 随机抽标签填进框内 (按分类分组显示) ---------- */
-  function rollFill() {
-    const lib = LIB_CACHE || [];
+  /* ---------- 🎲 填充 (手动模式): 按分类覆盖式随机填充 ---------- */
+  // 覆盖策略 st.fill_mode: "full"=全覆盖(按分类各抽) / "missing"=只填缺失分类 / "pinned_cat"=只填指定分类
+  // 分类范围 st.fill_scope: [大类名,...] (fill_mode=pinned_cat 时生效; 空=全部)
+  function buildPool(nsfwOn) {
     const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
-    if (!cats.length) return;
-    const st = getState(node);
-    const nsfwOn = getNsfwEffective(node);
-    // 收集所有可用标签 (尊重 NSFW 开关)
     const pool = [];
     for (const cat of cats) {
       for (const sub of cat.subcategories || []) {
         for (const tag of sub.tags || []) {
           if (tag.enabled === false) continue;
           if (tag.nsfw && !nsfwOn) continue;
-          pool.push({ en: tag.en, zh: tag.zh, nsfw: !!tag.nsfw, _cat: cat.name, _sub: sub.name });
+          pool.push({ en: tag.en, zh: tag.zh, nsfw: !!tag.nsfw, _cat: cat.name });
         }
       }
     }
-    if (!pool.length) return;
-    // 抽取数量 = 随机设置里的 min~max
-    let min = Number.isFinite(st.min_tags) ? st.min_tags : 3;
-    let max = Number.isFinite(st.max_tags) ? st.max_tags : 8;
-    if (min > max) [min, max] = [max, min];
-    const n = min + Math.floor(Math.random() * (max - min + 1));
-    // 随机抽取 + 去重 (同 seed 由后端执行时复现, 面板填充是即时草稿)
-    const picked = [];
-    const usedEn = new Set(st.tags.map((t) => t.en.toLowerCase()));
-    const bag = [...pool];
+    return pool;
+  }
+
+  function pickFrom(list, n, usedEn) {
+    const bag = [...list];
+    const out = [];
     for (let i = 0; i < n && bag.length; i++) {
       const idx = Math.floor(Math.random() * bag.length);
       const tag = bag.splice(idx, 1)[0];
       if (usedEn.has(tag.en.toLowerCase())) { i--; continue; }
       usedEn.add(tag.en.toLowerCase());
-      picked.push({ en: tag.en, zh: tag.zh, nsfw: tag.nsfw, enabled: true, _cat: tag._cat, _sub: tag._sub });
+      out.push(tag);
+    }
+    return out;
+  }
+
+  function rollFill() {
+    const st = getState(node);
+    const nsfwOn = getNsfwEffective(node);
+    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
+    if (!cats.length) return;
+    const pool = buildPool(nsfwOn);
+    if (!pool.length) return;
+    const usedEn = new Set(st.tags.map((t) => t.en.toLowerCase()));
+    const scope = new Set(st.fill_scope || []);
+    const fillMode = st.fill_mode || "missing"; // 默认: 填缺失
+    // 目标分类集合 (按策略筛)
+    let targetCats = cats;
+    if (fillMode === "pinned_cat" && scope.size) {
+      targetCats = cats.filter((c) => scope.has(c.name));
+    } else if (fillMode === "missing") {
+      // 已被手动标签覆盖的分类跳过
+      targetCats = cats.filter((c) => !st.tags.some((t) => {
+        const p = LIB_PATH.get(String(t.en).toLowerCase());
+        return p && p[0] === c.name;
+      }));
+    }
+    if (!targetCats.length) return;
+    let lo = Number.isFinite(st.min_tags) ? st.min_tags : 3;
+    let hi = Number.isFinite(st.max_tags) ? st.max_tags : 8;
+    if (lo > hi) [lo, hi] = [hi, lo];
+    // 每分类配额 = 总量均摊到目标分类 (至少 1), 让多个分类都有份
+    const perCat = Math.max(1, Math.floor(hi / targetCats.length));
+    const picked = [];
+    for (const cat of targetCats) {
+      if (picked.length >= hi) break;
+      const catPool = pool.filter((t) => t._cat === cat.name);
+      const quota = Math.min(catPool.length, perCat, hi - picked.length);
+      picked.push(...pickFrom(catPool, quota, usedEn));
+    }
+    // 不足 min 时从全库随机补齐 (跳过已用)
+    if (picked.length < lo) {
+      picked.push(...pickFrom(pool, lo - picked.length, usedEn));
     }
     if (!picked.length) return;
-    // 追加到现有标签后面 (不动用户手动添加/排序的)
-    setState(node, { tags: [...st.tags, ...picked.map(({ _cat, _sub, ...rest }) => rest)] });
+    setState(node, { tags: [...st.tags, ...picked.map(({ _cat, ...rest }) => rest)] });
     ui.fillGroups = groupByCat(picked);
     renderTags();
     previewEl.textContent = outputPreview(getState(node).tags);
@@ -387,6 +426,48 @@ export function buildPanelWidget(node, container) {
       groups.get(key).push(t);
     }
     return groups;
+  }
+
+  /* ---------- 分类范围栏 (手动模式): 覆盖策略 + 可点击分类胶囊 ---------- */
+  function renderCatBar() {
+    const bar = container.querySelector(".tl-catbar");
+    if (!bar) return;
+    if (ui.mode !== "manual") { bar.style.display = "none"; return; }
+    bar.style.display = "";
+    const st = getState(node);
+    const fillMode = st.fill_mode || "missing";
+    const scope = new Set(st.fill_scope || []);
+    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
+    const MODES = [
+      ["missing", "填缺失", "只随机填充你还没填的分类 (手动已填的分类跳过)"],
+      ["full", "全覆盖", "无视已填, 每个分类都随机抽一组"],
+      ["pinned_cat", "指定分类", "只填充下面选中的分类"],
+    ];
+    bar.innerHTML =
+      `<div class="tl-catbar-row">` +
+      MODES.map(([id, label, tip]) =>
+        `<button class="tl-fillmode${fillMode === id ? " active" : ""}" data-fm="${id}" title="${tip}">${label}</button>`
+      ).join("") +
+      `</div>` +
+      `<div class="tl-catbar-row tl-catchips">` +
+      (fillMode === "pinned_cat"
+        ? cats.map((c) =>
+            `<button class="tl-catchip${scope.has(c.name) ? " on" : ""}" data-cat="${c.name}" title="点击选择/取消该分类的填充">${c.name}</button>`
+          ).join("")
+        : `<span class="tl-catbar-hint">🎲 填充会自动按分类分组填入</span>`) +
+      `</div>`;
+    bar.querySelectorAll(".tl-fillmode").forEach((b) => {
+      b.onclick = () => { setState(node, { fill_mode: b.dataset.fm }); renderCatBar(); };
+    });
+    bar.querySelectorAll(".tl-catchip").forEach((b) => {
+      b.onclick = () => {
+        const cur = new Set(getState(node).fill_scope || []);
+        if (cur.has(b.dataset.cat)) cur.delete(b.dataset.cat);
+        else cur.add(b.dataset.cat);
+        setState(node, { fill_scope: [...cur] });
+        renderCatBar();
+      };
+    });
   }
 
   /* ---------- 语言显示 ---------- */
@@ -420,7 +501,7 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderConflictBtn();
+    renderTags(); renderNsfw(); renderConflictBtn(); renderCatBar();
   }
 
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
@@ -505,6 +586,15 @@ export function buildPanelWidget(node, container) {
             placeholder="留空 = 全库抽取"
             style="width:100%;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>`,
           "只从匹配的标签里随机 (支持中文/英文/别名)")}
+        ${row("组合随机范围分类", `
+          <div id="rs-mixscope" style="display:flex;flex-wrap:wrap;gap:4px">
+            ${(LIB_CACHE?.categories || []).map((c) => {
+              const on = (st.mix_scope || []).includes(c.name);
+              return `<button type="button" data-cat="${c.name}" class="tl-catchip${on ? " on" : ""}"
+                style="padding:2px 9px;font-size:11px">${c.name}</button>`;
+            }).join("")}
+          </div>`,
+          "不选任何分类 = 全覆盖; 点选后只在选中分类里随机组合")}
         <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
           <button id="rs-cancel" style="background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#aab3c5;padding:7px 16px;cursor:pointer">取消</button>
           <button id="rs-ok" style="background:linear-gradient(135deg,#0071e3,#54a0ff);border:0;border-radius:8px;color:#fff;padding:7px 18px;cursor:pointer;font-weight:600">保存</button>
@@ -513,6 +603,10 @@ export function buildPanelWidget(node, container) {
     document.body.appendChild(dlg);
     dlg.showModal();
     dlg.querySelector("#rs-cancel").onclick = () => dlg.close();
+    // 范围分类胶囊即时切换
+    dlg.querySelectorAll("#rs-mixscope .tl-catchip").forEach((b) => {
+      b.onclick = () => b.classList.toggle("on");
+    });
     dlg.querySelector("#rs-ok").onclick = () => {
       const num = (id, def) => {
         const v = parseInt(dlg.querySelector(id).value);
@@ -521,6 +615,8 @@ export function buildPanelWidget(node, container) {
       let min = num("#rs-min", 3);
       let max = num("#rs-max", 8);
       if (min > max) [min, max] = [max, min];
+      const mixScope = [...dlg.querySelectorAll("#rs-mixscope .tl-catchip.on")]
+        .map((b) => b.dataset.cat);
       setState(node, {
         min_tags: min,
         max_tags: max,
@@ -529,6 +625,7 @@ export function buildPanelWidget(node, container) {
         use_weights_syntax: dlg.querySelector("#rs-w").checked,
         dedupe: dlg.querySelector("#rs-dd").checked,
         search_text: dlg.querySelector("#rs-search").value.trim(),
+        mix_scope: mixScope,
       });
       dlg.close();
       renderTags();
@@ -1147,7 +1244,7 @@ app.registerExtension({
         };
         // combo 选项显示值映射 (显示中文, 内部值仍英文以兼容工作流)
         const OPT_LABELS = {
-          mode: { manual: "手动选签", random_by_category: "按分类随机", random_mix: "组合随机" },
+          mode: { manual: "手动", random_mix: "组合随机", random_by_category: "手动" },
           control_after_generate: { fixed: "固定", increment: "递增", decrement: "递减", randomize: "随机" },
         };
         for (const w of node.widgets || []) {
@@ -1202,7 +1299,11 @@ app.registerExtension({
             let repaired = [];
             const wOf = (name) => this.widgets?.find((x) => x.name === name);
             const modeW3 = wOf("mode");
-            if (modeW3 && !["manual", "random_by_category", "random_mix"].includes(modeW3.value)) {
+            if (modeW3 && modeW3.value === "random_by_category") {
+              // 旧三态模式: 按类随机 → 手动 (用户改用 🎲填充 + 分类范围栏)
+              modeW3.value = "manual";
+              repaired.push(`按类随机→手动`);
+            } else if (modeW3 && !["manual", "random_mix"].includes(modeW3.value)) {
               modeW3.value = "manual";
               repaired.push(`mode→manual`);
             }

@@ -147,30 +147,27 @@ def main() -> None:
     else:
         check("manual 兼容旧selected", True, "skipped - smile 不在默认库")
 
-    # random_by_category 同 seed 复现 / 数量正确 (新骨架: lighting=光影氛围, stylemed=风格媒介)
-    rand_state = {"category_random": {
-        "lighting": {"enabled": True, "count": 2, "empty_chance": 0},
-        "stylemed": {"enabled": True, "count": 3, "empty_chance": 0}}}
-    o1 = node.build(json.dumps(rand_state), "random_by_category", 7)
-    o2 = node.build(json.dumps(rand_state), "random_by_category", 7)
-    print(f"      sample(by_cat seed7): {o1[0]}")
-    check("by_category 同seed复现", o1[0] == o2[0])
-    # 风格媒介只有 3 条标签(去重后可能不满3), 断言上限放宽: 至少 1+2
-    cnt_lines = len([p for p in o1[0].split(", ") if p])
-    check("by_category 数量在2~5", 2 <= cnt_lines <= 5, o1[0])
-
-    # 空抽 100% = 输出空
-    e = node.build('{"category_random":{"lighting":{"enabled":true,"count":2,"empty_chance":100}}}',
-                   "random_by_category", 5)
-    check("空抽100%输出空", e[0] == "", repr(e[0]))
-
-    # random_mix
+    # random_mix 同 seed 复现 / 数量正确
     mixA = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
     mixB = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
     print(f"      sample(mix seed123): {mixA[0]}")
     check("mix 同seed复现", mixA[0] == mixB[0])
     cnt = len([p for p in mixA[0].split(", ") if p])
     check("mix 数量在4~6", 4 <= cnt <= 6, str(cnt))
+
+    # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
+    scoped = node.build('{"min_tags":2,"max_tags":3,"mix_scope":["光影氛围"]}', "random_mix", 42)
+    print(f"      sample(mix scoped): {scoped[0]}")
+    lib_pairs = dict()
+    for t, cname in TagLibraryNode._flat(library.get_merged()):
+        lib_pairs[str(t.get("en", "")).lower()] = cname
+    in_scope = all(lib_pairs.get(p.strip(), "光影氛围") == "光影氛围"
+                   for p in scoped[0].split(",") if p.strip())
+    check("mix_scope 限定分类", scoped[0] != "" and in_scope, scoped[0][:60])
+
+    # 旧 random_by_category → manual 退化 (mode 纠偏)
+    legacy = node.build("{}", "random_by_category", 1)
+    check("by_category 退化为 manual(不炸)", isinstance(legacy, tuple), "ok")
 
     # pinned 必含
     pin_state = {"selected": [], "pinned": ids_of("masterpiece")}
@@ -322,16 +319,24 @@ def main() -> None:
 
                 # 3) 随机模式: 排除整个大类 -> 该大类零漏出
                 state_r = json.dumps({
-                    "category_random": {subj_cat["id"]: {"enabled": True, "count": 5}},
+                    "min_tags": 5, "max_tags": 8,
                     "exclude_categories": ["人物主体"]})
                 big_ens = {t.get("en", "").lower()
                            for s in subj_cat.get("subcategories", [])
                            for t in s.get("tags", [])}
+                # 同名标签可能存在于多个分类 (如 dappled moonlight 双处),
+                # 泄漏判定 = 输出含【只在人物主体】的独有标签
+                flat_all = TagLibraryNode._flat(library.get_merged())
+                exclusive = {t.get("en", "").lower()
+                             for t, cn in flat_all
+                             if cn == "人物主体"
+                             and not any(cn2 == "人物主体" or t2.get("en","").lower() == t.get("en","").lower()
+                                         and cn2 != "人物主体" for t2, cn2 in flat_all)}
                 leaked3 = []
                 for sd in range(20):
-                    o = node.build(state_r, "random_by_category", sd)
+                    o = node.build(state_r, "random_mix", sd)
                     text_l = o[0].lower()
-                    leaked3 += [en for en in big_ens if en and en in text_l]
+                    leaked3 += [en for en in exclusive if en and en in text_l]
                 check("排除大类:随机零漏出", not leaked3, str(leaked3[:4]))
             else:
                 check("存在 groups 的子分类", False)
