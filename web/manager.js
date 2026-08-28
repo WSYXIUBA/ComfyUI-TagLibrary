@@ -203,16 +203,17 @@
     });
   }
 
+  /* ---------- 标签 chip 流 (一行多枚, 双显, 绿框/红框, 右键编辑菜单) ---------- */
   function renderTable() {
-    const tbody = $("#tagRows");
-    tbody.innerHTML = "";
+    const flow = $("#tagFlow");
+    flow.innerHTML = "";
     const sub = subById(activeSubId);
     if (!sub) { $("#emptyHint").classList.remove("hidden"); return; }
     $("#emptyHint").classList.add("hidden");
 
     const tags = (sub.tags || []).filter(tagHits);
     if (!tags.length && filterQ) {
-      $("#emptyHint").textContent = `当前子分类没有匹配 "${filterQ}" 的标签`;
+      $("#emptyHint").textContent = `当前子分类没有匹配 \"${filterQ}\" 的标签`;
       $("#emptyHint").classList.remove("hidden");
       return;
     }
@@ -220,79 +221,77 @@
       '没有标签。点右上「➕ 添加标签」或「📋 批量粘贴」。格式每行一条: english | 中文 | 权重';
 
     for (const tag of tags) {
-      const tr = document.createElement("tr");
-      if (tag.enabled === false) tr.classList.add("disabled-tag");
-      if (tag.nsfw) tr.classList.add("nsfw-row");
-
-      const tdEn = mkCellInput(tag.en, (v) => { tag.en = v.trim(); touched(tr); }, "英文文本");
-      const tdZh = mkCellInput(tag.zh || "", (v) => { tag.zh = v.trim(); touched(tr); }, "中文显示名");
-      const tdW = mkCellInput(String(tag.weight ?? 1.0), (v) => {
-        const w = parseFloat(v);
-        if (!Number.isNaN(w) && w > 0 && w <= 3) { tag.weight = w; touched(tr); }
-      }, "(0,3]");
-      tdW.firstChild.classList.add("w-num");
-
-      const tdAlias = document.createElement("td");
-      tdAlias.appendChild(mkAliasInput(tag));
-
-      const tdEn3 = document.createElement("td");
-      const chk = document.createElement("input");
-      chk.type = "checkbox";
-      chk.checked = tag.enabled !== false;
-      chk.onchange = () => { tag.enabled = chk.checked; touched(tr); tr.classList.toggle("disabled-tag", !chk.checked); renderStats(); };
-      tdEn3.appendChild(chk);
-
-      const tdNsfw = document.createElement("td");
-      const nchk = document.createElement("input");
-      nchk.type = "checkbox";
-      nchk.className = "nsfw-chk";
-      nchk.checked = !!tag.nsfw;
-      nchk.title = "标记为 NSFW (节点 off 模式会排除)";
-      nchk.onchange = () => { tag.nsfw = nchk.checked || undefined; if (!nchk.checked) delete tag.nsfw; touched(tr); };
-      tdNsfw.appendChild(nchk);
-
-      const tdDel = document.createElement("td");
-      const delBtn = document.createElement("button");
-      delBtn.className = "icon-btn del";
-      delBtn.title = "删除标签";
-      delBtn.textContent = "🗑";
-      delBtn.onclick = () => {
-        sub.tags = sub.tags.filter((t) => t !== tag);
-        markDirty(); renderTable(); renderStats();
+      const el = document.createElement("span");
+      el.className = "mtag" + (tag.nsfw ? " nsfw" : "") + (tag.enabled === false ? " off" : "");
+      el.title = "右键: 编辑标签\\n左键拖拽排序不可用 (chip 模式), 编辑请右键";
+      const zh = (tag.zh || "").trim();
+      el.innerHTML =
+        `<span class="mt-en">${escapeHtml(tag.en)}</span>` +
+        (zh ? `<span class="mt-zh">${escapeHtml(zh)}</span>` : "") +
+        (tag.weight && tag.weight !== 1.0 ? `<span class="mt-w">${tag.weight}</span>` : "") +
+        (tag.enabled === false ? `<span class="mt-off">停</span>` : "");
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openTagMenu(e.clientX, e.clientY, tag, sub);
       };
-      tdDel.appendChild(delBtn);
-
-      tr.append(tdEn, tdZh, tdW, tdAlias, tdEn3, tdNsfw, tdDel);
-      tbody.appendChild(tr);
+      flow.appendChild(el);
     }
   }
 
-  function touched() { markDirty(); }
-
-  function mkCellInput(value, onchg, placeholder) {
-    const td = document.createElement("td");
-    const inp = document.createElement("input");
-    inp.className = "cell-input";
-    inp.value = value;
-    inp.placeholder = placeholder || "";
-    inp.onchange = () => onchg(inp.value);
-    td.appendChild(inp);
-    return td;
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
-  function mkAliasInput(tag) {
-    const inp = document.createElement("input");
-    inp.className = "cell-input";
-    inp.value = (tag.aliases || []).join(", ");
-    inp.placeholder = "同义词, 逗号隔开";
-    inp.onchange = () => {
-      tag.aliases = inp.value.split(",").map((s) => s.trim()).filter(Boolean);
-      markDirty();
+  /* ---------- 右键编辑菜单 ---------- */
+  let menuEl = null;
+  function closeTagMenu() {
+    if (menuEl) { menuEl.remove(); menuEl = null; }
+  }
+  function openTagMenu(x, y, tag, sub) {
+    closeTagMenu();
+    menuEl = document.createElement("div");
+    menuEl.className = "mtag-menu";
+    menuEl.innerHTML = `
+      <label>英文 <input data-f="en" value="${escapeHtml(tag.en)}"/></label>
+      <label>中文 <input data-f="zh" value="${escapeHtml(tag.zh || "")}" placeholder="中文翻译"/></label>
+      <label>默认权重 <input data-f="weight" type="number" step="0.05" min="0.1" max="3" value="${tag.weight ?? 1.0}"/></label>
+      <label>别名 <input data-f="aliases" value="${escapeHtml((tag.aliases || []).join(", "))}" placeholder="同义词, 逗号隔开"/></label>
+      <div class="mt-row">
+        <label class="mt-chk"><input type="checkbox" data-f="nsfw" ${tag.nsfw ? "checked" : ""}/> 🔞 NSFW</label>
+        <label class="mt-chk"><input type="checkbox" data-f="enabled" ${tag.enabled !== false ? "checked" : ""}/> 启用</label>
+      </div>
+      <div class="mt-actions">
+        <button data-act="del" class="danger">🗑 删除</button>
+        <button data-act="ok" class="primary">保存</button>
+      </div>`;
+    document.body.appendChild(menuEl);
+    // 视口内定位
+    const r = menuEl.getBoundingClientRect();
+    menuEl.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+    menuEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+
+    menuEl.addEventListener("click", (e) => e.stopPropagation());
+    menuEl.querySelector('[data-act="ok"]').onclick = () => {
+      const g = (f) => menuEl.querySelector(`[data-f="${f}"]`);
+      const en = g("en").value.trim();
+      if (en) tag.en = en; else g("en").value = tag.en;
+      tag.zh = g("zh").value.trim();
+      const w = parseFloat(g("weight").value);
+      if (!Number.isNaN(w) && w > 0 && w <= 3) tag.weight = w; else delete tag.weight;
+      tag.aliases = g("aliases").value.split(",").map((s) => s.trim()).filter(Boolean);
+      if (g("nsfw").checked) tag.nsfw = true; else delete tag.nsfw;
+      tag.enabled = g("enabled").checked;
+      markDirty(); renderTable(); closeTagMenu();
     };
-    const wrap = document.createElement("div");
-    wrap.appendChild(inp);
-    return wrap;
+    menuEl.querySelector('[data-act="del"]').onclick = () => {
+      sub.tags = sub.tags.filter((t) => t !== tag);
+      markDirty(); renderTable(); closeTagMenu();
+    };
+    setTimeout(() => document.addEventListener("click", closeTagMenu, { once: true }), 0);
   }
+
+  function touched() { markDirty(); }
 
   function renderStats() {
     const box = $("#statsBox");

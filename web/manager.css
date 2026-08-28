@@ -283,3 +283,82 @@ tr.nsfw-row:hover td { background: rgba(255,107,107,0.07) !important; }
 }
 #toast.err { border-color: rgba(255,118,117,0.55); color: #ffc9c8; }
 @keyframes drop { from { transform: translate(-50%, -12px); opacity: 0; } }
+
+/* ---------- 标签 chip 流 (一行多枚) ---------- */
+.tag-flow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 10px 12px;
+  align-content: flex-start;
+}
+.mtag {
+  --c: #22b573;                       /* 正常标签 = 绿框 */
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  border: 1.5px solid color-mix(in srgb, var(--c) 55%, transparent);
+  background: color-mix(in srgb, var(--c) 10%, transparent);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 3px 9px;
+  font-size: 12px;
+  cursor: context-menu;
+  user-select: none;
+  transition: .12s;
+}
+.mtag:hover { background: color-mix(in srgb, var(--c) 22%, transparent); transform: translateY(-1px); }
+.mtag .mt-en { font-weight: 600; }
+.mtag .mt-zh { font-size: 10.5px; opacity: .62; }
+.mtag .mt-w { font-size: 9.5px; opacity: .55; font-family: Consolas, monospace; }
+.mtag .mt-off {
+  font-size: 9px; background: rgba(255,255,255,.14);
+  border-radius: 4px; padding: 0 4px; opacity: .7;
+}
+.mtag.off { opacity: .5; filter: grayscale(.6); }
+.mtag.nsfw {                          /* NSFW = 红框 */
+  --c: #e5484d;
+}
+
+/* ---------- 右键编辑菜单 ---------- */
+.mtag-menu {
+  position: fixed;
+  z-index: 300;
+  min-width: 250px;
+  background: rgba(28,30,38,.98);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 11px;
+  padding: 12px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.5);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text);
+}
+.mtag-menu label { display: flex; align-items: center; gap: 8px; }
+.mtag-menu label input:not([type="checkbox"]) {
+  flex: 1;
+  background: rgba(0,0,0,.35);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 7px;
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+}
+.mtag-menu label input:focus { border-color: rgba(84,160,255,.55); }
+.mtag-menu .mt-row { display: flex; gap: 14px; }
+.mtag-menu .mt-chk { gap: 5px; cursor: pointer; }
+.mtag-menu .mt-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 2px; }
+.mtag-menu button {
+  border-radius: 7px;
+  padding: 5px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(255,255,255,.06);
+  color: var(--text);
+}
+.mtag-menu button.primary { background: linear-gradient(135deg, #0071e3, #54a0ff); border: 0; color: #fff; font-weight: 600; }
+.mtag-menu button.danger { border-color: rgba(255,107,107,.5); color: #ff9d9d; }

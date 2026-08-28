@@ -33,7 +33,7 @@
       <ul id="catList"></ul>
     </aside>
 
-    <!-- 中: 子分类页签 + 标签表格 -->
+    <!-- 中: 子分类页签 + 标签 chip 流 -->
     <section class="col-tags">
       <div class="tabs-row">
         <div id="subTabs" class="tabs"></div>
@@ -42,12 +42,7 @@
         <button id="btnAddTag" class="btn small primary">➕ 添加标签</button>
       </div>
       <div class="table-wrap">
-        <table id="tagTable">
-          <thead>
-            <tr><th style="width:32%">英文 (出图用)</th><th>中文</th><th style="width:64px">权重</th><th>别名</th><th style="width:40px">启用</th><th style="width:40px">🔞</th><th style="width:52px"></th></tr>
-          </thead>
-          <tbody id="tagRows"></tbody>
-        </table>
+        <div id="tagFlow" class="tag-flow"></div>
         <div id="emptyHint" class="empty hidden">没有标签。点右上「➕ 添加标签」或「📋 批量粘贴」。格式每行一条: <code>english | 中文 | 权重</code></div>
       </div>
     </section>
