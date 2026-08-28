@@ -278,9 +278,15 @@ class TagLibraryNode:
 
         else:  # auto (原 random_mix)
             rng = random.Random(seed)
-            pool_all = [(t, c) for t, c in self._flat(lib)
-                        if self._tag_matches(t, search_text)
-                        and c not in exclude_keys]
+            # 子分类粒度填充: fill_master 开 → 统一范围; 关 → fill_sub_ranges 每子分类独立
+            master = bool(state.get("fill_master", True))
+            mlo, mhi = state.get("fill_master_min", 1), state.get("fill_master_max", 1)
+            sub_ranges = state.get("fill_sub_ranges") or {}
+            pool_all = [(t, c, s) for c in lib.get("categories", [])
+                        if c.get("name") not in exclude_keys
+                        for s in c.get("subcategories", [])
+                        for t in s.get("tags", [])
+                        if t.get("enabled", True) and self._tag_matches(t, search_text)]
             if not pool_all:
                 tags = []
             else:
@@ -290,49 +296,59 @@ class TagLibraryNode:
                     return max(float(weights_map.get(pair[1], 1.0)), 0.001)
 
                 lo, hi = min(min_tags, max_tags), max(min_tags, max_tags)
-                n = rng.randint(lo, hi)
-                pool_dict = {t.get("id"): t for t, _ in pool_all}
+                # 子分类粒度抽取: 每个子分类读自己的范围 [mn, mx] 抽 n 个
+                # fill_master=True → 统一用 fill_master_min/max; False → 每子分类 fill_sub_ranges
+                def _sub_range(sub_id: str) -> tuple[int, int]:
+                    if master:
+                        a, b = int(mlo), int(mhi)
+                    else:
+                        r = sub_ranges.get(sub_id) or {"min": 1, "max": 1}
+                        a, b = int(r.get("min", 1)), int(r.get("max", 1))
+                    return (min(a, b), max(a, b))
+
+                weights_map = self._safe_json(category_weights)
+                def _weight(tag: dict) -> float:
+                    cname = tag.get("_cat", "")
+                    return max(float(weights_map.get(cname, 1.0)), 0.001)
+
+                by_sub: dict[str, list] = {}
+                for t, c, s in pool_all:
+                    cname = c.get("name", "") if isinstance(c, dict) else str(c)
+                    t = {**t, "_cat": cname}
+                    by_sub.setdefault(s.get("id"), []).append(t)
+                pool_dict = {t.get("id"): t for t, _, _ in pool_all}
                 fixed = [pool_dict[i] for i in pinned_ids if i in pool_dict]
                 fixed_lower = [str(t.get("en", "")).strip().lower() for t in fixed]
-                rest_pool = [(t, c) for t, c in pool_all
-                             if t.get("id") not in pinned_ids
-                             and str(t.get("en", "")).strip().lower() not in fixed_lower]
-                remain = max(0, n - len(fixed)) if pinned_required else n
+                chosen_pairs: list[dict] = []
+                used_lowers = set(fixed_lower)
+                # 全局冲突避让: 同一互斥组只允许一个词 (不论来自哪个子分类)
+                banned: list[set] = []
                 if avoid_conflicts:
-                    # 贪心抽取: 逐个抽、命中已占用互斥组的候选跳过补位
-                    rest: list[dict] = []
-                    banned: list[set] = []
-                    lowers_used = set(fixed_lower)
-                    attempts = 0
-                    guard = remain * 12 + 200  # 防死循环上限
-                    while len(rest) < remain and attempts < guard and rest_pool:
-                        attempts += 1
-                        pick_pair = weighted_sample(rest_pool, 1, _weight, rng)
-                        if not pick_pair:
-                            break
-                        pick = pick_pair[0][0]  # rest_pool 元素是 (tag, category_name)
-                        plo = str(pick.get("en", "")).strip().lower()
-                        hit_ban = any(plo in b for b in banned)
-                        if not hit_ban:
-                            for g in tagconflicts.get_groups():
-                                gs = set(g["tags"])
-                                if plo in gs:
-                                    if gs & lowers_used:
-                                        hit_ban = True
-                                    else:
-                                        banned.append(gs)
-                                    break
-                        if hit_ban:
-                            rest_pool = [(t, c) for t, c in rest_pool
-                                         if t.get("id") != pick.get("id")]
+                    for g in tagconflicts.get_groups():
+                        banned.append(set(str(x).lower() for x in g.get("tags", [])))
+                for sid, pairs in by_sub.items():
+                    mn, mx = _sub_range(sid)
+                    if mx <= 0:
+                        continue
+                    want = rng.randint(mn, mx)
+                    candidates = []
+                    for t in pairs:
+                        plo = str(t.get("en", "")).strip().lower()
+                        if plo in used_lowers or t.get("id") in pinned_ids:
                             continue
-                        rest.append(pick)
-                        lowers_used.add(plo)
-                        rest_pool = [(t, c) for t, c in rest_pool
-                                     if t.get("id") != pick.get("id")]
-                else:
-                    rest = [t for t, _ in weighted_sample(rest_pool, remain, _weight, rng)]
-                all_tags = fixed + rest if pinned_required else rest + fixed[:n]
+                        if avoid_conflicts and any(plo in g for g in banned):
+                            continue
+                        candidates.append(t)
+                    if not candidates:
+                        continue
+                    for t in weighted_sample(candidates, min(want, len(candidates)), _weight, rng):
+                        plo = str(t.get("en", "")).strip().lower()
+                        if plo in used_lowers:
+                            continue
+                        chosen_pairs.append(t)
+                        used_lowers.add(plo)
+                rest = chosen_pairs
+                all_tags = fixed + rest if pinned_required else rest + fixed[:len(fixed)]
                 tags = [self._format_tag(t, use_weights_syntax) for t in all_tags]
 
         # 去重保序
