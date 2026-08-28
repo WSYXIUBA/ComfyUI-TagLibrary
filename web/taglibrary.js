@@ -1278,9 +1278,12 @@ app.registerExtension({
       };
 
       syncPanelToNode();
-      // ---- 声明面板所需高度, 让 computeSize 有正确的最小值 ----
-      // LGraphNode.computeSize 会 clamp 到 constructor.min_height:
-      // 出生尺寸 = max(默认, min_height) → 不再"出生偏小, 一拖跳大"
+      // ---- 声明面板所需尺寸, 让出生尺寸 = 最小限制 (拖拽不会再跳变) ----
+      // 高度: LGraphNode.computeSize 会 clamp 到 constructor.min_height
+      // 宽度: computeSize 宽度只由 slots/title 推算 (最小 210), 没有 min_width clamp。
+      // 前端 node.size 是 Float32Array backing 的 getter (boundingRect.size),
+      // setSize 会把值拷进 rect 再回调 onResize(sizeRef) —— 在回调里【就地】改
+      // sizeRef[0]/sizeRef[1] 即可钳制 (换引用/改 this.size 都会被渲染层覆盖)。
       node.constructor.min_height = Math.max(PANEL_MIN_H, 560);
       const minW = Math.max(PANEL_MIN_W, 420);
       if (node.size[0] < minW || node.size[1] < node.constructor.min_height) {
@@ -1289,6 +1292,11 @@ app.registerExtension({
           Math.max(node.size[1], node.constructor.min_height),
         ]);
       }
+      node.constructor.prototype.onResize = function (size) {
+        // sizeRef 是 node.boundingRect.size 的 subarray (引用语义, 就地改生效)
+        if (size[0] < minW) size[0] = minW;
+        if (size[1] < node.constructor.min_height) size[1] = node.constructor.min_height;
+      };
 
       window.addEventListener("taglib-updated", () => panelApi.refresh());
       return r;
