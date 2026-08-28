@@ -1147,7 +1147,12 @@ app.registerExtension({
       // 不需要任何手动 onDraw/rAF 同步 —— 面板原生嵌入节点, 随节点缩放。
       holder.style.setProperty("--comfy-widget-min-height", "160px");
       holder.style.setProperty("--comfy-widget-height", "60%");
-      const domW = node.addDOMWidget("taglib_panel", "panel", holder, { hideOnZoom: false });
+      // serialize:false —— 面板本身不进 widgets_values (它的状态已存在 selection_state 里),
+      // 否则会在 seed 的 control_after_generate 之后插入一个多余槽位, 让按位置保存/加载错位。
+      const domW = node.addDOMWidget("taglib_panel", "panel", holder, {
+        hideOnZoom: false,
+        serialize: false,
+      });
       node._taglibPanelApi = panelApi;
 
       // 内容变化(分类展开/chips 渲染)时让画布重排一次
