@@ -42,8 +42,8 @@ class TagLibraryNode:
                     "multiline": False,
                     "tooltip": "节点面板状态 (自动维护, 勿手改)",
                 }),
-                "mode": (["manual", "random_mix"],
-                         {"tooltip": "manual=手动选签+填充 / random_mix=全库随机组合"}),
+                "mode": (["manual", "auto"],
+                         {"tooltip": "manual=手动选签+填充 / auto=自动按排除类目随机组合"}),
                 "seed": ("INT", {"default": 0, "min": 0,
                                  "max": 0xffffffffffffffff,
                                  "tooltip": "随机种子, 同 seed 同结果; 面板 🎲ROLL 换随机数"}),
@@ -124,8 +124,8 @@ class TagLibraryNode:
               prefix: str | None = None,
               suffix: str | None = None, **legacy):
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
-        if mode not in ("manual", "random_mix"):
-            mode = "manual"  # 旧 random_by_category 一律退回 manual
+        if mode not in ("manual", "auto"):
+            mode = "auto" if mode == "random_mix" else "manual"  # 旧值迁移
         try:
             seed = int(seed)
         except (TypeError, ValueError):
@@ -276,13 +276,10 @@ class TagLibraryNode:
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
-        else:  # random_mix
+        else:  # auto (原 random_mix)
             rng = random.Random(seed)
-            # 组合随机范围: state.mix_scope = ["大类名", ...] (空/缺省 = 全覆盖)
-            mix_scope = {str(x) for x in (state.get("mix_scope") or [])}
             pool_all = [(t, c) for t, c in self._flat(lib)
                         if self._tag_matches(t, search_text)
-                        and (not mix_scope or c in mix_scope)
                         and c not in exclude_keys]
             if not pool_all:
                 tags = []
