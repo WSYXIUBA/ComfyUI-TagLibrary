@@ -148,31 +148,33 @@ def main() -> None:
         check("manual 兼容旧selected", True, "skipped - smile 不在默认库")
 
     # random_mix 同 seed 复现 / 数量正确
-    mixA = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
-    mixB = node.build('{"min_tags":4,"max_tags":6}', "random_mix", 123)
+    mixA = node.build('{"min_tags":4,"max_tags":6}', "auto", 123)
+    mixB = node.build('{"min_tags":4,"max_tags":6}', "auto", 123)
     print(f"      sample(mix seed123): {mixA[0]}")
     check("mix 同seed复现", mixA[0] == mixB[0])
     cnt = len([p for p in mixA[0].split(", ") if p])
     check("mix 数量在4~6", 4 <= cnt <= 6, str(cnt))
 
     # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
-    scoped = node.build('{"min_tags":2,"max_tags":3,"mix_scope":["光影氛围"]}', "random_mix", 42)
+    scoped = node.build('{"min_tags":2,"max_tags":3,"exclude_categories":["人物主体","服装系统","姿势动作","构图镜头","场景环境","风格媒介","材质特效","负面标签库","质量与技术"]}', "auto", 42)
     print(f"      sample(mix scoped): {scoped[0]}")
     lib_pairs = dict()
     for t, cname in TagLibraryNode._flat(library.get_merged()):
         lib_pairs[str(t.get("en", "")).lower()] = cname
     in_scope = all(lib_pairs.get(p.strip(), "光影氛围") == "光影氛围"
                    for p in scoped[0].split(",") if p.strip())
-    check("mix_scope 限定分类", scoped[0] != "" and in_scope, scoped[0][:60])
+    check("排除类目限定范围(等价mix_scope)", scoped[0] != "" and in_scope, scoped[0][:60])
 
     # 旧 random_by_category → manual 退化 (mode 纠偏)
     legacy = node.build("{}", "random_by_category", 1)
     check("by_category 退化为 manual(不炸)", isinstance(legacy, tuple), "ok")
+    legacy2 = node.build("{}", "random_mix", 1)
+    check("random_mix 迁移为 auto(不炸)", isinstance(legacy2, tuple), "ok")
 
     # pinned 必含
     pin_state = {"selected": [], "pinned": ids_of("masterpiece")}
     pin_state["min_tags"] = 2; pin_state["max_tags"] = 2
-    pinout = node.build(json.dumps(pin_state), "random_mix", 999)
+    pinout = node.build(json.dumps(pin_state), "auto", 999)
     check("pinned 必含", "masterpiece" in pinout[0], pinout[0])
 
     # 权重语法 (新 tags 结构)
@@ -190,7 +192,7 @@ def main() -> None:
     check("去重保序", dup[0] == "masterpiece, smile", dup[0])
 
     # 中文搜索命中别名
-    sf = node.build('{"search_text":"月光","min_tags":1,"max_tags":3}', "random_mix", 11)
+    sf = node.build('{"search_text":"月光","min_tags":1,"max_tags":3}', "auto", 11)
     check("中文搜索命中", "dappled moonlight" in sf[0], sf[0])
 
     # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
@@ -253,7 +255,7 @@ def main() -> None:
         pin_mix = {"selected": [], "pinned": [conflict_pair[0]], "avoid_conflicts": True}
         bad = 0
         for s in range(40):
-            o = node.build(json.dumps({**pin_mix, "min_tags": 4, "max_tags": 9}), "random_mix", s)
+            o = node.build(json.dumps({**pin_mix, "min_tags": 4, "max_tags": 9}), "auto", s)
             parts_lower = [p.strip().lower() for p in o[0].split(",")]
             pair_ens = [str(t.get("en","").lower()) for t,_ in TagLibraryNode._flat(lib3)
                         if t.get("id") in conflict_pair]
@@ -334,7 +336,7 @@ def main() -> None:
                                          and cn2 != "人物主体" for t2, cn2 in flat_all)}
                 leaked3 = []
                 for sd in range(20):
-                    o = node.build(state_r, "random_mix", sd)
+                    o = node.build(state_r, "auto", sd)
                     text_l = o[0].lower()
                     leaked3 += [en for en in exclusive if en and en in text_l]
                 check("排除大类:随机零漏出", not leaked3, str(leaked3[:4]))
