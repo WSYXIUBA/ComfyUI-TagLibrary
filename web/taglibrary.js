@@ -938,6 +938,7 @@ app.registerExtension({
 
       // 面板随节点宽度自适应: 监听节点 resize, 同步最小宽度 + 重算高度
       const PANEL_MIN_W = 280;
+      const PANEL_MIN_H = 300;  // 面板最少需要的高度 (参数区 + 面板 + 预览)
       function syncPanelToNode() {
         // 宽度不再强制节点变宽 —— 面板 CSS (flex/min-width:0) 跟随节点实际宽度收缩,
         // 避免"面板凸出节点"的错位。仅提醒画布重绘。
@@ -984,6 +985,7 @@ app.registerExtension({
         const LABELS = {
           mode: "模式",
           seed: "随机种子",
+          control_after_generate: "生成后种子动作",
           nsfw_mode: "NSFW 过滤",
           min_tags: "随机最少标签数",
           max_tags: "随机最多标签数",
@@ -992,16 +994,55 @@ app.registerExtension({
           use_weights_syntax: "输出加权重语法 (tag:1.2)",
           dedupe: "输出去重",
           pinned_required: "📌必含标签强制加入随机结果",
+          category_weights: "分类权重 (自动维护)",
+          selection_state: "标签库状态 (自动维护)",
+        };
+        // combo 选项显示值映射 (显示中文, 内部值仍英文以兼容工作流)
+        const OPT_LABELS = {
+          mode: { manual: "手动选签", random_by_category: "按分类随机", random_mix: "组合随机" },
+          nsfw_mode: { off: "排除 NSFW", on: "包含 NSFW", only: "仅 NSFW" },
+          separator: { comma: "逗号 (推荐)", space: "空格" },
+          control_after_generate: { fixed: "固定", increment: "递增", decrement: "递减", randomize: "随机" },
         };
         for (const w of node.widgets || []) {
           if (LABELS[w.name]) {
-            try {
-              w.label = LABELS[w.name];
-              if (w.options) w.options.multiline = w.options.multiline; // noop keep ref
-            } catch {}
+            try { w.label = LABELS[w.name]; } catch {}
           }
-          if (w.name === "nsfw_mode" && w.element?.tagName === "SELECT") {}
+          const optMap = OPT_LABELS[w.name];
+          if (optMap) {
+            // 新版前端 select 用 innerText 渲染 option; 劫持显示层
+            try {
+              if (w.element?.tagName === "SELECT") {
+                for (const opt of w.element.options) {
+                  if (optMap[opt.value]) opt.textContent = optMap[opt.value];
+                }
+                w.element.once = null;
+              }
+            } catch {}
+            // 面板 chip 上显示中文化: 劫持 value 的显示回调
+            if (!w.__zhOpt) {
+              w.__zhOpt = true;
+              const origOnChange = w.onChange;
+              w.onChange = function (v) {
+                // 保存原始值, 但 UI 显示映射后的中文 (通过 selected index 不变)
+                return origOnChange?.apply(this, arguments);
+              };
+            }
+          }
         }
+        // 显示层兜底: 每次绘制前把 widget 显示文本换中文 (LiteGraph 画布绘 label+value)
+        try {
+          const origDraw = node.onDrawBackground;
+          node.onDrawBackground = function (ctx) {
+            for (const w of node.widgets || []) {
+              const m = OPT_LABELS[w.name];
+              if (m && m[w.value] && w.element?.tagName !== "SELECT") {
+                w.displayValue = m[w.value];
+              }
+            }
+            return origDraw?.apply(this, arguments);
+          };
+        } catch {}
         // ComfyUI 渲染用 w.label ?? w.name, label 设置即生效;
         // 老版本没有 label 字段时 hack 到 onLabel 需要额外兼容, 现代版都支持.
         const modeW2 = node.widgets?.find((w) => w.name === "mode");
@@ -1019,11 +1060,13 @@ app.registerExtension({
 
         const modeW = node.widgets?.find((w) => w.name === "mode");
         const defMode = getSetting(SET_DEFAULT_MODE, "manual");
-        if (modeW && Object.values(modeW.options || {}).includes(defMode)) {
+        // 只对"新建节点"应用默认模式: widgets_values 还没被工作流填充时值为原型默认。
+        // 加载旧工作流时此 setTimeout 同样会跑, 但 mode 已是工作流保存值, 不能覆盖!
+        if (modeW && node.widgets_values === null && Object.values(modeW.options || {}).includes(defMode)) {
           modeW.value = defMode;
         }
         const defNsfw = getSetting(SET_DEFAULT_NSFW, false);
-        if (defNsfw) {
+        if (defNsfw && node.widgets_values === null) {
           const sw = node.widgets?.find((w) => w.name === "selection_state");
           if (sw) {
             try {
@@ -1054,9 +1097,13 @@ app.registerExtension({
       // 用 rAF 轻量同步循环 (同一帧有 dirty 才重算, 空闲时零开销)
       domW._syncHeight = function () {
         try {
-          const available = node.size[1] - (domW.last_y || w_lastY_fallback(node)) - 8;
-          const h = Math.max(90, Math.round(available));
+          const lastY = domW.last_y || w_lastY_fallback(node);
+          const available = node.size[1] - lastY - 6;
+          // 高度夹在 [90, available]: 节点缩小时面板收缩到贴合, 永不溢出节点
+          const h = Math.max(60, Math.min(Math.round(available), Math.round(holder.scrollHeight || available)));
           if (holder.style.height !== h + "px") holder.style.height = h + "px";
+          // 同步面板自身高度标记, 让 computeSize 拿到真实值
+          holder.dataset.h = String(h);
         } catch {}
       };
       if (!window.__taglibSync) {
@@ -1085,9 +1132,16 @@ app.registerExtension({
       }
 
       // 让 ComfyUI 量取面板真实高度: computeSize 报告 holder 实际高, 宽度=节点内容宽
+      // 同时它决定节点的最小可缩尺寸 —— 节点缩到不能再小时面板仍完全在节点内。
       domW.computeSize = function (width) {
-        // 宽度永远跟随节点实际宽度 (不再强制最小宽, 面板 CSS 自适应收缩)
-        return [Math.max(width || 0, 200), -2];  // -2 = DOM widget 自管高度
+        const w = Math.max(width || 0, 220);
+        // 高度: 读 holder 实际渲染高度 (DOM widget 自管高度), 缓存避免每帧 layout 抖动
+        let h = 120;
+        try {
+          const r = holder.getBoundingClientRect();
+          if (r.height > 40) h = r.height;
+        } catch {}
+        return [w, Math.max(h, 90)];
       };
       // 高度变化(分类展开/chips 渲染/模式切换)时通知画布重算布局
       panelApi.onChange = () => {
@@ -1099,11 +1153,17 @@ app.registerExtension({
       ro.observe(holder);
 
       syncPanelToNode();
-      // 默认尺寸: 只在宽度不足时撑到最小可用宽 (280), 高度尊重用户/前端默认, 不强加 420
-      node.setSize([
-        Math.max(node.size[0], 280),
-        Math.max(node.size[1], Math.round((domW.last_y || w_lastY_fallback(node)) + 240)),
-      ]);
+      // ---- 默认尺寸: 出生即达到最小限制 (节点不会出现"比最小还小, 一拖就跳大"的问题) ----
+      // 前端给新节点的默认 size 往往偏小 (例如 [220, 130]); 这里一次性撑到面板可用大小,
+      // 之后用户可以自由缩小/放大 (LiteGraph 的最小值由 computeSize 决定)。
+      const minW = Math.max(PANEL_MIN_W, 320);
+      const minH = Math.max(PANEL_MIN_H, Math.round((domW.last_y || w_lastY_fallback(node)) + 200));
+      if (node.size[0] < minW || node.size[1] < minH) {
+        node.setSize([
+          Math.max(node.size[0], minW),
+          Math.max(node.size[1], minH),
+        ]);
+      }
 
       window.addEventListener("taglib-updated", () => panelApi.refresh());
       return r;
