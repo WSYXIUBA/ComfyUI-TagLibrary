@@ -981,27 +981,18 @@ app.registerExtension({
           };
         })();
 
-        // ---- 中文化 widget 标签 (改 name 的显示别名) ----
+        // ---- 中文化 widget 标签 (v3 极简: 只有 4+2 个 widget) ----
         const LABELS = {
           mode: "模式",
           seed: "随机种子",
           control_after_generate: "生成后种子动作",
           nsfw_mode: "NSFW 过滤",
-          min_tags: "随机最少标签数",
-          max_tags: "随机最多标签数",
-          search_text: "随机过滤词(中/英/别名)",
-          separator: "输出分隔符",
-          use_weights_syntax: "输出加权重语法 (tag:1.2)",
-          dedupe: "输出去重",
-          pinned_required: "📌必含标签强制加入随机结果",
-          category_weights: "分类权重 (自动维护)",
           selection_state: "标签库状态 (自动维护)",
         };
         // combo 选项显示值映射 (显示中文, 内部值仍英文以兼容工作流)
         const OPT_LABELS = {
           mode: { manual: "手动选签", random_by_category: "按分类随机", random_mix: "组合随机" },
           nsfw_mode: { off: "排除 NSFW", on: "包含 NSFW", only: "仅 NSFW" },
-          separator: { comma: "逗号 (推荐)", space: "空格" },
           control_after_generate: { fixed: "固定", increment: "递增", decrement: "递减", randomize: "随机" },
         };
         for (const w of node.widgets || []) {
@@ -1010,24 +1001,13 @@ app.registerExtension({
           }
           const optMap = OPT_LABELS[w.name];
           if (optMap) {
-            // 新版前端 select 用 innerText 渲染 option; 劫持显示层
             try {
               if (w.element?.tagName === "SELECT") {
                 for (const opt of w.element.options) {
                   if (optMap[opt.value]) opt.textContent = optMap[opt.value];
                 }
-                w.element.once = null;
               }
             } catch {}
-            // 面板 chip 上显示中文化: 劫持 value 的显示回调
-            if (!w.__zhOpt) {
-              w.__zhOpt = true;
-              const origOnChange = w.onChange;
-              w.onChange = function (v) {
-                // 保存原始值, 但 UI 显示映射后的中文 (通过 selected index 不变)
-                return origOnChange?.apply(this, arguments);
-              };
-            }
           }
         }
         // 显示层兜底: 每次绘制前把 widget 显示文本换中文 (LiteGraph 画布绘 label+value)
@@ -1058,51 +1038,67 @@ app.registerExtension({
         const nsfwW = node.widgets?.find((w) => w.name === "nsfw_mode");
         if (nsfwW) nsfwW.tooltip = "off=排除 NSFW / on=混入 NSFW / only=只用 NSFW";
 
-        // ---- 参数错位自愈 (onConfigure): 旧工作流的 widgets_values 是按位置存的,
-        // 插件历史上在 seed 后插入过 nsfw_mode、seed 还附带 control_after_generate,
-        // 位置对不上就会把 'comma'/数字 喂给错误的参数 => 校验报错。
-        // 这里在每次加载工作流 (configure) 后按名字做一次合法性检查, 错位就重置为默认。
+        // ---- 参数自愈 (onConfigure): 按名字校验, 非法值重置默认。
+        // v3 签名只有 [selection_state, mode, seed, ctl, nsfw_mode, taglib_panel],
+        // 旧 v2 工作流多出来的 8 个槽位值会错位 —— 这里统一纠正。
         const onConfigure = nodeType.prototype.onConfigure;
         nodeType.prototype.onConfigure = function () {
           const r = onConfigure?.apply(this, arguments);
           try {
-            const WIDGET_DEFAULTS = {
-              mode: "manual",
-              nsfw_mode: "off",
-              separator: "comma",
-              min_tags: 3,
-              max_tags: 8,
-              use_weights_syntax: false,
-              dedupe: true,
-              pinned_required: true,
-            };
             let repaired = [];
-            for (const [name, def] of Object.entries(WIDGET_DEFAULTS)) {
-              const w = this.widgets?.find((x) => x.name === name);
-              if (!w) continue;
-              let v = w.value;
-              let bad = false;
-              if (name === "mode") bad = !["manual", "random_by_category", "random_mix"].includes(v);
-              else if (name === "nsfw_mode") bad = !["off", "on", "only"].includes(v);
-              else if (name === "separator") bad = !["comma", "space"].includes(v);
-              else if (name === "min_tags" || name === "max_tags")
-                bad = typeof v !== "number" || isNaN(v) || v < 0 || v > 60;
-              else bad = typeof v !== "boolean";
-              if (bad) {
-                w.value = def;
-                repaired.push(`${name}=${JSON.stringify(v)}→${def}`);
+            const wOf = (name) => this.widgets?.find((x) => x.name === name);
+            const modeW3 = wOf("mode");
+            if (modeW3 && !["manual", "random_by_category", "random_mix"].includes(modeW3.value)) {
+              modeW3.value = "manual";
+              repaired.push(`mode→manual`);
+            }
+            const nsfwW3 = wOf("nsfw_mode");
+            if (nsfwW3 && !["off", "on", "only"].includes(nsfwW3.value)) {
+              nsfwW3.value = "off";
+              repaired.push(`nsfw_mode→off`);
+            }
+            const seedW = wOf("seed");
+            if (seedW && (typeof seedW.value !== "number" || isNaN(seedW.value) || seedW.value < 0)) {
+              seedW.value = 0;
+              repaired.push(`seed→0`);
+            }
+            // selection_state 必须是 JSON 对象; 旧 v2 工作流错位可能把数字/字符串塞进来
+            const sw = wOf("selection_state");
+            if (sw) {
+              let parsed = null;
+              if (typeof sw.value === "string" && sw.value.trim()) {
+                try { parsed = JSON.parse(sw.value); } catch { parsed = null; }
+              } else if (typeof sw.value === "object" && sw.value !== null) {
+                parsed = sw.value;
+              }
+              if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+                sw.value = "{}";
+                repaired.push("selection_state→{}");
+              }
+              // 旧 v2 工作流: 错位把 8 个旧参数值留在 widgets_values 里, 而新签名
+              // 只消费 5 个 (state/mode/seed/ctl/nsfw) → 多余的 8 个不会污染任何 widget,
+              // 但需要把用户当时的设置抢救进 selection_state:
+              // v2 顺序: [state, mode, seed, ctl, nsfw, min, max, cw, st, sep, uw, dd, pr]
+              if (Array.isArray(this.widgets_values) && this.widgets_values.length > 5) {
+                const [, , , , , minV, maxV, cwV, stV, sepV, uwV, ddV, prV] = this.widgets_values;
+                try {
+                  const st2 = JSON.parse(sw.value || "{}");
+                  let migrated = [];
+                  if (Number.isFinite(minV)) { st2.min_tags = minV; migrated.push("min"); }
+                  if (Number.isFinite(maxV)) { st2.max_tags = maxV; migrated.push("max"); }
+                  if (typeof cwV === "string") { st2.category_weights = cwV; }
+                  if (typeof stV === "string") { st2.search_text = stV; }
+                  if (sepV === "comma" || sepV === "space") { st2.separator = sepV; migrated.push("sep"); }
+                  if (typeof uwV === "boolean") { st2.use_weights_syntax = uwV; }
+                  if (typeof ddV === "boolean") { st2.dedupe = ddV; }
+                  if (typeof prV === "boolean") { st2.pinned_required = prV; }
+                  sw.value = JSON.stringify(st2);
+                  if (migrated.length) repaired.push(`旧参数迁移(${migrated.join(",")})`);
+                } catch {}
               }
             }
-            // selection_state 必须是 JSON 对象
-            const sw = this.widgets?.find((x) => x.name === "selection_state");
-            if (sw && typeof sw.value === "string" && sw.value.trim()) {
-              try {
-                const p = JSON.parse(sw.value);
-                if (typeof p !== "object" || p === null) { sw.value = "{}"; repaired.push("selection_state→{}"); }
-              } catch { sw.value = "{}"; repaired.push("selection_state(broken)→{}"); }
-            }
             if (repaired.length) {
-              console.warn("[TagLibrary] 检测到旧工作流参数错位, 已自动修复:", repaired.join(", "));
+              console.warn("[TagLibrary] 检测到旧工作流参数, 已自动修复/迁移:", repaired.join(", "));
             }
           } catch {}
           return r;
@@ -1126,8 +1122,8 @@ app.registerExtension({
             } catch {}
           }
         }
-        // 隐藏两个内部 widget
-        for (const name of ["selection_state", "category_weights"]) {
+        // 隐藏内部 widget (selection_state 是面板状态, 不需要显示)
+        for (const name of ["selection_state"]) {
           const w = node.widgets?.find((x) => x.name === name);
           if (w) {
             w.computeSize = () => [0, -4];
@@ -1153,6 +1149,10 @@ app.registerExtension({
         hideOnZoom: false,
         serialize: false,
       });
+      // 新版前端序列化循环读的是【widget 实例属性】serialize (不是 options.serialize),
+      // 必须直接赋在实例上才能真正跳过。另外 serializeValue 返回 undefined 兜底。
+      domW.serialize = false;
+      try { domW.serializeValue = () => undefined; } catch {}
       node._taglibPanelApi = panelApi;
 
       // 内容变化(分类展开/chips 渲染)时让画布重排一次
