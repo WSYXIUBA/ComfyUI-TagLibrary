@@ -311,8 +311,11 @@ class TagLibraryNode:
 
         else:  # random_mix
             rng = random.Random(seed)
+            # 组合随机范围: state.mix_scope = ["大类名", ...] (空/缺省 = 全覆盖)
+            mix_scope = {str(x) for x in (state.get("mix_scope") or [])}
             pool_all = [(t, c) for t, c in self._flat(lib)
-                        if self._tag_matches(t, search_text)]
+                        if self._tag_matches(t, search_text)
+                        and (not mix_scope or c in mix_scope)]
             if not pool_all:
                 tags = []
             else:

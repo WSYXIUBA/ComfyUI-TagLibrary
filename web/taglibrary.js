@@ -1422,24 +1422,24 @@ app.registerExtension({
         ],
       });
     } catch {}
-    // 顶栏直达按钮 (官方 topbar API 走不通时兜底: 在顶栏 DOM 注入一个按钮)
-    setTimeout(() => {
+    // 顶栏直达按钮: fixed 定位贴在右上角 (控制面板按钮左侧), 不依赖插件变动大的 DOM 结构
+    const injectTopbarBtn = () => {
       try {
-        if (document.getElementById("taglib-topbar-btn")) return;
-        // 新版 topbar: .comfy-menu-actions / 旧版: #comfy-menu 按钮 Crow 位置
-        const anchor =
-          document.querySelector(".comfy-menu-actions") ||
-          document.querySelector("nav[aria-label]")?.lastElementChild;
-        if (!anchor) return;
+        if (document.getElementById("taglib-topbar-btn")) return true;
         const btn = document.createElement("button");
         btn.id = "taglib-topbar-btn";
-        btn.className = anchor.querySelector("button")?.className || "comfyui-button";
-        btn.textContent = "🏷 标签库";
-        btn.title = "打开标签库管理页";
-        btn.style.marginLeft = "6px";
+        btn.textContent = "🏷";
+        btn.title = "标签库管理页";
+        btn.style.cssText =
+          "position:fixed;z-index:99999;top:10px;right:64px;padding:4px 10px;" +
+          "border-radius:8px;border:1px solid rgba(128,140,160,.4);" +
+          "background:rgba(28,30,38,.92);color:#e3e7ee;cursor:pointer;font-size:13px;";
         btn.onclick = openManagerDialog;
-        anchor.appendChild(btn);
-      } catch {}
-    }, 2500);
+        document.body.appendChild(btn);
+        return true;
+      } catch { return false; }
+    };
+    setTimeout(injectTopbarBtn, 2500);
+    setTimeout(injectTopbarBtn, 6000);
   },
 });
