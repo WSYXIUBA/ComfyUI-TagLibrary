@@ -600,6 +600,11 @@ export function buildPanelWidget(node, container) {
       invalidateLibraryCache();
       await fetchLibrary();
       applyScale();
+      // executed 回显预存的分组数据 → 应用到 ui.fillGroups
+      if (node._taglibPendingGroups instanceof Map) {
+        ui.fillGroups = node._taglibPendingGroups;
+        node._taglibPendingGroups = null;
+      }
       renderAll();
     },
   };
@@ -1585,7 +1590,24 @@ app.registerExtension({
             return p && excluded.has(p[0]);
           });
           const have = new Set(kept.map((t) => t.en.toLowerCase()));
-          const fresh = parsed.filter((t) => t.en && !have.has(t.en.toLowerCase()));
+          const fresh = [];
+          for (const t of parsed) {
+            if (!t.en || have.has(t.en.toLowerCase())) continue;
+            // cat 优先用后端带回的; 没有时前端按 libPath 反查 (en 可能是格式化后的)
+            let cat = t.cat || "";
+            const p = libPath.get(t.en.toLowerCase());
+            if (!cat && p) cat = p[0];
+            have.add(t.en.toLowerCase());
+            fresh.push({ en: t.en, zh: t.zh || "", nsfw: !!t.nsfw, enabled: true, _cat: cat });
+          }
+          // 分组标题数据: cat → fillGroups
+          const groups = new Map();
+          for (const t of fresh) {
+            const k = t._cat || "其他";
+            if (!groups.has(k)) groups.set(k, []);
+            groups.get(k).push(t);
+          }
+          node._taglibPendingGroups = groups;
           w.value = JSON.stringify({ ...st, tags: [...kept, ...fresh] });
           node._taglibPanelApi?.refresh?.();
           node.setDirtyCanvas?.(true, true);
