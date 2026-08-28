@@ -263,7 +263,7 @@ export function buildPanelWidget(node, container) {
       el.innerHTML =
         `<span class="tl-pin${t.pinned ? " pinned" : ""}" title="随机时必含">📌</span>` +
         `<b>${chipLabel(t)}</b>` +
-        (t.zh && getLang() !== "zh" ? `<i class="t-zh">${t.zh}</i>` : "") +
+        (t.zh && getLang() === "en" ? `<i class="t-zh">${t.zh}</i>` : "") +
         `<span class="tl-x" title="移除">✕</span>`;
       el.querySelector(".tl-pin").onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
       el.querySelector(".tl-x").onclick = (e) => { e.stopPropagation(); removeTagIdx(idx); };
@@ -1099,9 +1099,18 @@ function openManagerDialog() {
   dlg.style.cssText =
     "width:min(96vw,1400px);height:min(94vh,980px);border:none;border-radius:14px;" +
     "padding:0;background:#17191f;color:#dfe3ea;max-width:none;max-height:none;";
-  dlg.innerHTML = `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
+  dlg.innerHTML =
+    `<button id="taglib-mgr-close" title="关闭 (Esc)" style="position:absolute;top:10px;right:14px;z-index:10;
+      width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);cursor:pointer;
+      background:rgba(30,32,40,.95);color:#dfe3ea;font-size:16px;line-height:1">✕</button>` +
+    `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
   document.body.appendChild(dlg);
   dlg.showModal();
+  dlg.querySelector("#taglib-mgr-close").onclick = () => dlg.close();
+  dlg.addEventListener("click", (e) => {
+    // 点击遮罩区域也可关闭 (dialog 自身 = 遮罩)
+    if (e.target === dlg) dlg.close();
+  });
   dlg.addEventListener("close", () => {
     invalidateLibraryCache();
     window.dispatchEvent(new CustomEvent("taglib-updated"));
