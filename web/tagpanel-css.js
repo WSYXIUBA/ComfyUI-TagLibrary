@@ -5,9 +5,13 @@
 
 const CSS = `
 /* ================= TagLibrary 节点面板 ================= */
+/* 主题适配: html 根类 dark-theme 由 ComfyUI 前端按当前配色切换
+   (arc/dark/github/light/solarized/nord 六套内置主题)。
+   面板颜色全部取自 CSS 变量 → 任何主题下都协调。 */
 .taglib-widget-holder { all: initial; display: block; font-family: inherit; min-width: 0; width: 100%; height: var(--comfy-widget-height, 60%); min-height: var(--comfy-widget-min-height, 160px); overflow: hidden; box-sizing: border-box; }
 .taglib-panel {
-  --tl-bg: rgba(17,19,25,0.92);
+  /* 默认 = dark 主题 */
+  --tl-bg: rgba(23,23,24,0.94);
   --tl-card: rgba(255,255,255,0.045);
   --tl-border: rgba(255,255,255,0.10);
   --tl-text: #e3e7ee;
@@ -25,6 +29,41 @@ const CSS = `
   font: 12px/1.45 "Segoe UI", "Microsoft YaHei", sans-serif;
   user-select: none;
   overflow: hidden;
+}
+/* ---------- 主题覆盖 (fg/bg 取自各主题声明值, 边框/卡片由明度推算) ---------- */
+/* arc: fg #fff, bg #2b2f38, menu #242730 */
+html:not(.dark-theme) .taglib-panel,
+.taglib-panel[data-theme="arc"] {
+  --tl-bg: rgba(36,39,48,0.94);
+  --tl-card: rgba(255,255,255,0.05);
+}
+/* github: fg #e5eaf0, bg #161b22, menu #13171d */
+.taglib-panel[data-theme="github"] {
+  --tl-bg: rgba(19,23,29,0.94);
+}
+/* light: fg #222, bg #DDD, menu #FFFFFF — 浅色主题 */
+html:not(.dark-theme) .taglib-panel[data-theme="light"],
+.taglib-panel.tl-light {
+  --tl-bg: rgba(255,255,255,0.96);
+  --tl-card: rgba(0,0,0,0.045);
+  --tl-border: rgba(0,0,0,0.14);
+  --tl-text: #222;
+  --tl-muted: #6b7280;
+  --tl-accent: #0071e3;
+  background: linear-gradient(180deg, #ffffff, rgba(245,245,247,0.96));
+}
+/* solarized: fg #fdf6e3, bg #002b36, menu #073642 */
+.taglib-panel[data-theme="solarized"] {
+  --tl-bg: rgba(7,54,66,0.94);
+  --tl-card: rgba(253,246,227,0.06);
+  --tl-text: #fdf6e3;
+  --tl-muted: #93a1a1;
+  --tl-accent: #b58900;
+}
+/* nord: fg #e5eaf0, bg #2e3440, menu #161b22 */
+.taglib-panel[data-theme="nord"] {
+  --tl-bg: rgba(22,27,34,0.94);
+  --tl-accent: #88c0d0;
 }
 .taglib-panel *, .taglib-panel *::before, .taglib-panel *::after { box-sizing: inherit; }
 
