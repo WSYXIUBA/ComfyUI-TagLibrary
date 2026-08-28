@@ -336,24 +336,17 @@ export function buildPanelWidget(node, container) {
     renderTags();
   }
 
-  /* ---------- 🎲 填充: 清空非排除类目标签 → 按分类随机填充 (排除类目 = 唯一范围控制) ---------- */
-  function buildPool(nsfwOn) {
-    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
-    const pool = [];
-    for (const cat of cats) {
-      if (new Set(getState(node).exclude_categories || []).has(cat.name)) continue; // 排除类目不参与
-      for (const sub of cat.subcategories || []) {
-        for (const tag of sub.tags || []) {
-          if (tag.enabled === false) continue;
-          if (tag.nsfw && !nsfwOn) continue;
-          pool.push({ en: tag.en, zh: tag.zh, nsfw: !!tag.nsfw, _cat: cat.name });
-        }
-      }
+  /* ---------- 🎲 填充: 子分类粒度抽取, 排除类目=0~0 ---------- */
+  function getFillRange(st, subId) {
+    if (st.fill_master ?? true) {
+      const lo = st.fill_master_min ?? 1, hi = st.fill_master_max ?? 1;
+      return [Math.min(lo, hi), Math.max(lo, hi)];
     }
-    return pool;
+    const r = (st.fill_sub_ranges || {})[subId] || { min: 1, max: 1 };
+    return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
   }
 
-  let CONFLICT_GROUPS = null; // 缓存: [{tags:[en,...]}, ...]
+  let CONFLICT_GROUPS = null; // 缓存: [Set(en_lower), ...]
   async function fetchConflicts() {
     if (CONFLICT_GROUPS) return CONFLICT_GROUPS;
     try {
@@ -380,36 +373,42 @@ export function buildPanelWidget(node, container) {
     return out;
   }
 
+  function buildSubPools(nsfwOn) {
+    // [{catName, subId, subName, tags:[...]}]  排除类目跳过
+    const excluded = new Set(getState(node).exclude_categories || []);
+    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
+    const subs = [];
+    for (const cat of cats) {
+      if (excluded.has(cat.name)) continue;
+      for (const sub of cat.subcategories || []) {
+        const tags = (sub.tags || []).filter((t) =>
+          t.enabled !== false && (nsfwOn || !t.nsfw));
+        if (tags.length) subs.push({ catName: cat.name, subId: sub.id, subName: sub.name, tags });
+      }
+    }
+    return subs;
+  }
+
   async function rollFill() {
     const st = getState(node);
     const nsfwOn = getNsfwEffective(node);
-    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
-    if (!cats.length) return;
     const excluded = new Set(st.exclude_categories || []);
     // ① 清空: 非"排除类目"的已有标签全部清掉 (排除类目的标签保留不动)
     const keptTags = st.tags.filter((t) => {
       const p = LIB_PATH.get(String(t.en).toLowerCase());
       return p && excluded.has(p[0]);
     });
-    // ② 填充: 每个非排除分类随机抽; 防冲突避让
-    const pool = buildPool(nsfwOn);
+    // ② 按子分类抽取: 每个子分类读范围, 冲突避让
+    const subPools = buildSubPools(nsfwOn);
     const usedEn = new Set(keptTags.map((t) => t.en.toLowerCase()));
     const bannedGroups = st.avoid_conflicts !== false ? await fetchConflicts() : [];
-    let lo = Number.isFinite(st.min_tags) ? st.min_tags : 3;
-    let hi = Number.isFinite(st.max_tags) ? st.max_tags : 8;
-    if (lo > hi) [lo, hi] = [hi, lo];
-    const targetCats = cats.filter((c) => !excluded.has(c.name));
-    if (!targetCats.length) return;
-    const perCat = Math.max(1, Math.floor(hi / targetCats.length));
     const picked = [];
-    for (const cat of targetCats) {
-      if (picked.length >= hi) break;
-      const catPool = pool.filter((t) => t._cat === cat.name);
-      const quota = Math.min(catPool.length, perCat, hi - picked.length);
-      picked.push(...pickFrom(catPool, quota, usedEn, bannedGroups));
+    for (const sp of subPools) {
+      const [mn, mx] = getFillRange(st, sp.subId);
+      if (mx <= 0) continue;
+      const n = mn + Math.floor(Math.random() * (mx - mn + 1));
+      picked.push(...pickFrom(sp.tags, n, usedEn, bannedGroups).map((t) => ({ ...t, _cat: sp.catName })));
     }
-    // 不足 min 时从全库随机补齐
-    if (picked.length < lo) picked.push(...pickFrom(pool, lo - picked.length, usedEn, bannedGroups));
     if (!picked.length) return;
     // ③ 写回: 排除类目的保留标签 + 新填充
     setState(node, { tags: [...keptTags, ...picked.map(({ _cat, ...rest }) => ({ ...rest, enabled: true }))] });
@@ -659,6 +658,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
       .tp-exc-card .nm { flex:1; font-size:13px; }
       .tp-exc-card .why { font-size:11px; color:#f7a4b1; }
       .tp-exc-hint { font-size:12px; color:#8b93a5; margin-bottom:12px; line-height:1.6; }
+      .tp-master { border:1px solid rgba(84,160,255,.35); background:rgba(84,160,255,.08);
+                   border-radius:10px; padding:10px; margin-bottom:8px; }
+      .tp-range { display:inline-flex; align-items:center; gap:4px; }
+      .tp-range input { width:44px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14);
+                        border-radius:6px; color:#e3e7ee; padding:3px 5px; font-size:11.5px; text-align:center; }
+      .tp-range-hint { font-size:10.5px; color:#6b7385; margin-top:5px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
@@ -690,11 +695,47 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
 
   function libCats() { return (LIB_CACHE && LIB_CACHE.categories) || []; }
 
-  /* ---------- 三级侧栏树: 大类(可折叠) > 子分类 > 孙分类 ---------- */
+  /* ---------- 三级侧栏树: 大类(可折叠) > 子分类 > 孙分类 + 抽取范围设置 ---------- */
   function renderCats() {
     catsBox.innerHTML = "";
     if (!ui.openCats) ui.openCats = new Set();
     const allCount = libCats().reduce((n, c) => n + countTags(c), 0);
+    // ---- 总控制开关 + 范围 (放在"全部"上面) ----
+    const st = getState(node);
+    const master = st.fill_master ?? true;
+    const mlo = st.fill_master_min ?? 1;
+    const mhi = st.fill_master_max ?? 1;
+    const masterBox = document.createElement("div");
+    masterBox.className = "tp-master";
+    masterBox.innerHTML = `
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+        <input type="checkbox" class="tp-master-sw" ${master ? "checked" : ""}
+          style="width:14px;height:14px;accent-color:#54a0ff"/>
+        <b style="font-size:12px">总控制</b>
+      </label>
+      <div class="tp-range" style="${master ? "" : "opacity:.35"}">
+        <input type="number" class="tp-master-min" min="0" max="20" value="${mlo}"/>
+        <span>~</span>
+        <input type="number" class="tp-master-max" min="0" max="20" value="${mhi}"/>
+      </div>
+      <div class="tp-range-hint">每个子分类抽取 ${mlo}~${mhi} 个</div>`;
+    catsBox.appendChild(masterBox);
+    masterBox.querySelector(".tp-master-sw").onchange = (e) => {
+      setState(node, { fill_master: e.target.checked });
+      renderCats();
+    };
+    const saveMaster = () => {
+      const mn = parseInt(masterBox.querySelector(".tp-master-min").value) || 0;
+      const mx = parseInt(masterBox.querySelector(".tp-master-max").value) || 0;
+      setState(node, { fill_master_min: Math.min(20, Math.max(0, mn)),
+                       fill_master_max: Math.min(20, Math.max(0, mx)) });
+      masterBox.querySelector(".tp-range-hint").textContent =
+        `每个子分类抽取 ${Math.min(mn,mx)}~${Math.max(mn,mx)} 个`;
+    };
+    masterBox.querySelector(".tp-master-min").onchange = saveMaster;
+    masterBox.querySelector(".tp-master-max").onchange = saveMaster;
+    // 排除的类目标注 0~0 (不填充)
+    const excludedSet = new Set(getExcluded() || []);
     mkRow(catsBox, {
       id: "__all__", icon: "🗂", name: "全部", count: allCount,
       depth: 0, active: ui.activeCat === "__all__",
@@ -702,8 +743,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
     });
     for (const c of libCats()) {
       const open = ui.openCats.has(c.id);
+      const isExcluded = excludedSet.has(c.name);
       mkRow(catsBox, {
-        id: c.id, icon: c.icon || "📁", name: c.name, count: countTags(c),
+        id: c.id, icon: c.icon || "📁", name: c.name + (isExcluded ? " (0~0)" : ""), count: countTags(c),
         depth: 0, color: c.color, chevron: true, open,
         active: ui.activeCat === c.id && !ui.activeSub,
         onclick: () => { ui.activeCat = c.id; ui.activeSub = null; renderCats(); renderChips(); },
@@ -714,9 +756,17 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
       });
       if (!open) continue;
       for (const sub of c.subcategories || []) {
+        // 子分类独立范围框 (总控制关时生效)
+        const subRange = (st.fill_sub_ranges || {})[sub.id] || { min: 1, max: 1 };
         mkRow(catsBox, {
           id: sub.id, name: sub.name, count: (sub.tags || []).length,
           depth: 1, active: ui.activeSub === sub.id,
+          range: isExcluded ? { min: 0, max: 0, locked: true } : subRange,
+          onRange: (mn, mx) => {
+            const all = { ...(getState(node).fill_sub_ranges || {}) };
+            all[sub.id] = { min: mn, max: mx };
+            setState(node, { fill_sub_ranges: all });
+          },
           onclick: () => { ui.activeCat = c.id; ui.activeSub = sub.id; renderCats(); renderChips(); },
         });
         // 孙分类 (groups)
@@ -731,18 +781,35 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
     }
   }
 
-  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron }) {
+  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange }) {
     const el = document.createElement("div");
     el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
     el.style.color = color || (depth === 0 ? "#cfd6e4" : "#aab3c5");
     if (depth === 1) el.style.paddingLeft = "22px";
     if (depth === 2) el.style.paddingLeft = "38px";
+    const rangeHtml = range ? `
+      <span class="tp-range" style="${range.locked ? "opacity:.35" : ""}">
+        <input type="number" min="0" max="20" value="${range.min}" data-r="min" ${range.locked ? "disabled" : ""}/>
+        <span>~</span>
+        <input type="number" min="0" max="20" value="${range.max}" data-r="max" ${range.locked ? "disabled" : ""}/>
+      </span>` : "";
     el.innerHTML =
       `${chevron ? `<span class="tp-chev">${open ? "▾" : "▸"}</span>` : (depth > 0 ? '<span class="tp-chev">·</span>' : "")}` +
-      `<span>${icon}</span><span class="nm">${name}</span><span class="ct">${count}</span>`;
+      `<span>${icon}</span><span class="nm">${name}</span><span class="ct">${count}</span>` +
+      rangeHtml;
     el.onclick = onclick;
     if (onchevron) {
       el.querySelector(".tp-chev").onclick = (e) => { e.stopPropagation(); onchevron(); };
+    }
+    if (range && onRange) {
+      el.querySelectorAll(".tp-range input").forEach((inp) => {
+        inp.onclick = (e) => e.stopPropagation();
+        inp.onchange = () => {
+          const mn = parseInt(el.querySelector('[data-r="min"]').value) || 0;
+          const mx = parseInt(el.querySelector('[data-r="max"]').value) || 0;
+          onRange(Math.min(20, Math.max(0, mn)), Math.min(20, Math.max(0, mx)));
+        };
+      });
     }
     box.appendChild(el);
   }

@@ -147,13 +147,26 @@ def main() -> None:
     else:
         check("manual 兼容旧selected", True, "skipped - smile 不在默认库")
 
-    # random_mix 同 seed 复现 / 数量正确
-    mixA = node.build('{"min_tags":4,"max_tags":6}', "auto", 123)
-    mixB = node.build('{"min_tags":4,"max_tags":6}', "auto", 123)
-    print(f"      sample(mix seed123): {mixA[0]}")
-    check("mix 同seed复现", mixA[0] == mixB[0])
-    cnt = len([p for p in mixA[0].split(", ") if p])
-    check("mix 数量在4~6", 4 <= cnt <= 6, str(cnt))
+    # auto 模式: 总控制 1~3 → 每子分类抽 1~3 个 (35 子分类 → 数量远超旧 min/max)
+    mixA = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    mixB = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    print(f"      sample(auto seed123): {mixA[0][:60]}...")
+    check("auto 同seed复现", mixA[0] == mixB[0])
+    cntA = len([p for p in mixA[0].split(", ") if p])
+    check("auto 总控制1~3 → 总量>=35", cntA >= 35, str(cntA))
+    # 子分类独立范围: fill_master=false + 质量与技术整个大类 0~0 → 该大类不出
+    # (大类下每个子分类都设 0~0, 模拟 UI 里用户给每个子分类单独设 0)
+    q_subs = next(c for c in library.get_merged()["categories"] if c["name"] == "质量与技术")
+    zero_ranges = {s["id"]: {"min": 0, "max": 0} for s in q_subs["subcategories"]}
+    mixC = node.build(json.dumps({"fill_master": False, "fill_sub_ranges": zero_ranges}), "auto", 7)
+    flat_all = TagLibraryNode._flat(library.get_merged())
+    # 只判定"仅在质量与技术"存在的独有词 (同名标签在别类出现属合法)
+    q_only = {t.get("en","").lower() for t, cn in flat_all if cn == "质量与技术"}
+    others = {t.get("en","").lower() for t, cn in flat_all if cn != "质量与技术"}
+    q_exclusive = q_only - others
+    parts_c = [p.strip().lower() for p in mixC[0].split(",")]
+    leaked_q = [en for en in q_exclusive if en and en in parts_c]
+    check("子分类独立0~0 跳过", not leaked_q, str(leaked_q[:3]))
 
     # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
     scoped = node.build('{"min_tags":2,"max_tags":3,"exclude_categories":["人物主体","服装系统","姿势动作","构图镜头","场景环境","风格媒介","材质特效","负面标签库","质量与技术"]}', "auto", 42)
@@ -252,7 +265,8 @@ def main() -> None:
             conflict_pair = pair[:2]
             break
     if conflict_pair:
-        pin_mix = {"selected": [], "pinned": [conflict_pair[0]], "avoid_conflicts": True}
+        pin_mix = {"selected": [], "pinned": [conflict_pair[0]], "avoid_conflicts": True,
+                   "fill_master": True, "fill_master_min": 1, "fill_master_max": 1}
         bad = 0
         for s in range(40):
             o = node.build(json.dumps({**pin_mix, "min_tags": 4, "max_tags": 9}), "auto", s)
@@ -337,8 +351,8 @@ def main() -> None:
                 leaked3 = []
                 for sd in range(20):
                     o = node.build(state_r, "auto", sd)
-                    text_l = o[0].lower()
-                    leaked3 += [en for en in exclusive if en and en in text_l]
+                    parts_l = [p.strip().lower() for p in o[0].split(",")]
+                    leaked3 += [en for en in exclusive if en and en in parts_l]
                 check("排除大类:随机零漏出", not leaked3, str(leaked3[:4]))
             else:
                 check("存在 groups 的子分类", False)
