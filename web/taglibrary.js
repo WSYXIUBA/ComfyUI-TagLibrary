@@ -1240,13 +1240,15 @@ app.registerExtension({
       };
 
       syncPanelToNode();
-      // ---- 新节点初始尺寸 (lora-manager 同款): 出生即达到面板可用大小 ----
-      const minW = Math.max(PANEL_MIN_W, 320);
-      const minH = Math.max(PANEL_MIN_H, 340);
-      if (node.size[0] < minW || node.size[1] < minH) {
+      // ---- 声明面板所需高度, 让 computeSize 有正确的最小值 ----
+      // LGraphNode.computeSize 会 clamp 到 constructor.min_height:
+      // 出生尺寸 = max(默认, min_height) → 不再"出生偏小, 一拖跳大"
+      node.constructor.min_height = Math.max(PANEL_MIN_H, 560);
+      const minW = Math.max(PANEL_MIN_W, 420);
+      if (node.size[0] < minW || node.size[1] < node.constructor.min_height) {
         node.setSize([
           Math.max(node.size[0], minW),
-          Math.max(node.size[1], minH),
+          Math.max(node.size[1], node.constructor.min_height),
         ]);
       }
 
