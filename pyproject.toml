@@ -1,7 +1,7 @@
 [project]
 name = "comfyui-taglibrary"
-description = "结构化标签库节点: 多分类标签库管理页 + 节点内点选面板 + 三模式随机组合, 输出 STRING 直连 CLIPTextEncode。"
-version = "0.1.0"
+description = "结构化标签库节点: 结构化标签库节点: 双模式随机引擎 + 反冲突系统 + 文件夹式存储热同步 + 管理页, 输出 STRING 直连 CLIPTextEncode。"
+version = "1.0.0"
 license = { text = "MIT" }
 dependencies = []
 
