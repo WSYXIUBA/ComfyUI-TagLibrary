@@ -142,12 +142,30 @@ async def save_library(request: web.Request) -> web.Response:
     except Exception:
         return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
     try:
+        # 数据丢失护栏: 载荷标签数骤减 (如懒加载未完成就保存) → 拒绝
+        # (清空标签库走 DELETE 端点, 不受此护栏影响)
+        try:
+            cur_total = sum(len(s.get("tags") or [])
+                            for c in library.get_merged().get("categories", [])
+                            for s in c.get("subcategories", []))
+            new_total = sum(len(s.get("tags") or [])
+                            for c in payload.get("categories", [])
+                            for s in c.get("subcategories", []))
+        except Exception:  # noqa: BLE001
+            cur_total = new_total = 0
+        if cur_total >= 20 and new_total < cur_total * 0.5:
+            return _json_response({
+                "ok": False,
+                "error": (f"保存被拒绝: 提交载荷 {new_total} 个标签, 远少于当前库 "
+                          f"{cur_total} 个 (疑似加载未完成)。请刷新管理页重试; "
+                          f"大批量删除请使用「🗑 清空标签库」或分批进行。"),
+            }, 409)
         client_mtime = request.headers.get("X-TagLib-Mtime")
         result = library.save_user_library(
             payload,
             client_mtime=float(client_mtime) if client_mtime else None,
         )
-        _mirror_folder()  # 实时镜像: 分类/子分类增删改名即刻落到 data/标签库/
+        _mirror_folder()  # 实时镜像: 分类/子分类增删改名即刻落到 data/taglib/
         return _json_response(result)
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
