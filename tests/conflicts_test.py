@@ -55,7 +55,8 @@ def main():
         print("== 1. 缺文件 → 默认规则自动生成 ==")
         rules = tagconflicts.load_rules()
         ids = [r["id"] for r in rules]
-        check("默认规则 4 条", len(rules) == 4, str(ids))
+        check("默认规则 6 条", len(rules) == 6, str(ids))
+        check("默认含套装/画风互斥", {"suit-vs-tops", "realism-vs-anime"} <= set(ids))
         check("无真实旧文件泄漏进沙箱", not any(i.startswith("legacy.") for i in ids))
         check("nude-vs-clothes 存在", "nude-vs-clothes" in ids)
         check("conflicts.json 落盘", os.path.isfile(tagconflicts.CONFLICTS_PATH))

@@ -5912,7 +5912,7 @@
    "subcategories": [
     {
      "id": "pose.s1",
-     "name": "静态姿势",
+     "name": "姿势",
      "tags": [
       {
        "en": "standing",
@@ -6012,13 +6012,7 @@
        "enabled": true,
        "zh": "手臂支撑",
        "id": "pose.s1.arm-support"
-      }
-     ]
-    },
-    {
-     "id": "pose.s2",
-     "name": "动态动作",
-     "tags": [
+      },
       {
        "en": "walking",
        "weight": 1.0,
@@ -6287,20 +6281,6 @@
        "aliases": [],
        "zh": "电影感打光",
        "id": "lighting.s1.cinematic-lighting"
-      },
-      {
-       "en": "rim light",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "轮廓光",
-       "id": "lighting.s1.rim-light"
-      },
-      {
-       "en": "backlight",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "逆光",
-       "id": "lighting.s1.backlight"
       },
       {
        "id": "lighting.s1.dappled-moonlight",
