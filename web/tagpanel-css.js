@@ -304,6 +304,20 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 }
 .tl-ttag.on:hover { background: color-mix(in srgb, #2ecc71 30%, transparent); }
 .tl-ttag.nsfw:not(.on) { border-color: rgba(255,107,107,.35); color: #d9a0a0; }
+/* mutex 让位 (auto 回显): 灰显 + 删除线 */
+.tl-ttag.tl-dropped { opacity: .42; text-decoration: line-through; }
+.tl-ttag.tl-dropped::before { content: "🚫 "; font-size: 9px; }
+/* 引擎切换段 (自动模式显示) */
+.tl-eng-seg { display: inline-flex; border: 1px solid var(--tl-border); border-radius: 7px; overflow: hidden; }
+.tl-eng-seg button {
+  border: 0; background: transparent; color: var(--tl-muted); cursor: pointer;
+  font-size: 10px; padding: 3px 7px; transition: all .12s ease;
+}
+.tl-eng-seg button + button { border-left: 1px solid var(--tl-border); }
+.tl-eng-seg button.active { color: #cfe4ff; background: rgba(84,160,255,.18); }
+/* 锁定/预览小按钮 */
+.tl-lock-btn, .tl-pv-btn { opacity: .55; }
+.tl-lock-btn:hover, .tl-pv-btn:hover { opacity: 1; }
 .tl-ttag.nsfw.on {
   background: color-mix(in srgb, #ff4757 22%, transparent);
   border-color: rgba(255,71,87,.7);

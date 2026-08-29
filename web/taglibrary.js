@@ -132,7 +132,8 @@ export function buildPanelWidget(node, container) {
   injectPanelStyle();
   container.classList.add("taglib-panel");
 
-  const ui = { activeCat: null, filter: "", mode: "manual", chipsBoxHeight: null };
+  const ui = { activeCat: null, filter: "", mode: "manual", chipsBoxHeight: null,
+               previewMode: getState(node).preview_mode || "simple" };
   // activeCat=null -> 显示全部分类的 chips; 点胶囊切换到该分类; 再点取消回全部
 
 
@@ -152,10 +153,16 @@ export function buildPanelWidget(node, container) {
         <button data-mode="manual">手动</button>
         <button data-mode="auto">自动</button>
       </div>
+      <div class="tl-seg tl-eng-seg" title="自动模式引擎: Fast=极速 / Smart=依赖+权重+多样性" style="display:none">
+        <button data-eng="default_fast">Fast</button>
+        <button data-eng="default_smart">Smart</button>
+      </div>
     </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
+      <button class="tl-btn icon tl-lock-btn" data-act="lock" title="锁定当前结果为手动选择">🔒</button>
+      <button class="tl-btn icon tl-pv-btn" data-act="pv" title="预览模式: 简洁 → 带权重 → 调试">👁</button>
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
   `;
@@ -176,6 +183,7 @@ export function buildPanelWidget(node, container) {
     }
     modeSeg.querySelectorAll("button").forEach((b) =>
       b.classList.toggle("active", b.dataset.mode === ui.mode));
+    if (typeof syncEngSeg === "function") syncEngSeg();
   }
 
   function setMode(m) {
@@ -186,6 +194,42 @@ export function buildPanelWidget(node, container) {
     renderAll();
     node.setDirtyCanvas?.(true);
   }
+
+  /* ---------- 引擎切换 (Fast/Smart, 写入 selection_state.random_config_ref) ---------- */
+  const engSeg = $(".tl-eng-seg");
+  function syncEngSeg() {
+    if (!engSeg) return;
+    engSeg.style.display = ui.mode === "auto" ? "" : "none";
+    const ref = getState(node).random_config_ref || "default_fast";
+    engSeg.querySelectorAll("button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.eng === ref));
+  }
+  engSeg?.querySelectorAll("button").forEach((b) => {
+    b.onclick = () => {
+      setState(node, { random_config_ref: b.dataset.eng });
+      syncEngSeg();
+      if (ui.mode === "auto") renderTags();
+    };
+  });
+
+  /* ---------- 锁定当前结果为手动 ---------- */
+  $(".tl-lock-btn").onclick = () => {
+    const st = getState(node);
+    if (!(st.tags || []).length) return toast("当前没有标签可锁定");
+    setMode("manual");
+    toast("已锁定当前结果为手动选择 (不再随生成变化)");
+  };
+
+  /* ---------- 预览模式: 简洁 / 带权重 / 调试 ---------- */
+  const PV_MODES = ["simple", "weighted", "debug"];
+  $(".tl-pv-btn").onclick = () => {
+    const cur = getState(node).preview_mode || "simple";
+    const next = PV_MODES[(PV_MODES.indexOf(cur) + 1) % PV_MODES.length];
+    setState(node, { preview_mode: next });
+    ui.previewMode = next;
+    previewEl.textContent = outputPreview(getState(node).tags, next);
+    toast(`预览模式: ${{ simple: "简洁", weighted: "带权重", debug: "调试" }[next]}`);
+  };
 
   /* ---------- nsfw (二态按钮: 默认关, 开=绿色) ---------- */
   function renderNsfw() {
@@ -258,7 +302,9 @@ export function buildPanelWidget(node, container) {
         lastGroup = null;
       }
       const el = document.createElement("span");
-      el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "");
+      const dropped = ui.mode === "auto" && node._mutexDropped?.has(String(t.en).toLowerCase());
+      el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "")
+        + (dropped ? " tl-dropped" : "");
       el.draggable = true;
       el.title = t.enabled === false
         ? "已停用 — 点击启用"
@@ -293,10 +339,27 @@ export function buildPanelWidget(node, container) {
         ? `<div class="tl-empty">没有匹配 “${ui.filter}” 的已添加标签</div>`
         : `<div class="tl-empty">还没有添加标签<br/>点右上「➕ 添加标签」从库中挑选</div>`;
     }
-    previewEl.textContent = outputPreview(st.tags);
+    previewEl.textContent = outputPreview(st.tags, ui.previewMode);
   }
 
-  function outputPreview(tags) {
+  function outputPreview(tags, mode) {
+    mode = mode || getState(node).preview_mode || "simple";
+    if (mode === "debug") {
+      const enabledN = tags.filter((t) => t.enabled !== false).length;
+      return `(调试) 共 ${tags.length} · 启用 ${enabledN} · 模式 ${ui.mode} · 引擎 `
+        + (getState(node).random_config_ref || "default_fast");
+    }
+    const weighted = mode === "weighted";
+    const withW = tags.filter((t) => t.enabled !== false && t.weight && t.weight !== 1).length;
+    if (weighted && withW) {
+      const parts = tags.filter((t) => t.enabled !== false)
+        .map((t) => t.weight && t.weight !== 1 ? `${t.en} (×${t.weight})` : t.en);
+      return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
+    }
+    return outputPreviewSimple(tags);
+  }
+
+  function outputPreviewSimple(tags) {
     const st = getState(node);
     const ex = new Set(st.exclude_categories || []);
     // 三级排除: "大类" / "大类/子类" / "大类/子类/孙类" (与后端 tag_excluded 同规则)
@@ -458,7 +521,7 @@ export function buildPanelWidget(node, container) {
     setState(node, { tags: [...keptTags, ...picked.map(({ _cat, ...rest }) => ({ ...rest, enabled: true }))] });
     ui.fillGroups = groupByCat(picked);
     renderTags();
-    previewEl.textContent = outputPreview(getState(node).tags);
+    previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
   }
 
   function groupByCat(tags) {
@@ -503,7 +566,7 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderConflictBtn();
+    renderTags(); renderNsfw(); renderConflictBtn(); syncEngSeg();
   }
 
   // 全局偏好变更 -> 本节点面板实时跟随。
@@ -1968,6 +2031,14 @@ app.registerExtension({
             groups.get(k).push(t);
           }
           node._taglibPendingGroups = groups;
+          // mutex 让位标签 (灰显+删除线, 仅 auto 模式渲染时生效)
+          let dropped = output.taglib_echo_dropped;
+          if (typeof dropped === "string") {
+            try { dropped = JSON.parse(Array.isArray(dropped) ? dropped.join("") : dropped); }
+            catch { dropped = []; }
+          }
+          node._mutexDropped = new Set((Array.isArray(dropped) ? dropped : [])
+            .map((x) => String(x).toLowerCase()));
           w.value = JSON.stringify({ ...st, tags: [...kept, ...fresh] });
           node._taglibPanelApi?.refresh?.();
           node.setDirtyCanvas?.(true, true);
