@@ -362,3 +362,25 @@ tr.nsfw-row:hover td { background: rgba(255,107,107,0.07) !important; }
 }
 .mtag-menu button.primary { background: linear-gradient(135deg, #0071e3, #54a0ff); border: 0; color: #fff; font-weight: 600; }
 .mtag-menu button.danger { border-color: rgba(255,107,107,.5); color: #ff9d9d; }
+
+/* ---------- 子分类页签右键菜单 + 拖拽 ---------- */
+.tab.drag-over { border-color: var(--accent); background: rgba(84,160,255,.12); }
+.mtag-menu.sub-menu { min-width: 210px; }
+.mtag-menu .sm-title {
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(255,255,255,.1);
+  padding-bottom: 6px;
+}
+.mtag-menu .sm-btn { text-align: left; }
+.mtag-menu .sm-hint { font-size: 10.5px; color: var(--muted); }
+
+/* ---------- 标签文件分组列表 ---------- */
+.file-group {
+  font-size: 11.5px;
+  color: #9ecbff;
+  font-weight: 600;
+  margin: 10px 0 4px;
+  letter-spacing: .02em;
+}
+.file-list .empty { padding: 14px; }

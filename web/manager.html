@@ -20,6 +20,7 @@
       <input id="globalSearch" class="search" placeholder="🔍 搜中文 / 英文 / 别名…" />
       <button id="btnAddCat" class="btn">➕ 新建分类</button>
       <button id="btnFiles" class="btn">📂 标签文件</button>
+      <button id="btnTemplate" class="btn" title="按当前分类结构生成 .md 模板 (内嵌使用说明), 发给 AI 补充标签后从「标签文件」导回">🤖 AI模板</button>
       <button id="btnImport" class="btn">📥 导入</button>
       <button id="btnExport" class="btn">📤 导出</button>
       <button id="btnReset" class="btn danger">↺ 恢复默认库</button>
@@ -85,16 +86,22 @@
 <div id="filesDialog" class="modal hidden">
   <div class="modal-box wide">
     <h3>📂 标签文件</h3>
-    <p class="muted">单文件 Markdown 格式: <code># 分类</code> / <code>## 子分类</code>, 标签逗号分隔,
-    支持 <code>英文(中文){权重}[nsfw]</code>。内置目录 <code id="builtinDir">…</code>,
-    外置目录(可选):</p>
-    <input id="extDirInput" class="search full-w" placeholder='例如 D:\mytags (留空 = 只看内置)' />
+    <p class="muted">
+      文件夹结构 = 分类结构: <code>根目录/一级分类/二级分类/xx.md</code>。
+      文件格式: <code># 分类</code> / <code>## 子分类</code> 标题 + 标签行 (支持
+      <code>英文(中文){权重}[nsfw]</code>); 无标题的文件按所在文件夹名归分类。
+      标签库目录 <code id="builtinDir">…</code>, 外置目录(可选):
+    </p>
+    <input id="extDirInput" class="search full-w" placeholder='例如 D:\mytags (留空 = 只看标签库目录)' />
     <div id="fileList" class="file-list"></div>
     <div class="import-row">
-      <span>或直接上传文件:</span>
-      <input type="file" id="mdFileInput" accept=".md,.txt" multiple />
+      <span>或直接上传文件 (.md / .txt / .json):</span>
+      <input type="file" id="mdFileInput" accept=".md,.txt,.json" multiple />
     </div>
     <div class="modal-actions">
+      <button id="btnSyncFolder" class="btn" title="把当前库导出为两级文件夹结构 (覆盖同名文件, 不删除多余文件)">📁 同步当前库到文件夹</button>
+      <button id="btnImportAll" class="btn">⏩ 全部导入</button>
+      <span class="flex-spacer"></span>
       <button id="filesCancel" class="btn">关闭</button>
     </div>
   </div>

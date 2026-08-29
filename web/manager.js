@@ -193,14 +193,82 @@
     box.innerHTML = "";
     const cat = catById(activeCatId);
     if (!cat) { $("#emptyHint").classList.remove("hidden"); return; }
-    (visibleSubs(cat)).forEach((sub) => {
+    (visibleSubs(cat)).forEach((sub, idx) => {
       const el = document.createElement("span");
       el.className = "tab" + (sub.id === activeSubId ? " active" : "");
+      el.draggable = true;
+      el.title = "点击切换 / 右键: 重命名·删除 / 拖拽排序";
       const hits = filterQ ? (sub.tags || []).filter(tagHits).length : (sub.tags || []).length;
-      el.innerHTML = `${sub.name} <span class="t-count">${hits}</span>`;
+      el.innerHTML = `${escapeHtml(sub.name)} <span class="t-count">${hits}</span>`;
       el.onclick = () => { activeSubId = sub.id; renderTabs(); renderTable(); };
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openSubTabMenu(e.clientX, e.clientY, cat, sub);
+      };
+      // 拖拽排序 (同级子分类)
+      el.ondragstart = (e) => e.dataTransfer.setData("text/plain", String(idx));
+      el.ondragover = (e) => { e.preventDefault(); el.classList.add("drag-over"); };
+      el.ondragleave = () => el.classList.remove("drag-over");
+      el.ondrop = (e) => {
+        e.preventDefault();
+        el.classList.remove("drag-over");
+        const from = parseInt(e.dataTransfer.getData("text/plain"));
+        if (Number.isNaN(from) || from === idx) return;
+        const subs = cat.subcategories;
+        const [moved] = subs.splice(from, 1);
+        subs.splice(idx, 0, moved);
+        markDirty(); renderTabs();
+      };
       box.appendChild(el);
     });
+  }
+
+  /* ---------- 子分类页签右键菜单: 重命名 / 删除 ---------- */
+  let subMenuEl = null;
+  function closeSubTabMenu() {
+    if (subMenuEl) { subMenuEl.remove(); subMenuEl = null; }
+  }
+  function openSubTabMenu(x, y, cat, sub) {
+    closeSubTabMenu();
+    subMenuEl = document.createElement("div");
+    subMenuEl.className = "mtag-menu sub-menu";
+    subMenuEl.innerHTML = `
+      <div class="sm-title">${escapeHtml(cat.name)} / ${escapeHtml(sub.name)}</div>
+      <button data-act="rename" class="sm-btn">✏ 重命名</button>
+      <button data-act="del" class="sm-btn danger">🗑 删除子分类</button>
+      <div class="sm-hint">${(sub.tags || []).length} 个标签将随子分类一起删除</div>`;
+    document.body.appendChild(subMenuEl);
+    const r = subMenuEl.getBoundingClientRect();
+    subMenuEl.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+    subMenuEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+    subMenuEl.addEventListener("click", (e) => e.stopPropagation());
+    subMenuEl.querySelector('[data-act="rename"]').onclick = () => {
+      closeSubTabMenu();
+      renameSub(cat, sub);
+    };
+    subMenuEl.querySelector('[data-act="del"]').onclick = () => {
+      closeSubTabMenu();
+      removeSub(cat, sub);
+    };
+    setTimeout(() => document.addEventListener("click", closeSubTabMenu, { once: true }), 0);
+  }
+
+  function renameSub(cat, sub) {
+    const name = prompt("子分类名称:", sub.name);
+    if (name === null) return;
+    if (!name.trim()) return toast("名称不能为空", true);
+    sub.name = name.trim();
+    markDirty(); renderTabs(); renderTable();
+  }
+
+  function removeSub(cat, sub) {
+    const n = (sub.tags || []).length;
+    if (!confirm(`确定删除子分类「${sub.name}」?\n其下 ${n} 个标签将一并删除 (保存后落盘)。`)) return;
+    cat.subcategories = (cat.subcategories || []).filter((s) => s !== sub);
+    if (activeSubId === sub.id) activeSubId = cat.subcategories?.[0]?.id || null;
+    keepSelection();
+    markDirty(); renderAll();
   }
 
   /* ---------- 标签 chip 流 (一行多枚, 双显, 绿框/红框, 右键编辑菜单) ---------- */
@@ -424,6 +492,70 @@
     URL.revokeObjectURL(a.href);
   }
 
+  /* ---------- 🤖 AI 模板导出 ----------
+     按当前库的分类结构实时生成 .md 模板: 内嵌使用说明 (HTML 注释, 导入解析时被忽略),
+     每个子分类带 ≤5 个现有标签做格式示例, AI 补齐后走「标签文件」导入自动去重合并。 */
+  function fmtTag(t) {
+    let s = t.en || "";
+    if (t.zh) s += `(${t.zh})`;
+    if (t.weight && t.weight !== 1.0) s += `{${t.weight}}`;
+    if (t.nsfw) s += "[nsfw]";
+    return s;
+  }
+
+  function buildTemplateMd() {
+    const SAMPLES = 5;
+    const head = `<!--
+==================================================================
+🏷 ComfyUI-TagLibrary 标签模板 (标签库管理页自动生成, 与当前库分类结构实时一致)
+
+【使用说明 —— 直接把本文件发给 AI, 并附一句: "请按文件内说明补充标签"】
+
+任务: 为每个「## 子分类」补充新的提示词标签。
+规则:
+ 1. 保持「# 大分类」「## 子分类」两级标题结构, 不要增删改任何标题。
+ 2. 每行写多个标签, 用逗号分隔; 单个标签语法:
+      english(中文翻译){权重}[nsfw]
+    - 中文翻译尽量填写; 权重可省略 (默认 1.0); NSFW 词必须带 [nsfw] 后缀
+    - 例: smile(微笑){1.1}, long hair(长发), some_word(某描述){1.0}[nsfw]
+ 3. 已有标签是格式示例 (每个子分类最多展示 ${SAMPLES} 个), 原样保留不要改,
+    在同一子分类下补充新标签。
+ 4. 每个子分类补充 8~15 个高质量、互相不重复的新标签。
+ 5. 完成后把整个文件内容直接输出返回 (保持 Markdown 格式)。
+导入: 回填后的文件 → 标签库管理页「📂 标签文件」上传, 自动按分类归位并去重。
+==================================================================
+-->`;
+    const parts = [head];
+    for (const cat of lib.categories || []) {
+      parts.push(``, `# ${cat.name}`);
+      const subs = cat.subcategories || [];
+      if (!subs.length) parts.push(`<!-- (此大分类暂无子分类) -->`);
+      for (const sub of subs) {
+        parts.push(``, `## ${sub.name}`);
+        const tags = (sub.tags || []);
+        if (!tags.length) {
+          parts.push(`<!-- (此子分类暂无标签, 请在下方补充) -->`);
+        } else {
+          parts.push(tags.slice(0, SAMPLES).map(fmtTag).join(", "));
+          if (tags.length > SAMPLES)
+            parts.push(`<!-- (另有 ${tags.length - SAMPLES} 个已有标签未展示, 补充时避免与其重复) -->`);
+        }
+      }
+    }
+    parts.push("");
+    return parts.join("\n");
+  }
+
+  function exportTemplate() {
+    const blob = new Blob([buildTemplateMd()], { type: "text/markdown" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "taglib_模板_发给AI补充.md";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast("模板已下载: 直接发给 AI, 回填后从「📂 标签文件」导入");
+  }
+
   function importJson(file) {
     const reader = new FileReader();
     reader.onload = async () => {
@@ -468,38 +600,63 @@
     }
   }
 
-  /* ---------------- 标签文件导入 ---------------- */
+  /* ---------------- 标签文件导入 (两级文件夹 = 两级分类) ---------------- */
+  let lastFiles = [];   // 最近一次列表, 供「全部导入」使用
+  let libraryDir = "";
+
+  async function importOneFile(f, btn) {
+    const body = { path: f.path, cat_dir: f.cat_dir || null, sub_dir: f.sub_dir || null };
+    const dir = $("#extDirInput").value.trim();
+    if (dir) body.external_dir = dir;
+    const res = await fetch("/taglib/api/tagfiles/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
+      body: JSON.stringify(body),
+    });
+    const out = await res.json();
+    if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    return out;
+  }
+
   async function refreshFileList() {
     const dir = $("#extDirInput").value.trim();
     const r = await fetch("/taglib/api/tagfiles" + (dir ? `?dir=${encodeURIComponent(dir)}` : ""));
     const data = await r.json();
     if (!data.ok) return;
-    $("#builtinDir").textContent = data.builtin_dir;
+    libraryDir = data.library_dir || "";
+    $("#builtinDir").textContent = libraryDir;
+    lastFiles = data.files || [];
     const box = $("#fileList");
     box.innerHTML = "";
-    for (const f of data.files || []) {
+    // 按文件夹归属分组: 大类 / 子分类 / 散文件
+    const groups = new Map();   // "cat/sub" -> files[]
+    const loose = [];
+    for (const f of lastFiles) {
+      if (f.cat_dir) {
+        const key = `${f.cat_dir}/${f.sub_dir || ""}`;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(f);
+      } else {
+        loose.push(f);
+      }
+    }
+    const mkRow = (f, indent) => {
       const row = document.createElement("div");
       row.className = "file-row";
       const src = f.source === "builtin" ? "内置" : "外置";
+      const loc = f.cat_dir ? `${f.cat_dir}${f.sub_dir ? " / " + f.sub_dir : ""}` : "散文件 (按文件内标题)";
+      row.style.paddingLeft = indent ? "26px" : "";
       row.innerHTML = `<span class="f-src ${f.source}">${src}</span>
-        <span class="f-name">${f.file_name}</span>
-        <span class="muted">${(f.size / 1024).toFixed(1)} KB</span>`;
+        <span class="f-name">${escapeHtml(f.file_name)}</span>
+        <span class="muted">${escapeHtml(loc)} · ${(f.size / 1024).toFixed(1)} KB</span>`;
       const btn = document.createElement("button");
       btn.className = "btn small primary";
       btn.textContent = "⬇ 导入";
       btn.onclick = async () => {
         btn.disabled = true; btn.textContent = "导入中…";
         try {
-          const body = { path: f.path };
-          if (dir) body.external_dir = dir;
-          const res = await fetch("/taglib/api/tagfiles/import", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
-            body: JSON.stringify(body),
-          });
-          const out = await res.json();
-          if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-          toast(`✅ 新增 ${out.imported_new_tags} 个标签, 去重 ${out.duplicates_removed} 条 (分类包 ${out.imported_categories} 个)`);
+          const out = await importOneFile(f);
+          toast(`✅ ${f.file_name}: 新增 ${out.imported_new_tags} 个标签, 去重 ${out.duplicates_removed} 条`);
           btn.textContent = "已导入";
           await load();
         } catch (err) {
@@ -508,10 +665,60 @@
         }
       };
       row.appendChild(btn);
-      box.appendChild(row);
+      return row;
+    };
+    for (const [key, files] of groups) {
+      const [c, s] = key.split("/");
+      const head = document.createElement("div");
+      head.className = "file-group";
+      head.textContent = `📁 ${c}${s ? ` / 📁 ${s}` : ""}`;
+      box.appendChild(head);
+      for (const f of files) box.appendChild(mkRow(f, true));
     }
-    if (!(data.files || []).length)
-      box.innerHTML = `<div class="empty">该目录没有 .md/.txt 文件</div>`;
+    if (loose.length) {
+      const head = document.createElement("div");
+      head.className = "file-group";
+      head.textContent = "📄 散文件";
+      box.appendChild(head);
+      for (const f of loose) box.appendChild(mkRow(f, false));
+    }
+    if (!lastFiles.length)
+      box.innerHTML = `<div class="empty">目录里没有 .md/.txt 文件。点「📁 同步当前库到文件夹」生成结构。</div>`;
+  }
+
+  async function importAllFiles() {
+    if (!lastFiles.length) return toast("没有可导入的文件", true);
+    if (!confirm(`依次导入 ${lastFiles.length} 个文件? (自动去重, 已导入的会跳过新增)`)) return;
+    let okN = 0, newTags = 0, failN = 0;
+    for (const f of lastFiles) {
+      try {
+        const out = await importOneFile(f);
+        okN++;
+        newTags += out.imported_new_tags || 0;
+      } catch {
+        failN++;
+      }
+    }
+    await load();
+    toast(`✅ 全部导入完成: 成功 ${okN} 个, 新增 ${newTags} 标签${failN ? `, 失败 ${failN} 个` : ""}`);
+  }
+
+  async function syncToFolder() {
+    const dir = $("#extDirInput").value.trim();
+    if (dirty && !confirm("有未保存修改, 同步的是已保存的库内容。先保存再同步? (确定=继续同步)")) return;
+    try {
+      const res = await fetch("/taglib/api/tagfiles/export-folder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dir ? { dir } : {}),
+      });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      toast(`✅ 已导出 ${out.categories} 个分类 / ${out.subcategories} 个子分类 / ${out.tags} 标签 → ${out.folder}`);
+      await refreshFileList();
+    } catch (err) {
+      toast(`同步失败: ${err.message}`, true);
+    }
   }
 
   function openFilesDialog() {
@@ -521,6 +728,10 @@
 
   async function uploadMdFiles(files) {
     for (const file of files) {
+      if (file.name.toLowerCase().endsWith(".json")) {
+        importJson(file);   // JSON 模板/备份走按 id 合并
+        continue;
+      }
       const text = await file.text();
       const res = await fetch("/taglib/api/tagfiles/import", {
         method: "POST",
@@ -538,6 +749,8 @@
   $("#btnFiles").onclick = openFilesDialog;
   $("#filesCancel").onclick = () => $("#filesDialog").classList.add("hidden");
   $("#extDirInput").onchange = refreshFileList;
+  $("#btnImportAll").onclick = importAllFiles;
+  $("#btnSyncFolder").onclick = syncToFolder;
   $("#mdFileInput").onchange = (e) => {
     if (e.target.files.length) uploadMdFiles([...e.target.files]);
     e.target.value = "";
@@ -551,6 +764,7 @@
   $("#pasteOk").onclick = doPasteImport;
   $("#pasteCancel").onclick = () => $("#pasteDialog").classList.add("hidden");
   $("#btnExport").onclick = exportJson;
+  $("#btnTemplate").onclick = exportTemplate;
   $("#btnImport").onclick = () => $("#fileInput").click();
   $("#fileInput").onchange = (e) => {
     if (e.target.files[0]) importJson(e.target.files[0]);
