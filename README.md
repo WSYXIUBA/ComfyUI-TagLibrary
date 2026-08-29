@@ -24,6 +24,12 @@
 - **性能**：节点执行 1-4ms；库文件读取带缓存，热同步扫描节流
 - **seed 决定论**：同 seed 输出可复现；权重语法 `(tag:1.2)`、去重保序、prefix/suffix 串接
 
+## 界面预览
+
+| 节点面板（点选 / 分组填充 / NSFW 开关） | 标签库管理页（chip 流 / 全级编辑 / 统计） |
+|---|---|
+| ![节点面板](docs/screenshot_node_panel.png) | ![标签库管理页](docs/screenshot_manager.png) |
+
 ## 安装
 
 ### 方式一：ComfyUI Manager（推荐）
