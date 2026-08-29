@@ -600,6 +600,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-tag:hover { background:color-mix(in srgb, var(--c) 20%, transparent); transform:translateY(-1px); }
       .tp-tag.picked { background:var(--c); color:#fff; box-shadow:0 0 8px -2px var(--c); }
       .tp-tag.picked::before { content:"✓ "; }
+      .tp-tag.nsfw { --c:#e5484d; }   /* NSFW = 红色 (与管理页一致) */
       .tp-foot { display:flex; align-items:center; gap:10px; padding:11px 16px; border-top:1px solid rgba(255,255,255,.09); }
       .tp-count { font-size:13px; font-weight:600; color:#54a0ff; }
       .tp-btn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:inherit;
@@ -864,7 +865,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
       const isExisting = existing.has(t.en.toLowerCase());
       const el = document.createElement("span");
-          el.className = "tp-tag" + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
+          el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
           if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
           else {
             el.title = t.nsfw ? "🔞 NSFW 标签" : "";
