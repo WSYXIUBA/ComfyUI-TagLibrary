@@ -140,7 +140,6 @@ export function buildPanelWidget(node, container) {
       <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
       <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
       <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
-      <button class="tl-btn icon" data-act="randset" title="随机设置: 数量/分隔符/权重/去重等">⚙</button>
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
     </div>
     <div class="tl-toolbar">
@@ -463,6 +462,25 @@ export function buildPanelWidget(node, container) {
     renderTags(); renderNsfw(); renderConflictBtn();
   }
 
+  // 全局偏好变更 -> 本节点面板实时跟随。
+  // 本版本前端 extensionManager 没有 settings change 事件面 (setting/setting.settings
+  // 均非 EventTarget, Pinia $subscribe 也不触发), 所以: 设置页写入路径走 onGlobalChange
+  // 即时刷新; 其余来源 (ComfyUI 设置面板等) 用 2s 轻量轮询兜底。
+  const SYNC_KEYS = [
+    SET_DEFAULT_MODE, SET_DEFAULT_NSFW, SET_SCALE, SET_LANG,
+    SETTING_PREFIX + "chip_font_size", SETTING_PREFIX + "chip_radius",
+  ];
+  const lastVals = new Map(SYNC_KEYS.map((k) => [k, getSetting(k, null)]));
+  function pollSettingsSync() {
+    let changed = false;
+    for (const k of SYNC_KEYS) {
+      const v = getSetting(k, null);
+      if (v !== lastVals.get(k)) { lastVals.set(k, v); changed = true; }
+    }
+    if (changed) { applyScale(); renderAll(); }
+  }
+  setInterval(pollSettingsSync, 2000);
+
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
   function openTagPicker() {
     let dlg = document.getElementById("taglib-picker-dialog");
@@ -475,8 +493,8 @@ export function buildPanelWidget(node, container) {
     dlg.innerHTML = `<div id="taglib-picker-root" style="width:100%;height:100%;overflow:hidden"></div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
-    mountTagPicker(dlg.querySelector("#taglib-picker-root"), {
-      onCancel: () => { dlg.close(); dlg.remove(); },
+    const handle = mountTagPicker(dlg.querySelector("#taglib-picker-root"), {
+      onCancel: () => dlg.close(),
       onConfirm: (picked) => {
         // picked: [{en, zh?, nsfw?}] -> 追加到 state.tags
         const st = getState(node);
@@ -489,80 +507,35 @@ export function buildPanelWidget(node, container) {
         }
         setState(node, { tags: st.tags });
         renderTags();
-        dlg.close(); dlg.remove();
+        dlg.close();
       },
       getExisting: () => new Set(getState(node).tags.map((t) => t.en.toLowerCase())),
       getExcluded: () => getState(node).exclude_categories || [],
       setExcluded: (cats) => { setState(node, { exclude_categories: cats }); },
+      onNodeState: renderAll,
+      onGlobalChange: () => { applyScale(); renderAll(); },
       node,
+    });
+    // 点弹窗外遮罩 = 关闭 (与管理页一致); 移除与收尾统一走 close 事件
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", () => {
+      handle.destroy?.();
+      dlg.remove();
+      if (handle.libTouched()) {
+        // 内嵌管理页可能改过库 -> 刷新缓存, 全部节点面板跟随
+        invalidateLibraryCache();
+        fetchLibrary().then(renderAll);
+        window.dispatchEvent(new CustomEvent("taglib-updated"));
+      }
     });
   }
 
-  /* ---------- 随机设置弹窗 (⚙): 数量/分隔符/权重/去重/必含/过滤词 ---------- */
-  function openRandomSettings() {
-    let old = document.getElementById("taglib-randset-dialog");
-    if (old) old.remove();
-    const st = getState(node);
-    const dlg = document.createElement("dialog");
-    dlg.id = "taglib-randset-dialog";
-    dlg.style.cssText = "background:#161920;color:#e3e7ee;border:1px solid rgba(255,255,255,.14);border-radius:14px;padding:0;width:min(420px,92vw)";
-    const row = (label, inner, hint) => `
-      <div style="margin-bottom:14px">
-        <div style="font-size:12px;color:#8b93a5;margin-bottom:4px">${label}</div>
-        ${inner}
-        ${hint ? `<div style="font-size:11px;color:#6b7385;margin-top:3px">${hint}</div>` : ""}
-      </div>`;
-    dlg.innerHTML = `
-      <div style="padding:18px 20px">
-        <div style="font-size:15px;font-weight:600;margin-bottom:14px">⚙ 随机设置</div>
-        ${row("📌 钉选标签必含", `
-          <input id="rs-pinned" type="checkbox" ${st.pinned_required !== false ? "checked" : ""}
-            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
-          "开启后带 📌 的标签随机时一定出现")}
-        ${row("输出分隔符", `
-          <select id="rs-sep" style="background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px">
-            <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
-            <option value="space" ${st.separator === "space" ? "selected" : ""}>空格</option>
-          </select>`)}
-        ${row("权重语法 (tag:1.2)", `
-          <input id="rs-w" type="checkbox" ${st.use_weights_syntax ? "checked" : ""}
-            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
-          "开启后权重≠1 的标签输出为 (tag:权重) 形式")}
-        ${row("去重", `
-          <input id="rs-dd" type="checkbox" ${st.dedupe !== false ? "checked" : ""}
-            style="width:16px;height:16px;accent-color:#54a0ff"/>`,
-          "相同标签只输出一次")}
-        ${row("组合随机过滤词", `
-          <input id="rs-search" type="text" value="${(st.search_text || "").replace(/"/g, "&quot;")}"
-            placeholder="留空 = 全库抽取"
-            style="width:100%;background:#0e1015;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#e3e7ee;padding:6px 8px"/>`,
-          "只从匹配的标签里随机 (支持中文/英文/别名)")}
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:6px">
-          <button id="rs-cancel" style="background:transparent;border:1px solid rgba(255,255,255,.14);border-radius:8px;color:#aab3c5;padding:7px 16px;cursor:pointer">取消</button>
-          <button id="rs-ok" style="background:linear-gradient(135deg,#0071e3,#54a0ff);border:0;border-radius:8px;color:#fff;padding:7px 18px;cursor:pointer;font-weight:600">保存</button>
-        </div>
-      </div>`;
-    document.body.appendChild(dlg);
-    dlg.showModal();
-    dlg.querySelector("#rs-cancel").onclick = () => dlg.close();
-    dlg.querySelector("#rs-ok").onclick = () => {
-      setState(node, {
-        pinned_required: dlg.querySelector("#rs-pinned").checked,
-        separator: dlg.querySelector("#rs-sep").value,
-        use_weights_syntax: dlg.querySelector("#rs-w").checked,
-        dedupe: dlg.querySelector("#rs-dd").checked,
-        search_text: dlg.querySelector("#rs-search").value.trim(),
-      });
-      dlg.close();
-      renderTags();
-    };
-  }
+  /* ---------- 随机设置 (原 ⚙ 弹窗) 已并入「添加标签 → ⚙ 设置」页签 ---------- */
 
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollFill;
   container.querySelector('[data-act="lang"]').onclick = cycleLang;
-  container.querySelector('[data-act="randset"]').onclick = openRandomSettings;
   container.querySelector('[data-act="conflict"]').onclick = () => {
     const cur = getState(node).avoid_conflicts !== false;
     setState(node, { avoid_conflicts: !cur });
@@ -595,8 +568,8 @@ export function buildPanelWidget(node, container) {
 
 /* --------------------------------------------- tag picker (全库挑选器) */
 
-function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded, setExcluded, node }) {
-  const ui = { activeCat: null, filter: "", picked: [], tab: "pick" };  // pick | exclude
+function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChange, getExisting, getExcluded, setExcluded, node }) {
+  const ui = { activeCat: null, filter: "", picked: [], tab: "pick", libTouched: false };  // pick | exclude | manager | settings
 
   rootEl.innerHTML = `
     <style>
@@ -653,12 +626,30 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
       .tp-range input { width:44px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14);
                         border-radius:6px; color:#e3e7ee; padding:3px 5px; font-size:11.5px; text-align:center; }
       .tp-range-hint { font-size:10.5px; color:#6b7385; margin-top:5px; }
+      .tp-set-h { font-size:12px; font-weight:700; color:#8fb8ff; letter-spacing:.05em; margin:20px 0 10px; }
+      .tp-set-h:first-child { margin-top:0; }
+      .tp-set-h .sub { color:#6b7385; font-weight:400; font-size:11px; }
+      .tp-set-card { max-width:560px; border:1px solid rgba(255,255,255,.09); border-radius:12px;
+                     background:rgba(255,255,255,.03); padding:14px 16px; margin-bottom:6px; }
+      .tp-set-row { margin-bottom:13px; }
+      .tp-set-row:last-child { margin-bottom:0; }
+      .tp-set-lab { font-size:12px; color:#aab3c5; margin-bottom:4px; }
+      .tp-set-hint { font-size:11px; color:#6b7385; margin-top:3px; line-height:1.5; }
+      .tp-set-row select, .tp-set-row input[type="text"], .tp-set-row input[type="number"] {
+        background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); border-radius:8px;
+        color:#e3e7ee; padding:6px 9px; font-size:12.5px; outline:none;
+      }
+      .tp-set-row select:focus, .tp-set-row input:focus { border-color:rgba(84,160,255,.55); }
+      .tp-set-row input[type="checkbox"] { width:15px; height:15px; accent-color:#54a0ff; }
+      .tp-sync-note { font-size:11px; color:#6b7385; margin-top:14px; line-height:1.6; max-width:560px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
         <h2>🏷 从标签库添加</h2>
         <button class="tp-tabbtn tp-picktab active">挑标签</button>
         <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
+        <button class="tp-tabbtn tp-mgrtab">🏷 标签库管理</button>
+        <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
         <span style="flex:1"></span>
       </div>
@@ -666,12 +657,15 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
         <aside class="tp-cats"></aside>
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
         <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
+        <section class="tp-mgrview" style="display:none;flex:1;min-width:0;"></section>
+        <section class="tp-setview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
       </div>
       <div class="tp-foot">
         <span class="tp-footinfo">已挑选 <b class="tp-count">0</b> 个</span>
         <span style="flex:1"></span>
         <button class="tp-btn tp-cancel">取消</button>
         <button class="tp-btn primary tp-ok">✔ 确定并保存</button>
+        <button class="tp-btn tp-close2" style="display:none">✕ 关闭</button>
       </div>
     </div>
   `;
@@ -1063,23 +1057,133 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
     }
   }
 
+  /* ---------- 页签: 挑标签 | 排除类目 | 标签库管理 | 设置 ---------- */
+  const mgrView = $(".tp-mgrview");
+  const setView = $(".tp-setview");
+
+  // 内嵌管理页 (iframe 懒加载, 首次进入才创建; 离开/关闭时按需刷新库缓存)
+  function ensureMgrFrame() {
+    ui.libTouched = true;
+    if (!mgrView.querySelector("iframe")) {
+      mgrView.innerHTML =
+        `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;display:block;background:#17191f"></iframe>`;
+    }
+  }
+
+  function refreshLibIfTouched() {
+    if (!ui.libTouched) return;
+    ui.libTouched = false;
+    invalidateLibraryCache();
+    fetchLibrary().then(() => { renderCats(); renderChips(); });
+  }
+
+  /* ---------- 设置页: 节点参数(原⚙弹窗) + 全局偏好(与 ComfyUI 设置双向同步) ---------- */
+  function renderSettingsView() {
+    const st = getState(node);
+    // 全局值读取 (旧版三模式值归一化为现行二态)
+    const rawMode = getSetting(SET_DEFAULT_MODE, "manual");
+    const gMode = rawMode === "random_mix" ? "auto" : rawMode === "random_by_category" ? "manual" : (rawMode === "auto" ? "auto" : "manual");
+    const gNsfw = !!getSetting(SET_DEFAULT_NSFW, false);
+    const gScale = getSetting(SET_SCALE, 100);
+    const gFont = getSetting(SETTING_PREFIX + "chip_font_size", 0);
+    const gRadius = getSetting(SETTING_PREFIX + "chip_radius", 7);
+    const gLang = getSetting(SET_LANG, "bilingual");
+    const row = (label, inner, hint) => `
+      <div class="tp-set-row">
+        <div class="tp-set-lab">${label}</div>
+        ${inner}
+        ${hint ? `<div class="tp-set-hint">${hint}</div>` : ""}
+      </div>`;
+    setView.innerHTML = `
+      <div class="tp-set-h">节点参数 <span class="sub">· 存入当前节点, 随工作流保存</span></div>
+      <div class="tp-set-card">
+        ${row("📌 钉选标签必含", `<input type="checkbox" class="sv-pinned" ${st.pinned_required !== false ? "checked" : ""}/>`,
+          "开启后带 📌 的标签随机时一定出现")}
+        ${row("输出分隔符", `<select class="sv-sep">
+            <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
+            <option value="space" ${st.separator === "space" ? "selected" : ""}>空格</option>
+          </select>`)}
+        ${row("权重语法 (tag:1.2)", `<input type="checkbox" class="sv-w" ${st.use_weights_syntax ? "checked" : ""}/>`,
+          "开启后权重≠1 的标签输出为 (tag:权重) 形式")}
+        ${row("去重", `<input type="checkbox" class="sv-dd" ${st.dedupe !== false ? "checked" : ""}/>`,
+          "相同标签只输出一次")}
+        ${row("组合随机过滤词", `<input type="text" class="sv-search" value="${(st.search_text || "").replace(/"/g, "&quot;")}" placeholder="留空 = 全库抽取"/>`,
+          "只从匹配的标签里随机 (支持中文/英文/别名)")}
+      </div>
+      <div class="tp-set-h">全局偏好 <span class="sub">· 与 ComfyUI 设置面板「标签库」双向同步</span></div>
+      <div class="tp-set-card">
+        ${row("新节点的默认模式", `<select class="sv-gmode">
+            <option value="manual" ${gMode === "manual" ? "selected" : ""}>手动</option>
+            <option value="auto" ${gMode === "auto" ? "selected" : ""}>自动</option>
+          </select>`)}
+        ${row("默认启用 NSFW 标签", `<input type="checkbox" class="sv-gnsfw" ${gNsfw ? "checked" : ""}/>`,
+          "关闭时隐藏并排除 NSFW 标签; 也可在每个节点上单独开关")}
+        ${row("整体比例 (%) — 按钮/字体等内部 UI 缩放", `<input type="number" class="sv-gscale" min="50" max="200" step="5" value="${gScale}"/>`,
+          "100% = 默认大小; 影响面板内所有按钮/字体/chip 大小")}
+        ${row("标签字号覆盖 (px, 0=跟随比例)", `<input type="number" class="sv-gfont" min="0" max="24" step="1" value="${gFont}"/>`)}
+        ${row("标签圆角 (px)", `<input type="number" class="sv-grad" min="0" max="16" step="1" value="${gRadius}"/>`)}
+        ${row("标签文字显示", `<select class="sv-glang">
+            <option value="bilingual" ${gLang === "bilingual" ? "selected" : ""}>双语 (英文+中文)</option>
+            <option value="en" ${gLang === "en" ? "selected" : ""}>仅英文</option>
+            <option value="zh" ${gLang === "zh" ? "selected" : ""}>仅中文</option>
+          </select>`,
+          "输出永远只有英文; 这里只控制面板里标签按钮的显示文字")}
+      </div>
+      <div class="tp-sync-note">💡 节点参数即改即存; 全局偏好写入 ComfyUI 设置 (设置面板搜「标签库」是同一批值, 两边改都生效)。</div>
+    `;
+    // 节点参数: 即改即存 + 让节点面板实时跟随
+    const saveNode = (patch) => { setState(node, patch); onNodeState?.(); };
+    $(".sv-pinned").onchange = (e) => saveNode({ pinned_required: e.target.checked });
+    $(".sv-sep").onchange = (e) => saveNode({ separator: e.target.value });
+    $(".sv-w").onchange = (e) => saveNode({ use_weights_syntax: e.target.checked });
+    $(".sv-dd").onchange = (e) => saveNode({ dedupe: e.target.checked });
+    $(".sv-search").onchange = (e) => saveNode({ search_text: e.target.value.trim() });
+    // 全局偏好: 写入 ComfyUI 设置 (官方持久化) + 当前面板即时跟随; 其他节点由轮询跟进
+    const saveGlobal = (id, value) => { setSetting(id, value); onGlobalChange?.(); };
+    $(".sv-gmode").onchange = (e) => saveGlobal(SET_DEFAULT_MODE, e.target.value);
+    $(".sv-gnsfw").onchange = (e) => saveGlobal(SET_DEFAULT_NSFW, e.target.checked);
+    $(".sv-gscale").onchange = (e) => saveGlobal(SET_SCALE, Math.min(200, Math.max(50, parseInt(e.target.value) || 100)));
+    $(".sv-gfont").onchange = (e) => saveGlobal(SETTING_PREFIX + "chip_font_size", Math.min(24, Math.max(0, parseInt(e.target.value) || 0)));
+    $(".sv-grad").onchange = (e) => saveGlobal(SETTING_PREFIX + "chip_radius", Math.min(16, Math.max(0, parseInt(e.target.value) || 7)));
+    $(".sv-glang").onchange = (e) => saveGlobal(SET_LANG, e.target.value);
+  }
+
   function switchTab(tab) {
+    if (ui.tab === "manager" && tab !== "manager") refreshLibIfTouched();
     ui.tab = tab;
     rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
     rootEl.querySelector(".tp-excludetab").classList.toggle("active", tab === "exclude");
+    rootEl.querySelector(".tp-mgrtab").classList.toggle("active", tab === "manager");
+    rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
     excView.style.display = tab === "exclude" ? "block" : "none";
+    mgrView.style.display = tab === "manager" ? "flex" : "none";
+    setView.style.display = tab === "settings" ? "block" : "none";
     searchEl.style.visibility = tab === "pick" ? "visible" : "hidden";
-    $(".tp-footinfo").innerHTML = tab === "pick"
-      ? `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`
-      : (() => {
-          const n = (getExcluded ? getExcluded().length : 0);
-          return `已排除 <b style="color:#ff6b6b">${n}</b> 个分类`;
-        })();
+    const info = $(".tp-footinfo");
+    if (tab === "pick") {
+      info.innerHTML = `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`;
+    } else if (tab === "exclude") {
+      const n = (getExcluded ? getExcluded().length : 0);
+      info.innerHTML = `已排除 <b style="color:#ff6b6b">${n}</b> 个分类`;
+    } else if (tab === "manager") {
+      info.innerHTML = `管理页改动保存后全局生效`;
+    } else {
+      info.innerHTML = `节点参数即改即存 · 全局偏好双向同步`;
+    }
+    // 底部按钮: 挑选/排除 -> 取消+确定; 管理/设置 -> 仅关闭
+    const pickLike = tab === "pick" || tab === "exclude";
+    $(".tp-cancel").style.display = pickLike ? "" : "none";
+    $(".tp-ok").style.display = pickLike ? "" : "none";
+    $(".tp-close2").style.display = pickLike ? "none" : "";
     if (tab === "exclude") renderExclude();
+    if (tab === "settings") renderSettingsView();
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
   rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
+  rootEl.querySelector(".tp-mgrtab").onclick = () => { ensureMgrFrame(); switchTab("manager"); };
+  rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
+  $(".tp-close2").onclick = onCancel;
 
   searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
   $(".tp-cancel").onclick = onCancel;
@@ -1087,6 +1191,10 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, getExisting, getExcluded,
 
   renderCats();
   renderChips();
+  return {
+    destroy() {},
+    libTouched: () => ui.libTouched,
+  };
 }
 
 /* ------------------------------------------------- manager dialog */
@@ -1099,14 +1207,11 @@ function openManagerDialog() {
   dlg.style.cssText =
     "width:min(96vw,1400px);height:min(94vh,980px);border:none;border-radius:14px;" +
     "padding:0;background:#17191f;color:#dfe3ea;max-width:none;max-height:none;";
+  // 不设 ✕ 按钮 —— 会与管理页顶栏「恢复默认库」重叠; 关闭 = 点遮罩 / Esc
   dlg.innerHTML =
-    `<button id="taglib-mgr-close" title="关闭 (Esc)" style="position:absolute;top:10px;right:14px;z-index:10;
-      width:34px;height:34px;border-radius:9px;border:1px solid rgba(255,255,255,.18);cursor:pointer;
-      background:rgba(30,32,40,.95);color:#dfe3ea;font-size:16px;line-height:1">✕</button>` +
     `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
   document.body.appendChild(dlg);
   dlg.showModal();
-  dlg.querySelector("#taglib-mgr-close").onclick = () => dlg.close();
   dlg.addEventListener("click", (e) => {
     // 点击遮罩区域也可关闭 (dialog 自身 = 遮罩)
     if (e.target === dlg) dlg.close();
@@ -1122,15 +1227,23 @@ function openManagerDialog() {
 app.registerExtension({
   name: "zhixin.tagLibrary",
 
+  // 命令 + Extensions 菜单入口 (正规姿势: registerExtension 字段; 旧 registerCommand API 不存在)
+  commands: [
+    { id: "zhixin.openTagLibraryManager", label: "🏷 打开标签库管理页", function: () => openManagerDialog() },
+  ],
+  menuCommands: [
+    { path: ["Extensions"], commands: ["zhixin.openTagLibraryManager"] },
+  ],
+
   /* ComfyUI 设置面板里的专属设置 */
   settings: [
     {
       id: SET_DEFAULT_MODE,
       name: "标签库: 新节点的默认模式",
       type: "combo",
-      options: ["manual", "random_by_category", "random_mix"],
+      options: ["manual", "auto"],
       defaultValue: "manual",
-      tooltip: "手动=点选输出 / 按类随机 / 组合随机",
+      tooltip: "手动=点选+填充 / 自动=每次 Queue 按排除类目随机组合",
     },
     {
       id: SET_DEFAULT_NSFW,
@@ -1522,22 +1635,6 @@ app.registerExtension({
   },
 
   async setup() {
-    try {
-      app.extensionManager?.registerCommand?.({
-        id: "zhixin.openTagLibraryManager",
-        label: "🏷 打开标签库管理页",
-        function: () => openManagerDialog(),
-      });
-    } catch {}
-    // 顶栏菜单: 在根级加「🏷 标签库」入口 (当前页面弹窗, 不跳转)
-    try {
-      app.registerExtension({
-        name: "zhixin.tagLibrary.topbar",
-        menuCommands: [
-          { path: ["Extensions"], commands: ["zhixin.openTagLibraryManager"] },
-        ],
-      });
-    } catch {}
     // 顶栏直达按钮: fixed 定位贴在右上角 (控制面板按钮左侧), 不依赖插件变动大的 DOM 结构
     const injectTopbarBtn = () => {
       try {
