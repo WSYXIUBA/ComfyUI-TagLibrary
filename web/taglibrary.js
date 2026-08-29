@@ -345,28 +345,70 @@ export function buildPanelWidget(node, container) {
     return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
   }
 
-  let CONFLICT_GROUPS = null; // 缓存: [Set(en_lower), ...]
+  let CONFLICT_INDEX = null; // Map(en_lower -> Set(互斥 en_lower)), 每次填充现取 (规则可随时改)
   async function fetchConflicts() {
-    if (CONFLICT_GROUPS) return CONFLICT_GROUPS;
     try {
       const r = await fetch("/taglib/api/conflicts");
       const d = await r.json();
-      CONFLICT_GROUPS = (d.groups || []).map((g) => new Set((g.tags || []).map((x) => String(x).toLowerCase())));
-    } catch { CONFLICT_GROUPS = []; }
-    return CONFLICT_GROUPS;
+      // 引用解析: sub/cat → LIB_CACHE 里的标签集合
+      const idxSrc = {};
+      for (const cat of (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || []) {
+        const subs = idxSrc[cat.name] = {};
+        for (const sub of cat.subcategories || []) {
+          subs[sub.name] = (sub.tags || []).map((t) => String(t.en).toLowerCase());
+        }
+      }
+      const resolve = (ref) => {
+        if (!ref) return [];
+        if (ref.kind === "tag") return [String(ref.value).toLowerCase()];
+        if (ref.kind === "tags") return (ref.value || []).map((v) => String(v).toLowerCase());
+        if (ref.kind === "cat") {
+          const out = [];
+          Object.values(idxSrc[String(ref.value)] || {}).forEach((arr) => out.push(...arr));
+          return out;
+        }
+        if (ref.kind === "sub") {
+          const [c, s] = String(ref.value).split("/");
+          return [...((idxSrc[c] || {})[s] || [])];
+        }
+        return [];
+      };
+      const map = new Map();
+      const link = (a, b) => {
+        if (!a || !b || a === b) return;
+        if (!map.has(a)) map.set(a, new Set());
+        map.get(a).add(b);
+      };
+      for (const rule of d.rules || []) {
+        const Ls = resolve(rule.left);
+        const Rs = (rule.right || []).flatMap(resolve);
+        for (const a of Ls) for (const b of Rs) { link(a, b); link(b, a); }
+      }
+      CONFLICT_INDEX = map;
+    } catch { CONFLICT_INDEX = new Map(); }
+    return CONFLICT_INDEX;
   }
 
-  function pickFrom(list, n, usedEn, bannedGroups) {
+  function pickFrom(list, n, usedEn, conflictMap) {
     const bag = [...list];
     const out = [];
+    const banned = new Set();
+    const grow = () => {
+      if (!conflictMap) return;
+      for (const e of usedEn) {
+        for (const b of conflictMap.get(e) || []) banned.add(b);
+      }
+    };
+    grow();
     for (let i = 0; i < n && bag.length; i++) {
       const idx = Math.floor(Math.random() * bag.length);
       const tag = bag.splice(idx, 1)[0];
       const plo = tag.en.toLowerCase();
       if (usedEn.has(plo)) { i--; continue; }
-      // 防冲突: 命中已占用互斥组 → 跳过补位
-      if (bannedGroups && bannedGroups.some((g) => g.has(plo))) { i--; continue; }
+      // 反冲突: 与已抽中的任一标签互斥 → 让位
+      if (conflictMap && banned.has(plo)) { i--; continue; }
       usedEn.add(plo);
+      grow();
       out.push(tag);
     }
     return out;
@@ -398,16 +440,16 @@ export function buildPanelWidget(node, container) {
       const p = LIB_PATH.get(String(t.en).toLowerCase());
       return p && excluded.has(p[0]);
     });
-    // ② 按子分类抽取: 每个子分类读范围, 冲突避让
+    // ② 按子分类抽取: 每个子分类读范围, 反冲突避让 (抽到一边另一边让位)
     const subPools = buildSubPools(nsfwOn);
     const usedEn = new Set(keptTags.map((t) => t.en.toLowerCase()));
-    const bannedGroups = st.avoid_conflicts !== false ? await fetchConflicts() : [];
+    const conflictMap = st.avoid_conflicts !== false ? await fetchConflicts() : null;
     const picked = [];
     for (const sp of subPools) {
       const [mn, mx] = getFillRange(st, sp.subId);
       if (mx <= 0) continue;
       const n = mn + Math.floor(Math.random() * (mx - mn + 1));
-      picked.push(...pickFrom(sp.tags, n, usedEn, bannedGroups).map((t) => ({ ...t, _cat: sp.catName })));
+      picked.push(...pickFrom(sp.tags, n, usedEn, conflictMap).map((t) => ({ ...t, _cat: sp.catName })));
     }
     if (!picked.length) return;
     // ③ 写回: 排除类目的保留标签 + 新填充

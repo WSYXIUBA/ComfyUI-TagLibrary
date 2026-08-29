@@ -45,7 +45,7 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 |---|---|
 | `data/tag_library.json` | 默认库（随插件更新） |
 | `data/tag_library.user.json` | 用户库（管理页保存的内容，含删除墓碑） |
-| `data/标签库/` | **文件夹式标签库**：`一级分类/二级分类/xx.md`，与管理页分类一一对应 |
+| `data/taglib/` | **文件夹式标签库**：`一级分类/二级分类/xx.md`，与管理页分类一一对应；内含 `conflicts.json` 反冲突规则 |
 | `data/tagfiles/` | 旧内置标签文件目录（兼容扫描） |
 
 删除用户库即恢复出厂默认。
@@ -53,7 +53,8 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 ## 文件夹式标签库 & AI 模板
 
 ```
-data/标签库/
+data/taglib/
+├── conflicts.json     ← 反冲突规则 (可导出给 AI 生成后导回)
 ├── 质量与技术/
 │   ├── 画质强化/
 │   │   └── 画质强化.md     ← # 大类 / ## 子类 标题 + 标签行

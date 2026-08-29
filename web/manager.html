@@ -86,6 +86,14 @@
         <b>📚 全量模板</b>
         <span>导出现有全部标签。可让 AI 继续补充, 或配合「🗑 清空标签库」重构一二级分类; 也可直接分享给别人。</span>
       </button>
+      <button id="tplConflicts" class="tpl-choice">
+        <b>🧷 反冲突文件</b>
+        <span>仅导出 conflicts.json (内嵌 AI 说明注释)。可自由导入/替换。</span>
+      </button>
+      <button id="tplConflictsFull" class="tpl-choice">
+        <b>🧷📦 反冲突 + 全量模板（两个文件）</b>
+        <span>同时导出 conflicts.json 和全量模板, 一起发给 AI 即可自动生成匹配当前标签库的反冲突文件。</span>
+      </button>
     </div>
     <div class="modal-actions">
       <button id="tplCancel" class="btn">取消</button>
@@ -151,6 +159,39 @@
       <button id="btnImportAll" class="btn">⏩ 全部导入</button>
       <span class="flex-spacer"></span>
       <button id="filesCancel" class="btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 反冲突设置 -->
+<div id="conflictDialog" class="modal hidden">
+  <div class="modal-box wide">
+    <h3>🧷 反冲突设置 — <span id="cfSubject" class="accent"></span></h3>
+    <p class="muted">勾选与当前对象互斥的一级分类 / 二级分类 / 标签 (可多选)。随机填充或自动模式抽到当前对象时, 被勾选的整组让位; 手动点选不受影响。保存后立即写入 <code>data/taglib/conflicts.json</code>。</p>
+    <div class="cf-sec-title">已有反冲突关系 <span class="hint">(点 ✕ 删除)</span></div>
+    <div id="cfRelations" class="cf-relations"></div>
+    <div class="cf-sec-title">勾选新的冲突对象</div>
+    <div id="cfTree" class="cf-tree"></div>
+    <div class="modal-actions">
+      <button id="cfCancel" class="btn">取消</button>
+      <button id="cfSave" class="btn primary big">💾 保存反冲突规则</button>
+    </div>
+  </div>
+</div>
+
+<!-- 反冲突文件导入预览 -->
+<div id="conflictImportDialog" class="modal hidden">
+  <div class="modal-box">
+    <h3>🧷 反冲突文件导入预览</h3>
+    <p class="muted">共 <b id="cfiTotal">0</b> 条规则, 其中 <b id="cfiValid" class="accent">0</b> 条有效, <b id="cfiInvalid" style="color:#ff6b6b">0</b> 条失效 (指向库中不存在的分类/标签):</p>
+    <div id="cfiInvalidList" class="cfi-invalid hidden"></div>
+    <div class="cf-mode-row">
+      <label><input type="radio" name="cfiMode" value="replace" checked/> 替换 — 覆盖全部现有规则</label>
+      <label><input type="radio" name="cfiMode" value="merge"/> 合并 — 追加去重</label>
+    </div>
+    <div class="modal-actions">
+      <button id="cfiCancel" class="btn">取消</button>
+      <button id="cfiOk" class="btn primary big">✓ 确认导入</button>
     </div>
   </div>
 </div>
