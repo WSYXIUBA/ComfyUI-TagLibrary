@@ -24,8 +24,10 @@ from typing import Any
 
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import tagfiles
+    from . import schema
 except ImportError:  # pragma: no cover
     import tagfiles
+    import schema
 
 _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_PKG_DIR, "data")
@@ -418,6 +420,11 @@ def get_merged() -> dict[str, Any]:
         if _cache is not None and _cache_key == key:
             return _cache
         merged = deep_merge(load_default(), load_user_raw())
+        # v2 只读迁移: 内存中升级编辑层字段 (type/rarity/priority/...), 不写盘
+        try:
+            schema.migrate_library(merged)
+        except Exception:  # noqa: BLE001 — 迁移失败不阻塞读库
+            pass
         _cache, _cache_key = merged, key
         return merged
 
