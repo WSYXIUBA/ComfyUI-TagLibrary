@@ -265,6 +265,14 @@
        "aliases": [],
        "zh": "粉发",
        "id": "subject.s2.g1.pink-hair"
+      },
+      {
+       "en": "wet hair",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "湿发",
+       "id": "subject.s2.g1.wet-hair"
       }
      ]
     },
@@ -332,7 +340,6 @@
        "weight": 1.0,
        "aliases": [],
        "zh": "丰满曲线",
-       "nsfw": true,
        "id": "subject.s2.g3.curvy"
       },
       {
@@ -348,6 +355,30 @@
        "aliases": [],
        "zh": "肌肉",
        "id": "subject.s2.g3.muscular"
+      },
+      {
+       "en": "huge breasts",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "爆乳",
+       "id": "subject.s2.g3.huge-breasts"
+      },
+      {
+       "en": "small breasts",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "贫乳",
+       "id": "subject.s2.g3.small-breasts"
+      },
+      {
+       "en": "perky breasts",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "挺立胸部",
+       "id": "subject.s2.g3.perky-breasts"
       }
      ]
     },
@@ -940,15 +971,6 @@
        "id": "subject.s3.kitchen"
       },
       {
-       "en": "bathroom",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "浴室",
-       "nsfw": true,
-       "id": "subject.s3.bathroom"
-      },
-      {
        "en": "attic",
        "aliases": [],
        "weight": 1.0,
@@ -1003,24 +1025,6 @@
        "enabled": true,
        "zh": "酒店房间",
        "id": "subject.s3.hotel-room"
-      },
-      {
-       "en": "dressing room",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "更衣室",
-       "nsfw": true,
-       "id": "subject.s3.dressing-room"
-      },
-      {
-       "en": "locker room",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "储物柜室",
-       "nsfw": true,
-       "id": "subject.s3.locker-room"
       },
       {
        "en": "temple interior",
@@ -1565,15 +1569,6 @@
        "enabled": true,
        "zh": "飘发",
        "id": "subject.s3.floating-hair"
-      },
-      {
-       "en": "wet hair",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "湿发",
-       "nsfw": true,
-       "id": "subject.s3.wet-hair"
       },
       {
        "en": "open mouth",
@@ -3697,21 +3692,11 @@
        "id": "subject.s3.pixiv-id-reference"
       },
       {
-       "en": "loli",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "幼女",
-       "nsfw": true,
-       "id": "subject.s3.loli"
-      },
-      {
        "en": "mature female",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
        "zh": "成熟女性",
-       "nsfw": true,
        "id": "subject.s3.mature-female"
       },
       {
@@ -3720,7 +3705,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "人妻感",
-       "nsfw": true,
        "id": "subject.s3.milf"
       },
       {
@@ -3745,7 +3729,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "圆润",
-       "nsfw": true,
        "id": "subject.s3.plump"
       },
       {
@@ -3762,7 +3745,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "平胸",
-       "nsfw": true,
        "id": "subject.s3.flat-chest"
       },
       {
@@ -3771,7 +3753,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "适中胸",
-       "nsfw": true,
        "id": "subject.s3.medium-breasts"
       },
       {
@@ -3780,7 +3761,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "丰满胸部",
-       "nsfw": true,
        "id": "subject.s3.large-breasts"
       },
       {
@@ -3789,7 +3769,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "宽臀",
-       "nsfw": true,
        "id": "subject.s3.wide-hips"
       },
       {
@@ -3822,7 +3801,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "关节娃娃",
-       "nsfw": true,
        "id": "subject.s3.doll-like-joints"
       },
       {
@@ -3938,15 +3916,6 @@
        "id": "subject.s3.zettai-ryouiki"
       },
       {
-       "en": "pantyhose",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "连裤袜",
-       "nsfw": true,
-       "id": "subject.s3.pantyhose"
-      },
-      {
        "en": "knee highs",
        "aliases": [],
        "weight": 1.0,
@@ -3977,15 +3946,6 @@
        "enabled": true,
        "zh": "丝袜",
        "id": "subject.s3.stockings"
-      },
-      {
-       "en": "garter straps",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "吊袜带扣",
-       "nsfw": true,
-       "id": "subject.s3.garter-straps"
       },
       {
        "en": "ankle boots",
@@ -4892,15 +4852,6 @@
        "id": "subject.s3.belt"
       },
       {
-       "en": "corset",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "束腰",
-       "nsfw": true,
-       "id": "subject.s3.corset"
-      },
-      {
        "en": "waist apron",
        "aliases": [],
        "weight": 1.0,
@@ -5403,6 +5354,54 @@
        "enabled": true,
        "zh": "画中画构图",
        "id": "subject.s3.frame-within-frame"
+      },
+      {
+       "en": "heavy breathing",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "急促呼吸",
+       "id": "subject.s3.heavy-breathing"
+      },
+      {
+       "en": "flustered",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "慌乱",
+       "id": "subject.s3.flustered"
+      },
+      {
+       "en": "trembling",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "颤抖",
+       "id": "subject.s3.trembling"
+      },
+      {
+       "en": "drooling",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "流口水",
+       "id": "subject.s3.drooling"
+      },
+      {
+       "en": "teary eyes",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "含泪眼",
+       "id": "subject.s3.teary-eyes"
+      },
+      {
+       "en": "heart in eye",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "眼中爱心",
+       "id": "subject.s3.heart-in-eye"
       }
      ]
     },
@@ -5438,33 +5437,6 @@
        "id": "subject.extended.completely-nude"
       },
       {
-       "en": "huge breasts",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "爆乳",
-       "nsfw": true,
-       "id": "subject.extended.huge-breasts"
-      },
-      {
-       "en": "small breasts",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "贫乳",
-       "nsfw": true,
-       "id": "subject.extended.small-breasts"
-      },
-      {
-       "en": "perky breasts",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "挺立胸部",
-       "nsfw": true,
-       "id": "subject.extended.perky-breasts"
-      },
-      {
        "en": "nipples",
        "aliases": [],
        "weight": 1.0,
@@ -5488,7 +5460,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "锁骨",
-       "nsfw": true,
        "id": "subject.extended.collarbone"
       },
       {
@@ -5497,7 +5468,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "肚脐",
-       "nsfw": true,
        "id": "subject.extended.navel"
       },
       {
@@ -5506,7 +5476,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "露出腹部",
-       "nsfw": true,
        "id": "subject.extended.midriff"
       },
       {
@@ -5542,7 +5511,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "裸肩",
-       "nsfw": true,
        "id": "subject.extended.bare-shoulders"
       },
       {
@@ -5551,7 +5519,6 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "裸腿",
-       "nsfw": true,
        "id": "subject.extended.bare-legs"
       },
       {
@@ -5573,15 +5540,6 @@
        "id": "subject.extended.string-bikini"
       },
       {
-       "en": "competition swimsuit",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "竞技泳装",
-       "nsfw": true,
-       "id": "subject.extended.competition-swimsuit"
-      },
-      {
        "en": "naked apron",
        "aliases": [],
        "weight": 1.0,
@@ -5589,87 +5547,6 @@
        "zh": "裸体围裙",
        "nsfw": true,
        "id": "subject.extended.naked-apron"
-      },
-      {
-       "en": "bunny girl",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "兔女郎",
-       "nsfw": true,
-       "id": "subject.extended.bunny-girl"
-      },
-      {
-       "en": "mesh clothes",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "网状衣",
-       "nsfw": true,
-       "id": "subject.extended.mesh-clothes"
-      },
-      {
-       "en": "fishnets",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "渔网袜",
-       "nsfw": true,
-       "id": "subject.extended.fishnets"
-      },
-      {
-       "en": "garter belt",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "吊袜带",
-       "nsfw": true,
-       "id": "subject.extended.garter-belt"
-      },
-      {
-       "en": "thong",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "丁字裤",
-       "nsfw": true,
-       "id": "subject.extended.thong"
-      },
-      {
-       "en": "bent over",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "弯腰",
-       "nsfw": true,
-       "id": "subject.extended.bent-over"
-      },
-      {
-       "en": "all fours",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "四肢着地",
-       "nsfw": true,
-       "id": "subject.extended.all-fours"
-      },
-      {
-       "en": "on lap",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "坐大腿",
-       "nsfw": true,
-       "id": "subject.extended.on-lap"
-      },
-      {
-       "en": "legs up",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "抬腿",
-       "nsfw": true,
-       "id": "subject.extended.legs-up"
       },
       {
        "en": "spread legs",
@@ -5681,175 +5558,12 @@
        "id": "subject.extended.spread-legs"
       },
       {
-       "en": "knees up",
+       "en": "ahegao",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
-       "zh": "屈膝",
-       "nsfw": true,
-       "id": "subject.extended.knees-up"
-      },
-      {
-       "en": "crossed legs",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "交叠腿",
-       "nsfw": true,
-       "id": "subject.extended.crossed-legs"
-      },
-      {
-       "en": "sitting on object",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "坐物",
-       "nsfw": true,
-       "id": "subject.extended.sitting-on-object"
-      },
-      {
-       "en": "arm support",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "手臂支撑",
-       "nsfw": true,
-       "id": "subject.extended.arm-support"
-      },
-      {
-       "en": "bed sheet",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "被单",
-       "nsfw": true,
-       "id": "subject.extended.bed-sheet"
-      },
-      {
-       "en": "on bed",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "在床上",
-       "nsfw": true,
-       "id": "subject.extended.on-bed"
-      },
-      {
-       "en": "bathtub",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "浴缸",
-       "nsfw": true,
-       "id": "subject.extended.bathtub"
-      },
-      {
-       "en": "shower",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "淋浴",
-       "nsfw": true,
-       "id": "subject.extended.shower"
-      },
-      {
-       "en": "soap lather",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "泡沫",
-       "nsfw": true,
-       "id": "subject.extended.soap-lather"
-      },
-      {
-       "en": "towel",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "浴巾",
-       "nsfw": true,
-       "id": "subject.extended.towel"
-      },
-      {
-       "en": "office chair",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "办公椅",
-       "nsfw": true,
-       "id": "subject.extended.office-chair"
-      },
-      {
-       "en": "mirror",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "镜子",
-       "nsfw": true,
-       "id": "subject.extended.mirror"
-      },
-      {
-       "en": "heavy breathing",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "急促呼吸",
-       "nsfw": true,
-       "id": "subject.extended.heavy-breathing"
-      },
-      {
-       "en": "flustered",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "慌乱",
-       "nsfw": true,
-       "id": "subject.extended.flustered"
-      },
-      {
-       "en": "ahegao might not apply",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "无表情管理",
-       "nsfw": true,
+       "zh": "阿黑颜",
        "id": "subject.extended.ahegao-might-not-apply"
-      },
-      {
-       "en": "heart in eye",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "眼中爱心",
-       "nsfw": true,
-       "id": "subject.extended.heart-in-eye"
-      },
-      {
-       "en": "trembling",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "颤抖",
-       "nsfw": true,
-       "id": "subject.extended.trembling"
-      },
-      {
-       "en": "drooling",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "流口水",
-       "nsfw": true,
-       "id": "subject.extended.drooling"
-      },
-      {
-       "en": "teary eyes",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "含泪眼",
-       "nsfw": true,
-       "id": "subject.extended.teary-eyes"
       },
       {
        "en": "covered chest",
@@ -5859,6 +5573,60 @@
        "zh": "遮挡胸部",
        "nsfw": true,
        "id": "subject.extended.covered-chest"
+      },
+      {
+       "id": "subject.extended.partially-nude",
+       "en": "partially nude",
+       "zh": "半裸",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
+      },
+      {
+       "id": "subject.extended.bottomless",
+       "en": "bottomless",
+       "zh": "下身裸露",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
+      },
+      {
+       "id": "subject.extended.naked-towel",
+       "en": "naked towel",
+       "zh": "仅裹浴巾",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
+      },
+      {
+       "id": "subject.extended.naked-ribbon",
+       "en": "naked ribbon",
+       "zh": "裸体丝带",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
+      },
+      {
+       "id": "subject.extended.covered-nipples",
+       "en": "covered nipples",
+       "zh": "遮挡乳头",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
+      },
+      {
+       "id": "subject.extended.hair-over-breasts",
+       "en": "hair over breasts",
+       "zh": "发遮胸",
+       "weight": 1.0,
+       "aliases": [],
+       "enabled": true,
+       "nsfw": true
       }
      ]
     }
@@ -5922,6 +5690,22 @@
        "aliases": [],
        "zh": "和服",
        "id": "outfit.s1.kimono"
+      },
+      {
+       "en": "corset",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "束腰",
+       "id": "outfit.s1.corset"
+      },
+      {
+       "en": "mesh clothes",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "网状衣",
+       "id": "outfit.s1.mesh-clothes"
       }
      ]
     },
@@ -5956,6 +5740,38 @@
        "aliases": [],
        "zh": "牛仔裤",
        "id": "outfit.s2.jeans"
+      },
+      {
+       "en": "pantyhose",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "连裤袜",
+       "id": "outfit.s2.pantyhose"
+      },
+      {
+       "en": "thong",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "丁字裤",
+       "id": "outfit.s2.thong"
+      },
+      {
+       "en": "fishnets",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "渔网袜",
+       "id": "outfit.s2.fishnets"
+      },
+      {
+       "en": "garter belt",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "吊袜带",
+       "id": "outfit.s2.garter-belt"
       }
      ]
     },
@@ -5996,7 +5812,6 @@
        "weight": 1.0,
        "aliases": [],
        "zh": "泳装",
-       "nsfw": true,
        "id": "outfit.s3.swimsuit"
       },
       {
@@ -6005,6 +5820,22 @@
        "aliases": [],
        "zh": "旗袍",
        "id": "outfit.s3.qipao"
+      },
+      {
+       "en": "bunny girl",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "兔女郎",
+       "id": "outfit.s3.bunny-girl"
+      },
+      {
+       "en": "competition swimsuit",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "竞技泳装",
+       "id": "outfit.s3.competition-swimsuit"
       }
      ]
     },
@@ -6060,6 +5891,14 @@
        "aliases": [],
        "zh": "包袋",
        "id": "outfit.s4.bag"
+      },
+      {
+       "en": "garter straps",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "吊袜带扣",
+       "id": "outfit.s4.garter-straps"
       }
      ]
     }
@@ -6109,6 +5948,70 @@
        "aliases": [],
        "zh": "倚靠",
        "id": "pose.s1.leaning"
+      },
+      {
+       "en": "bent over",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "弯腰",
+       "id": "pose.s1.bent-over"
+      },
+      {
+       "en": "all fours",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "四肢着地",
+       "id": "pose.s1.all-fours"
+      },
+      {
+       "en": "on lap",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "坐大腿",
+       "id": "pose.s1.on-lap"
+      },
+      {
+       "en": "legs up",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "抬腿",
+       "id": "pose.s1.legs-up"
+      },
+      {
+       "en": "knees up",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "屈膝",
+       "id": "pose.s1.knees-up"
+      },
+      {
+       "en": "crossed legs",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "交叠腿",
+       "id": "pose.s1.crossed-legs"
+      },
+      {
+       "en": "sitting on object",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "坐物",
+       "id": "pose.s1.sitting-on-object"
+      },
+      {
+       "en": "arm support",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "手臂支撑",
+       "id": "pose.s1.arm-support"
       }
      ]
     },
@@ -6561,6 +6464,94 @@
        "aliases": [],
        "zh": "咖啡馆",
        "id": "scene.s1.cafe"
+      },
+      {
+       "en": "bathroom",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "浴室",
+       "id": "scene.s1.bathroom"
+      },
+      {
+       "en": "dressing room",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "更衣室",
+       "id": "scene.s1.dressing-room"
+      },
+      {
+       "en": "locker room",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "储物柜室",
+       "id": "scene.s1.locker-room"
+      },
+      {
+       "en": "bathtub",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "浴缸",
+       "id": "scene.s1.bathtub"
+      },
+      {
+       "en": "shower",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "淋浴",
+       "id": "scene.s1.shower"
+      },
+      {
+       "en": "soap lather",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "泡沫",
+       "id": "scene.s1.soap-lather"
+      },
+      {
+       "en": "towel",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "浴巾",
+       "id": "scene.s1.towel"
+      },
+      {
+       "en": "bed sheet",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "被单",
+       "id": "scene.s1.bed-sheet"
+      },
+      {
+       "en": "on bed",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "在床上",
+       "id": "scene.s1.on-bed"
+      },
+      {
+       "en": "office chair",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "办公椅",
+       "id": "scene.s1.office-chair"
+      },
+      {
+       "en": "mirror",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "镜子",
+       "id": "scene.s1.mirror"
       }
      ]
     },
@@ -6587,7 +6578,6 @@
        "weight": 1.0,
        "aliases": [],
        "zh": "海滩",
-       "nsfw": true,
        "id": "scene.s2.beach"
       },
       {
