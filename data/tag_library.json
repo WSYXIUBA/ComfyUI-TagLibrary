@@ -296,7 +296,7 @@
     },
     {
      "id": "subject.s2.g1",
-     "name": "发型发色",
+     "name": "发型",
      "tags": [
       {
        "en": "long hair",
@@ -325,34 +325,6 @@
        "aliases": [],
        "zh": "双马尾",
        "id": "subject.s2.g1.twin-tails"
-      },
-      {
-       "en": "black hair",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "黑发",
-       "id": "subject.s2.g1.black-hair"
-      },
-      {
-       "en": "blonde hair",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "金发",
-       "id": "subject.s2.g1.blonde-hair"
-      },
-      {
-       "en": "silver hair",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "银发",
-       "id": "subject.s2.g1.silver-hair"
-      },
-      {
-       "en": "pink hair",
-       "weight": 1.0,
-       "aliases": [],
-       "zh": "粉发",
-       "id": "subject.s2.g1.pink-hair"
       },
       {
        "en": "wet hair",
@@ -635,6 +607,56 @@
        "id": "subject.s2.g1.floating-hair"
       },
       {
+       "en": "brown hair",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "棕发",
+       "id": "subject.s2.g1.brown-hair"
+      },
+      {
+       "en": "twintails",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "zh": "双马尾",
+       "id": "subject.s2.g1.twintails"
+      }
+     ]
+    },
+    {
+     "id": "subject.haircolor",
+     "name": "发色",
+     "tags": [
+      {
+       "en": "black hair",
+       "weight": 1.0,
+       "aliases": [],
+       "zh": "黑发",
+       "id": "subject.s2.g1.black-hair"
+      },
+      {
+       "en": "blonde hair",
+       "weight": 1.0,
+       "aliases": [],
+       "zh": "金发",
+       "id": "subject.s2.g1.blonde-hair"
+      },
+      {
+       "en": "silver hair",
+       "weight": 1.0,
+       "aliases": [],
+       "zh": "银发",
+       "id": "subject.s2.g1.silver-hair"
+      },
+      {
+       "en": "pink hair",
+       "weight": 1.0,
+       "aliases": [],
+       "zh": "粉发",
+       "id": "subject.s2.g1.pink-hair"
+      },
+      {
        "en": "light blue hair",
        "aliases": [],
        "weight": 1.0,
@@ -673,14 +695,6 @@
        "enabled": true,
        "zh": "浅棕发",
        "id": "subject.s2.g1.light-brown-hair"
-      },
-      {
-       "en": "brown hair",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "棕发",
-       "id": "subject.s2.g1.brown-hair"
       },
       {
        "en": "red hair",
@@ -753,14 +767,6 @@
        "enabled": true,
        "zh": "彩虹发",
        "id": "subject.s2.g1.rainbow-hair"
-      },
-      {
-       "en": "twintails",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "双马尾",
-       "id": "subject.s2.g1.twintails"
       }
      ]
     },
