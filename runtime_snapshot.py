@@ -79,7 +79,7 @@ class RuntimeSnapshot:
         "tag_zh", "tag_lower", "tag_aliases",
         "pools", "pools_nonsfw",
         "cat_tag_ids", "sub_tag_ids", "cat_subs", "sub_key_to_index", "sub_owner_cat",
-        "en_to_id",
+        "en_to_id", "orig_id_to_int",
         "conflict_map", "require_closure", "boost_map", "cond_effects",
         "mutex_rules", "invalid_rules",
         "built_at",
@@ -113,6 +113,7 @@ class RuntimeSnapshot:
         self.sub_key_to_index: dict[tuple, int] = {}
         self.sub_owner_cat: dict[tuple, int] = {}
         self.en_to_id: dict[str, int] = {}
+        self.orig_id_to_int: dict[str, int] = {}   # 编辑层标签 id 字符串 → int
         self.conflict_map: dict[int, set] = {}
         self.require_closure: dict[int, tuple] = {}
         self.boost_map: dict[int, float] = {}
@@ -209,6 +210,9 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
                 _low = en.lower()
                 tag_lower.append(_low)
                 snap.en_to_id[_low] = i
+                _oid = str(t.get("id") or "")
+                if _oid:
+                    snap.orig_id_to_int[_oid] = i
                 tag_zh.append(str(t.get("zh", "") or ""))
                 _al = t.get("aliases") or None
                 tag_aliases.append(tuple(_al) if _al else None)

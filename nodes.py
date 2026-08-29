@@ -83,6 +83,75 @@ class TagLibraryNode:
         "separator", "use_weights_syntax", "dedupe", "pinned_required",
     )
 
+    # ------------------------------------------------------ v2 auto (引擎)
+
+    def _build_auto(self, lib, state: dict, seed: int, mode: str, *, nsfw_on: bool,
+                    avoid_conflicts: bool, search_text: str, category_weights,
+                    pinned_required: bool, use_weights_syntax: bool, dedupe: bool,
+                    separator: str, prefix: str | None, suffix: str | None,
+                    exclude_keys: set):
+        """v2 自动模式: RandomEngine 在 RuntimeSnapshot 上出词 (Fast/Smart)。
+
+        NSFW / 排除类目 / 互斥让位 / 配额全部在引擎池层面处理;
+        本方法只做: 引擎调用 → 顺序组装 → 权重语法/去重/prefix/suffix → 回显。
+        """
+        import random_engine
+        import runtime_snapshot
+
+        snap = runtime_snapshot.get_snapshot(lib)
+        cfg = random_engine.resolve_config(state, lib.get("settings") or {})
+        weights_map = self._safe_json(category_weights)
+        recent = getattr(self, "_recent_sets", None)
+        if recent is None:
+            recent = self._recent_sets = []
+
+        # diversity 组合撞车时有限重抽
+        res = None
+        for attempt in range(random_engine.MAX_REROLL):
+            res = random_engine.run_auto(snap, state, seed + attempt,
+                nsfw_on=nsfw_on, avoid_conflicts=avoid_conflicts,
+                search_text=search_text, cat_weights=weights_map,
+                config=cfg, recent_sets=recent)
+            if cfg.get("engine") != "smart":
+                break
+            if not random_engine.combo_is_recent(recent,
+                                                 res.fixed_ids + res.rest_ids):
+                break
+        random_engine.note_combination(recent, res.fixed_ids + res.rest_ids, cfg)
+
+        ordered = (res.fixed_ids + res.rest_ids if pinned_required
+                   else res.rest_ids + res.fixed_ids[:len(res.fixed_ids)])
+
+        echo_items = []
+        tags = []
+        seen_cat = snap.cat_names
+        cat_of_sub, sub_of = snap.cat_of_sub, snap.sub_of
+        for i in ordered:
+            d = {"en": snap.tag_text[i], "weight": snap.base_weights[i],
+                 "zh": snap.tag_zh[i], "nsfw": bool(snap.nsfw_flag[i])}
+            d["_cat"] = seen_cat[cat_of_sub[sub_of[i]]]
+            echo_items.append({"en": d["en"], "zh": d["zh"], "cat": d["_cat"],
+                               "nsfw": d["nsfw"], "enabled": True})
+            tags.append(self._format_tag(d, use_weights_syntax))
+
+        if dedupe:
+            seen: set[str] = set()
+            uniq = []
+            for t in tags:
+                k = t.lower()
+                if k not in seen:
+                    seen.add(k)
+                    uniq.append(t)
+            tags = uniq
+
+        sep = ", " if separator == "comma" else " "
+        parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
+        text = sep.join(parts) if parts else ""
+        return {
+            "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False)},
+            "result": (text, text),
+        }
+
     # ------------------------------------------------------------------ engine
 
     @staticmethod
@@ -217,6 +286,22 @@ class TagLibraryNode:
         # 排除类目: 支持 "大类名" / "大类名/子分类名" / "大类名/子分类名/孙分类名"
         exclude_keys: set[str] = {str(x) for x in (state.get("exclude_categories") or [])}
 
+        if mode != "manual":
+            # v2 自动模式 (auto / 旧 random_mix 兼容): RandomEngine 在 RuntimeSnapshot
+            # 上出词, NSFW/排除类目/互斥都在池层面处理, 不再全库复制过滤
+            return self._build_auto(lib, state, seed, mode,
+                                    nsfw_on=nsfw_on,
+                                    avoid_conflicts=avoid_conflicts,
+                                    search_text=str(state.get("search_text", "") or ""),
+                                    category_weights=category_weights,
+                                    pinned_required=pinned_required,
+                                    use_weights_syntax=use_weights_syntax,
+                                    dedupe=dedupe,
+                                    separator=separator,
+                                    prefix=prefix,
+                                    suffix=suffix,
+                                    exclude_keys=exclude_keys)
+
         def cat_excluded(cat: dict) -> bool:
             return cat.get("name") in exclude_keys
 
@@ -308,90 +393,6 @@ class TagLibraryNode:
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
-        else:  # auto (原 random_mix)
-            rng = random.Random(seed)
-            # 子分类粒度填充: fill_master 开 → 统一范围; 关 → fill_sub_ranges 每子分类独立
-            master = bool(state.get("fill_master", True))
-            mlo, mhi = state.get("fill_master_min", 1), state.get("fill_master_max", 1)
-            sub_ranges = state.get("fill_sub_ranges") or {}
-            pool_all = [(t, c, s) for c in lib.get("categories", [])
-                        if c.get("name") not in exclude_keys
-                        for s in c.get("subcategories", [])
-                        if f"{c.get('name')}/{s.get('name')}" not in exclude_keys  # 二级排除
-                        for t in s.get("tags", [])
-                        if t.get("enabled", True) and self._tag_matches(t, search_text)]
-            if not pool_all:
-                tags = []
-            else:
-                weights_map = self._safe_json(category_weights)
-
-                def _weight(pair):
-                    return max(float(weights_map.get(pair[1], 1.0)), 0.001)
-
-                lo, hi = min(min_tags, max_tags), max(min_tags, max_tags)
-                # 子分类粒度抽取: 每个子分类读自己的范围 [mn, mx] 抽 n 个
-                # fill_master=True → 统一用 fill_master_min/max; False → 每子分类 fill_sub_ranges
-                def _sub_range(sub_id: str) -> tuple[int, int]:
-                    if master:
-                        a, b = int(mlo), int(mhi)
-                    else:
-                        r = sub_ranges.get(sub_id) or {"min": 1, "max": 1}
-                        a, b = int(r.get("min", 1)), int(r.get("max", 1))
-                    return (min(a, b), max(a, b))
-
-                weights_map = self._safe_json(category_weights)
-                def _weight(tag: dict) -> float:
-                    cname = tag.get("_cat", "")
-                    return max(float(weights_map.get(cname, 1.0)), 0.001)
-
-                by_sub: dict[str, list] = {}
-                for t, c, s in pool_all:
-                    cname = c.get("name", "") if isinstance(c, dict) else str(c)
-                    t = {**t, "_cat": cname}
-                    by_sub.setdefault(s.get("id"), []).append(t)
-                pool_dict = {t.get("id"): t for t, _, _ in pool_all}
-                fixed = [pool_dict[i] for i in pinned_ids if i in pool_dict]
-                fixed_lower = [str(t.get("en", "")).strip().lower() for t in fixed]
-                chosen_pairs: list[dict] = []
-                used_lowers = set(fixed_lower)
-                # 反冲突: 规则双向互斥 —— 已抽中的标签命中一侧, 另一侧自动让位
-                excl = tagconflicts.ExclusionIndex(library.get_merged()) if avoid_conflicts else None
-                banned_cache: set = set()
-                banned_src: set = set()
-
-                def _banned() -> set:
-                    new = used_lowers - banned_src
-                    if new:
-                        banned_cache.update(excl.banned_for(new))
-                        banned_src.update(new)
-                    return banned_cache
-                for sid, pairs in by_sub.items():
-                    mn, mx = _sub_range(sid)
-                    if mx <= 0:
-                        continue
-                    want = rng.randint(mn, mx)
-                    candidates = []
-                    for t in pairs:
-                        plo = str(t.get("en", "")).strip().lower()
-                        if plo in used_lowers or t.get("id") in pinned_ids:
-                            continue
-                        candidates.append(t)
-                    if not candidates:
-                        continue
-                    for t in weighted_sample(candidates, min(want, len(candidates)), _weight, rng):
-                        plo = str(t.get("en", "")).strip().lower()
-                        if plo in used_lowers:
-                            continue
-                        if excl is not None and plo in _banned():
-                            continue
-                        chosen_pairs.append(t)
-                        used_lowers.add(plo)
-                rest = chosen_pairs
-                all_tags = fixed + rest if pinned_required else rest + fixed[:len(fixed)]
-                tags = [self._format_tag(t, use_weights_syntax) for t in all_tags]
-                _auto_chosen = all_tags
-
-        # 去重保序
         if dedupe:
             seen: set[str] = set()
             uniq = []
