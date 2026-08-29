@@ -222,7 +222,8 @@ def main() -> None:
 
     # pinned 必含
     pin_state = {"selected": [], "pinned": ids_of("masterpiece")}
-    pin_state["min_tags"] = 2; pin_state["max_tags"] = 2
+    pin_state["min_tags"] = 2
+    pin_state["max_tags"] = 2
     __r_pinout = node.build(json.dumps(pin_state), "auto", 999)
     pinout = __r_pinout["result"] if isinstance(__r_pinout, dict) else __r_pinout
     check("pinned 必含", "masterpiece" in pinout[0], pinout[0])
