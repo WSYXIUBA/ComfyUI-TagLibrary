@@ -384,3 +384,34 @@ tr.nsfw-row:hover td { background: rgba(255,107,107,0.07) !important; }
   letter-spacing: .02em;
 }
 .file-list .empty { padding: 14px; }
+
+/* ---------- 导出模板选择 / 清空确认 / 导入预览 ---------- */
+.tpl-choices { display: flex; flex-direction: column; gap: 10px; margin: 14px 0; }
+.tpl-choice {
+  text-align: left; cursor: pointer; border: 1px solid var(--border);
+  background: rgba(255,255,255,.04); color: var(--text);
+  border-radius: 11px; padding: 12px 14px; display: flex; flex-direction: column; gap: 5px;
+  transition: all .12s ease;
+}
+.tpl-choice:hover { border-color: var(--accent); background: rgba(84,160,255,.08); }
+.tpl-choice span { font-size: 11.5px; color: var(--muted); line-height: 1.55; }
+.modal-actions.col { flex-direction: column; align-items: stretch; }
+.modal-actions.col .btn { width: 100%; }
+.accent { color: #54a0ff; }
+.preview-list {
+  max-height: 46vh; overflow-y: auto; border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 12px; margin: 10px 0;
+}
+.pv-group {
+  font-size: 11.5px; font-weight: 700; color: #9ecbff;
+  margin: 9px 0 5px; letter-spacing: .02em;
+}
+.pv-group:first-child { margin-top: 0; }
+.pv-flow { display: flex; flex-wrap: wrap; gap: 4px; }
+.pv-tag {
+  --c: #2ecc71;
+  border: 1px solid color-mix(in srgb, var(--c) 35%, rgba(255,255,255,.12));
+  background: color-mix(in srgb, var(--c) 10%, rgba(255,255,255,.03));
+  border-radius: 7px; padding: 2px 8px; font-size: 11.5px;
+}
+.pv-tag.nsfw { --c: #e5484d; }

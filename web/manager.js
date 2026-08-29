@@ -483,18 +483,8 @@
     toast(`批量导入 ${added} 条${skipped ? `, 跳过 ${skipped} 条空行` : ""}`);
   }
 
-  function exportJson() {
-    const blob = new Blob([JSON.stringify(lib, null, 1)], { type: "application/json" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = "tag_library.export.json";
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  /* ---------- 🤖 AI 模板导出 ----------
-     按当前库的分类结构实时生成 .md 模板: 内嵌使用说明 (HTML 注释, 导入解析时被忽略),
-     每个子分类带 ≤5 个现有标签做格式示例, AI 补齐后走「标签文件」导入自动去重合并。 */
+  /* ---------- 📤 导出模板 (基础/全量两种, 文件内嵌 AI 使用说明) ----------
+     按当前库的分类结构实时生成 .md; 说明写在 HTML 注释里 (导入解析时被忽略)。 */
   function fmtTag(t) {
     let s = t.en || "";
     if (t.zh) s += `(${t.zh})`;
@@ -503,26 +493,32 @@
     return s;
   }
 
-  function buildTemplateMd() {
-    const SAMPLES = 5;
-    const head = `<!--
-==================================================================
-🏷 ComfyUI-TagLibrary 标签模板 (标签库管理页自动生成, 与当前库分类结构实时一致)
-
-【使用说明 —— 直接把本文件发给 AI, 并附一句: "请按文件内说明补充标签"】
-
-任务: 为每个「## 子分类」补充新的提示词标签。
-规则:
- 1. 保持「# 大分类」「## 子分类」两级标题结构, 不要增删改任何标题。
+  const TPL_RULES = ` 1. 保持「# 大分类」「## 子分类」两级标题结构 (全量模板重构分类时除外, 见下)
  2. 每行写多个标签, 用逗号分隔; 单个标签语法:
       english(中文翻译){权重}[nsfw]
     - 中文翻译尽量填写; 权重可省略 (默认 1.0); NSFW 词必须带 [nsfw] 后缀
     - 例: smile(微笑){1.1}, long hair(长发), some_word(某描述){1.0}[nsfw]
- 3. 已有标签是格式示例 (每个子分类最多展示 ${SAMPLES} 个), 原样保留不要改,
-    在同一子分类下补充新标签。
- 4. 每个子分类补充 8~15 个高质量、互相不重复的新标签。
- 5. 完成后把整个文件内容直接输出返回 (保持 Markdown 格式)。
-导入: 回填后的文件 → 标签库管理页「📂 标签文件」上传, 自动按分类归位并去重。
+ 3. 完成后把整个文件内容直接输出返回 (保持 Markdown 格式)
+导入: 回填的文件 → 管理页「📥 导入」, 自动按分类归位+去重, 预览确认后入库`;
+
+  function buildTemplateMd(full) {
+    const SAMPLES = 5;
+    const scope = full
+      ? `任务: 本文件包含标签库的全部标签。你可以:
+ - 在任意「## 子分类」下继续补充新标签 (不要与现有标签重复)
+ - 配合「🗑 清空标签库」后导入本文件, 即可重构一二级分类 (增删改标题、重新组织标签)
+ - 直接把本文件分享给别人, 对方导入即可获得整库`
+      : `任务: 为每个「## 子分类」补充 8~15 个高质量、互相不重复的新标签。
+已有标签只是格式示例 (每个子分类最多展示 ${SAMPLES} 个), 原样保留不要改。`;
+    const head = `<!--
+==================================================================
+🏷 ComfyUI-TagLibrary 标签模板 (${full ? "全量" : "基础"}) —— 标签库管理页自动生成, 与当前库分类结构实时一致
+
+【使用说明 —— 直接把本文件发给 AI, 并附一句: "请按文件内说明处理"】
+
+${scope}
+规则:
+${TPL_RULES}
 ==================================================================
 -->`;
     const parts = [head];
@@ -533,11 +529,13 @@
       for (const sub of subs) {
         parts.push(``, `## ${sub.name}`);
         const tags = (sub.tags || []);
-        if (!tags.length) {
+        const shown = full ? tags : tags.slice(0, SAMPLES);
+        if (!shown.length) {
           parts.push(`<!-- (此子分类暂无标签, 请在下方补充) -->`);
         } else {
-          parts.push(tags.slice(0, SAMPLES).map(fmtTag).join(", "));
-          if (tags.length > SAMPLES)
+          for (let i = 0; i < shown.length; i += 6)
+            parts.push(shown.slice(i, i + 6).map(fmtTag).join(", "));
+          if (!full && tags.length > SAMPLES)
             parts.push(`<!-- (另有 ${tags.length - SAMPLES} 个已有标签未展示, 补充时避免与其重复) -->`);
         }
       }
@@ -546,14 +544,19 @@
     return parts.join("\n");
   }
 
-  function exportTemplate() {
-    const blob = new Blob([buildTemplateMd()], { type: "text/markdown" });
+  function downloadText(text, filename) {
+    const blob = new Blob([text], { type: "text/markdown" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "taglib_模板_发给AI补充.md";
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(a.href);
-    toast("模板已下载: 直接发给 AI, 回填后从「📂 标签文件」导入");
+  }
+
+  function exportTemplate(full) {
+    downloadText(buildTemplateMd(full), full ? "taglib_模板_全量.md" : "taglib_模板.md");
+    toast(full ? "全量模板已下载" : "基础模板已下载: 发给 AI, 回填后从「📥 导入」预览入库");
+    $("#templateDialog").classList.add("hidden");
   }
 
   function importJson(file) {
@@ -583,20 +586,69 @@
     reader.readAsText(file, "utf-8");
   }
 
-  async function resetDefault() {
-    if (!confirm("恢复默认库 = 清空你的全部修改 (用户库删除)。确定?")) return;
-    if (dirty && !confirm("还有未保存的修改也会一并丢弃。继续?")) return;
+  /* ---------------- 导入预览: dry-run -> 确认弹窗 -> 真正入库 ---------------- */
+  let pendingPayload = null;   // 确认后原样发给 /import 的请求体
+
+  function renderPreview(out) {
+    $("#pvCount").textContent = out.total_new;
+    $("#pvDup").textContent = out.duplicates_removed;
+    const box = $("#previewList");
+    box.innerHTML = "";
+    for (const g of out.groups || []) {
+      const head = document.createElement("div");
+      head.className = "pv-group";
+      head.textContent = `${g.cat_icon || "📦"} ${g.cat} / ${g.sub}`;
+      box.appendChild(head);
+      const flow = document.createElement("div");
+      flow.className = "pv-flow";
+      for (const t of g.tags) {
+        const chip = document.createElement("span");
+        chip.className = "pv-tag" + (t.nsfw ? " nsfw" : "");
+        chip.textContent = t.en + (t.zh ? ` ${t.zh}` : "") +
+          (t.weight && t.weight !== 1.0 ? ` {${t.weight}}` : "");
+        flow.appendChild(chip);
+      }
+      box.appendChild(flow);
+    }
+  }
+
+  async function openImportPreview(payload) {
+    const res = await fetch("/taglib/api/tagfiles/preview-import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
+      body: JSON.stringify(payload),
+    });
+    const out = await res.json();
+    if (!res.ok || !out.ok) { toast(`解析失败: ${out.error || "HTTP " + res.status}`, true); return; }
+    if (!out.total_new) {
+      toast(`没有新增标签 (跳过已有 ${out.duplicates_removed} 个), 无需导入`);
+      return;
+    }
+    pendingPayload = payload;
+    renderPreview(out);
+    $("#previewDialog").classList.remove("hidden");
+  }
+
+  async function confirmImport() {
+    if (!pendingPayload) return;
+    $("#pvOk").disabled = true;
     try {
-      // 直接以"空categories + 墓碑清空"提交会全删 —— 所以恢复默认要走后端约定:
-      // 提交一棵与默认库等价的空树会被墓碑机制误伤, 干脆提供专用信号: 空 payload + reset flag
-      const r = await fetch(API, {
-        method: "DELETE",
+      const res = await fetch("/taglib/api/tagfiles/import", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
+        body: JSON.stringify(pendingPayload),
       });
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      toast("已恢复默认库");
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      toast(`✅ 已新增 ${out.imported_new_tags} 个标签, 跳过已有 ${out.duplicates_removed} 个`);
+      $("#previewDialog").classList.add("hidden");
+      pendingPayload = null;
       await load();
+      refreshFileList();
     } catch (err) {
-      toast(`恢复失败: ${err.message} (也可以手动删除 custom_nodes/ComfyUI-TagLibrary/data/tag_library.user.json 后刷新)`, true);
+      toast(`导入失败: ${err.message}`, true);
+    } finally {
+      $("#pvOk").disabled = false;
     }
   }
 
@@ -604,18 +656,12 @@
   let lastFiles = [];   // 最近一次列表, 供「全部导入」使用
   let libraryDir = "";
 
-  async function importOneFile(f, btn) {
-    const body = { path: f.path, cat_dir: f.cat_dir || null, sub_dir: f.sub_dir || null };
+  function filePayload(files) {
+    // files: [{path, cat_dir, sub_dir}] -> 请求体 (items + 可选外置目录)
     const dir = $("#extDirInput").value.trim();
+    const body = { items: files.map((f) => ({ path: f.path, cat_dir: f.cat_dir || null, sub_dir: f.sub_dir || null })) };
     if (dir) body.external_dir = dir;
-    const res = await fetch("/taglib/api/tagfiles/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
-      body: JSON.stringify(body),
-    });
-    const out = await res.json();
-    if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-    return out;
+    return body;
   }
 
   async function refreshFileList() {
@@ -652,18 +698,7 @@
       const btn = document.createElement("button");
       btn.className = "btn small primary";
       btn.textContent = "⬇ 导入";
-      btn.onclick = async () => {
-        btn.disabled = true; btn.textContent = "导入中…";
-        try {
-          const out = await importOneFile(f);
-          toast(`✅ ${f.file_name}: 新增 ${out.imported_new_tags} 个标签, 去重 ${out.duplicates_removed} 条`);
-          btn.textContent = "已导入";
-          await load();
-        } catch (err) {
-          toast(`导入失败: ${err.message}`, true);
-          btn.disabled = false; btn.textContent = "⬇ 导入";
-        }
-      };
+      btn.onclick = () => openImportPreview(filePayload([f]));
       row.appendChild(btn);
       return row;
     };
@@ -688,19 +723,7 @@
 
   async function importAllFiles() {
     if (!lastFiles.length) return toast("没有可导入的文件", true);
-    if (!confirm(`依次导入 ${lastFiles.length} 个文件? (自动去重, 已导入的会跳过新增)`)) return;
-    let okN = 0, newTags = 0, failN = 0;
-    for (const f of lastFiles) {
-      try {
-        const out = await importOneFile(f);
-        okN++;
-        newTags += out.imported_new_tags || 0;
-      } catch {
-        failN++;
-      }
-    }
-    await load();
-    toast(`✅ 全部导入完成: 成功 ${okN} 个, 新增 ${newTags} 标签${failN ? `, 失败 ${failN} 个` : ""}`);
+    await openImportPreview(filePayload(lastFiles));
   }
 
   async function syncToFolder() {
@@ -726,22 +749,17 @@
     refreshFileList();
   }
 
-  async function uploadMdFiles(files) {
+  async function uploadFiles(files) {
+    // .md/.txt → 预览确认入库; .json → 按库结构合并进工作树 (保存时落盘)
+    const texts = [];
     for (const file of files) {
       if (file.name.toLowerCase().endsWith(".json")) {
-        importJson(file);   // JSON 模板/备份走按 id 合并
+        importJson(file);
         continue;
       }
-      const text = await file.text();
-      const res = await fetch("/taglib/api/tagfiles/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
-        body: JSON.stringify({ text }),
-      });
-      const out = await res.json();
-      if (!res.ok || !out.ok) { toast(`${file.name}: ${out.error || "导入失败"}`, true); continue; }
-      toast(`✅ ${file.name}: 新增 ${out.imported_new_tags}, 去重 ${out.duplicates_removed}`);
+      texts.push({ text: await file.text() });
     }
+    if (texts.length) await openImportPreview({ items: texts });
     await load();
     refreshFileList();
   }
@@ -752,9 +770,11 @@
   $("#btnImportAll").onclick = importAllFiles;
   $("#btnSyncFolder").onclick = syncToFolder;
   $("#mdFileInput").onchange = (e) => {
-    if (e.target.files.length) uploadMdFiles([...e.target.files]);
+    if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = "";
   };
+  $("#pvOk").onclick = confirmImport;
+  $("#pvCancel").onclick = () => { $("#previewDialog").classList.add("hidden"); pendingPayload = null; };
 
   /* ---------------- bind UI ---------------- */
   $("#btnAddCat").onclick = addCategory;
@@ -763,14 +783,62 @@
   $("#btnPaste").onclick = openPasteDialog;
   $("#pasteOk").onclick = doPasteImport;
   $("#pasteCancel").onclick = () => $("#pasteDialog").classList.add("hidden");
-  $("#btnExport").onclick = exportJson;
-  $("#btnTemplate").onclick = exportTemplate;
+  $("#btnTemplate").onclick = () => $("#templateDialog").classList.remove("hidden");
+  $("#tplBasic").onclick = () => exportTemplate(false);
+  $("#tplFull").onclick = () => exportTemplate(true);
+  $("#tplCancel").onclick = () => $("#templateDialog").classList.add("hidden");
   $("#btnImport").onclick = () => $("#fileInput").click();
   $("#fileInput").onchange = (e) => {
-    if (e.target.files[0]) importJson(e.target.files[0]);
+    if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = "";
   };
-  $("#btnReset").onclick = resetDefault;
+
+  /* ---------- 备份库 / 清空标签库 ---------- */
+  async function backupSave() {
+    if (dirty && !confirm("有未保存修改, 备份的是已保存的库内容。先保存再备份? (确定=继续备份)")) return;
+    try {
+      const res = await fetch("/taglib/api/library/backup", { method: "POST" });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      toast(`✅ 已存为默认库 (备份于 data/备份库/, ${new Date(out.mtime * 1000).toLocaleString()})`);
+    } catch (err) {
+      toast(`备份失败: ${err.message}`, true);
+    }
+  }
+
+  async function backupRestore() {
+    if (dirty && !confirm("有未保存修改, 恢复会覆盖工作树。继续?")) return;
+    if (!confirm("恢复备份库 = 用 data/备份库/ 里的内容整体覆盖当前标签库。确定?")) return;
+    try {
+      const res = await fetch("/taglib/api/library/restore-backup", { method: "POST" });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      toast("✅ 已从备份恢复标签库");
+      await load();
+    } catch (err) {
+      toast(`恢复失败: ${err.message}`, true);
+    }
+  }
+
+  async function clearLibrary(withExport) {
+    $("#clearDialog").classList.add("hidden");
+    if (withExport) exportTemplate(true);
+    try {
+      const r = await fetch(API, { method: "DELETE" });
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      toast(withExport ? "全量模板已导出, 标签库已清空 (回出厂默认)" : "标签库已清空 (回出厂默认)");
+      await load();
+    } catch (err) {
+      toast(`清空失败: ${err.message}`, true);
+    }
+  }
+
+  $("#btnBackupSave").onclick = backupSave;
+  $("#btnBackupRestore").onclick = backupRestore;
+  $("#btnClearLib").onclick = () => $("#clearDialog").classList.remove("hidden");
+  $("#clearOk").onclick = () => clearLibrary(false);
+  $("#clearExport").onclick = () => clearLibrary(true);
+  $("#clearCancel").onclick = () => $("#clearDialog").classList.add("hidden");
   $("#btnSave").onclick = save;
   $("#btnCancel").onclick = async () => {
     if (dirty && !confirm("放弃当前全部未保存修改?")) return;
@@ -789,6 +857,9 @@
     if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
     if (e.key === "Escape") $("#pasteDialog").classList.add("hidden");
   });
+
+  // 调试/测试钩子 (不参与 UI)
+  window.__taglib = { openImportPreview, getLib: () => lib };
 
   load().catch((err) => toast(`加载失败: ${err.message}`, true));
 })();
