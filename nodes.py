@@ -323,11 +323,17 @@ class TagLibraryNode:
                 fixed_lower = [str(t.get("en", "")).strip().lower() for t in fixed]
                 chosen_pairs: list[dict] = []
                 used_lowers = set(fixed_lower)
-                # 全局冲突避让: 同一互斥组只允许一个词 (不论来自哪个子分类)
-                banned: list[set] = []
-                if avoid_conflicts:
-                    for g in tagconflicts.get_groups():
-                        banned.append(set(str(x).lower() for x in g.get("tags", [])))
+                # 反冲突: 规则双向互斥 —— 已抽中的标签命中一侧, 另一侧自动让位
+                excl = tagconflicts.ExclusionIndex(library.get_merged()) if avoid_conflicts else None
+                banned_cache: set = set()
+                banned_src: set = set()
+
+                def _banned() -> set:
+                    new = used_lowers - banned_src
+                    if new:
+                        banned_cache.update(excl.banned_for(new))
+                        banned_src.update(new)
+                    return banned_cache
                 for sid, pairs in by_sub.items():
                     mn, mx = _sub_range(sid)
                     if mx <= 0:
@@ -338,14 +344,14 @@ class TagLibraryNode:
                         plo = str(t.get("en", "")).strip().lower()
                         if plo in used_lowers or t.get("id") in pinned_ids:
                             continue
-                        if avoid_conflicts and any(plo in g for g in banned):
-                            continue
                         candidates.append(t)
                     if not candidates:
                         continue
                     for t in weighted_sample(candidates, min(want, len(candidates)), _weight, rng):
                         plo = str(t.get("en", "")).strip().lower()
                         if plo in used_lowers:
+                            continue
+                        if excl is not None and plo in _banned():
                             continue
                         chosen_pairs.append(t)
                         used_lowers.add(plo)

@@ -151,6 +151,11 @@
         activeSubId = cat.subcategories?.[0]?.id || null;
         renderAll();
       };
+      li.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openCatMenu(e.clientX, e.clientY, cat);
+      };
 
       // 拖拽排序
       li.ondragstart = (e) => e.dataTransfer.setData("text/plain", String(idx));
@@ -237,6 +242,7 @@
       <div class="sm-title">${escapeHtml(cat.name)} / ${escapeHtml(sub.name)}</div>
       <button data-act="rename" class="sm-btn">✏ 重命名</button>
       <button data-act="del" class="sm-btn danger">🗑 删除子分类</button>
+      <button data-act="conf" class="sm-btn">🧷 反冲突设置…</button>
       <div class="sm-hint">${(sub.tags || []).length} 个标签将随子分类一起删除</div>`;
     document.body.appendChild(subMenuEl);
     const r = subMenuEl.getBoundingClientRect();
@@ -251,7 +257,41 @@
       closeSubTabMenu();
       removeSub(cat, sub);
     };
+    subMenuEl.querySelector('[data-act="conf"]').onclick = () => {
+      closeSubTabMenu();
+      openConflictDialog({ kind: "sub", value: `${cat.name}/${sub.name}`,
+                           label: `${cat.name}/${sub.name}` });
+    };
     setTimeout(() => document.addEventListener("click", closeSubTabMenu, { once: true }), 0);
+  }
+
+  /* ---------- 一级分类右键菜单: 重命名 / 删除 / 反冲突 ---------- */
+  let catMenuEl = null;
+  function closeCatMenu() {
+    if (catMenuEl) { catMenuEl.remove(); catMenuEl = null; }
+  }
+  function openCatMenu(x, y, cat) {
+    closeCatMenu();
+    catMenuEl = document.createElement("div");
+    catMenuEl.className = "mtag-menu sub-menu";
+    catMenuEl.innerHTML = `
+      <div class="sm-title">${escapeHtml(cat.name)}</div>
+      <button data-act="rename" class="sm-btn">✏ 重命名</button>
+      <button data-act="del" class="sm-btn danger">🗑 删除分类</button>
+      <button data-act="conf" class="sm-btn">🧷 反冲突设置…</button>
+      <div class="sm-hint">${countTags(cat)} 个标签将随分类一起删除</div>`;
+    document.body.appendChild(catMenuEl);
+    const r = catMenuEl.getBoundingClientRect();
+    catMenuEl.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+    catMenuEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+    catMenuEl.addEventListener("click", (e) => e.stopPropagation());
+    catMenuEl.querySelector('[data-act="rename"]').onclick = () => { closeCatMenu(); renameCat(cat); };
+    catMenuEl.querySelector('[data-act="del"]').onclick = () => { closeCatMenu(); removeCat(cat); };
+    catMenuEl.querySelector('[data-act="conf"]').onclick = () => {
+      closeCatMenu();
+      openConflictDialog({ kind: "cat", value: cat.name, label: cat.name });
+    };
+    setTimeout(() => document.addEventListener("click", closeCatMenu, { once: true }), 0);
   }
 
   function renameSub(cat, sub) {
@@ -329,6 +369,7 @@
         <label class="mt-chk"><input type="checkbox" data-f="nsfw" ${tag.nsfw ? "checked" : ""}/> 🔞 NSFW</label>
         <label class="mt-chk"><input type="checkbox" data-f="enabled" ${tag.enabled !== false ? "checked" : ""}/> 启用</label>
       </div>
+      <button data-act="conf" class="mt-conf-btn">🧷 反冲突设置…</button>
       <div class="mt-actions">
         <button data-act="del" class="danger">🗑 删除</button>
         <button data-act="ok" class="primary">保存</button>
@@ -340,6 +381,11 @@
     menuEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
 
     menuEl.addEventListener("click", (e) => e.stopPropagation());
+    menuEl.querySelector('[data-act="conf"]').onclick = () => {
+      const en = tag.en;
+      closeTagMenu();
+      openConflictDialog({ kind: "tag", value: en, label: en });
+    };
     menuEl.querySelector('[data-act="ok"]').onclick = () => {
       const g = (f) => menuEl.querySelector(`[data-f="${f}"]`);
       const en = g("en").value.trim();
@@ -750,11 +796,18 @@ ${TPL_RULES}
   }
 
   async function uploadFiles(files) {
-    // .md/.txt → 预览确认入库; .json → 按库结构合并进工作树 (保存时落盘)
+    // .md/.txt → 标签导入预览; .json → 自动识别: 反冲突文件 or 库结构合并
     const texts = [];
     for (const file of files) {
       if (file.name.toLowerCase().endsWith(".json")) {
-        importJson(file);
+        const text = await file.text();
+        let obj = null;
+        try { obj = JSON.parse(text); } catch {}
+        if (obj && Array.isArray(obj.rules)) {
+          await openConflictsImport(obj.rules);   // 反冲突文件
+        } else {
+          importJson(file);                        // 库结构 JSON
+        }
         continue;
       }
       texts.push({ text: await file.text() });
@@ -776,6 +829,293 @@ ${TPL_RULES}
   $("#pvOk").onclick = confirmImport;
   $("#pvCancel").onclick = () => { $("#previewDialog").classList.add("hidden"); pendingPayload = null; };
 
+  /* ---------------- 🧷 反冲突机制 (conflicts.json) ---------------- */
+
+  const refKey = (ref) => `${ref.kind}:${String(ref.value).toLowerCase()}`;
+
+  let cfSubject = null;     // {kind, value, label}
+  let cfRules = [];         // 工作副本
+  let cfInvalid = [];       // 失效清单
+  let cfRelations = [];     // 当前对象的已有关系 [{key, label, invalid, via}]
+  let cfChecked = new Set();
+  let cfOpen = new Set();   // 勾选树展开状态
+  let cfRefByKey = new Map();
+
+  const cfInitialKeys = () => new Set(cfRelations.map((r) => r.key));
+
+  async function openConflictDialog(subject) {
+    cfSubject = subject;
+    cfOpen = new Set();
+    cfRefByKey = new Map();
+    let st;
+    try {
+      st = await fetch("/taglib/api/conflicts").then((r) => r.json());
+    } catch (err) {
+      return toast(`反冲突规则加载失败: ${err.message}`, true);
+    }
+    cfRules = JSON.parse(JSON.stringify(st.rules || []));
+    cfInvalid = st.invalid || [];
+    cfRelations = computeRelations(subject, cfRules, cfInvalid);
+    cfChecked = cfInitialKeys();
+    $("#cfSubject").textContent = subject.label || subject.value;
+    renderCfRelations();
+    renderCfTree();
+    $("#conflictDialog").classList.remove("hidden");
+  }
+
+  function relLabel(key) {
+    const i = key.indexOf(":");
+    return key.slice(i + 1);
+  }
+
+  function computeRelations(subject, rules, invalid) {
+    const sKey = refKey(subject);
+    const sVal = String(subject.value).toLowerCase();
+    const out = new Map();
+    const invalidVals = new Set((invalid || []).map((x) => String(x.value)));
+    rules.forEach((r, idx) => {
+      const L = r.left;
+      if (L.kind === "tags") {
+        // 组规则: 当前标签是组成员 → 与 right 各项互斥
+        if (subject.kind === "tag" &&
+            L.value.some((v) => String(v).toLowerCase() === sVal)) {
+          for (const ref of r.right) {
+            const k = refKey(ref);
+            if (!out.has(k)) out.set(k, { key: k, ref, invalid: invalidVals.has(String(ref.value)),
+                                          via: { idx, type: "group" } });
+          }
+        }
+        return;
+      }
+      if (refKey(L) === sKey) {
+        for (const ref of r.right) {
+          const k = refKey(ref);
+          if (k !== sKey && !out.has(k))
+            out.set(k, { key: k, ref, invalid: invalidVals.has(String(ref.value)),
+                         via: { idx, type: "out" } });
+        }
+      }
+      if ((r.right || []).some((ref) => refKey(ref) === sKey)) {
+        const k = refKey(L);
+        if (k !== sKey && !out.has(k))
+          out.set(k, { key: k, ref: L, invalid: invalidVals.has(String(L.value)),
+                       via: { idx, type: "in" } });
+      }
+    });
+    return [...out.values()];
+  }
+
+  function removeRelation(rel) {
+    const r = cfRules[rel.via.idx];
+    if (!r) return;
+    const sVal = String(cfSubject.value).toLowerCase();
+    if (rel.via.type === "out") {
+      r.right = (r.right || []).filter((x) => refKey(x) !== rel.key);
+      if (!r.right.length) cfRules.splice(rel.via.idx, 1);
+    } else if (rel.via.type === "in") {
+      r.right = (r.right || []).filter((x) => refKey(x) !== refKey(cfSubject));
+      if (!r.right.length) cfRules.splice(rel.via.idx, 1);
+    } else { // group: 把当前标签移出组
+      r.left.value = (r.left.value || []).filter((v) => String(v).toLowerCase() !== sVal);
+      if (r.left.value.length < 2) cfRules.splice(rel.via.idx, 1);
+    }
+    cfRelations = computeRelations(cfSubject, cfRules, cfInvalid);
+    cfChecked = cfInitialKeys();
+    renderCfRelations();
+    renderCfTree();
+  }
+
+  function renderCfRelations() {
+    const box = $("#cfRelations");
+    box.innerHTML = "";
+    if (!cfRelations.length) {
+      box.innerHTML = `<div class="muted" style="padding:6px 2px">暂无 — 在下方勾选建立</div>`;
+      return;
+    }
+    for (const rel of cfRelations) {
+      const chip = document.createElement("span");
+      chip.className = "cf-rel" + (rel.invalid ? " bad" : "");
+      chip.title = rel.invalid ? "⚠ 该目标在当前标签库中不存在" : "";
+      chip.innerHTML =
+        `${escapeHtml(relLabel(rel.key))}${rel.invalid ? " ⚠" : ""}` +
+        `<span class="cf-x" title="删除该关系">✕</span>`;
+      chip.querySelector(".cf-x").onclick = () => removeRelation(rel);
+      box.appendChild(chip);
+    }
+  }
+
+  function cfRowEl(key, ref, label, depth, chevron, onToggle) {
+    const row = document.createElement("div");
+    row.className = "cf-row";
+    row.style.paddingLeft = 6 + depth * 20 + "px";
+    const checked = cfChecked.has(key);
+    row.innerHTML = `
+      ${chevron !== undefined ? `<span class="cf-chev">${chevron ? "▾" : "▸"}</span>` : `<span class="cf-chev">·</span>`}
+      <label class="cf-lab"><input type="checkbox" ${checked ? "checked" : ""}/><span>${escapeHtml(label)}</span></label>`;
+    row.querySelector("input").onchange = (e) => {
+      e.target.checked ? cfChecked.add(key) : cfChecked.delete(key);
+    };
+    if (chevron !== undefined) {
+      row.querySelector(".cf-chev").style.cursor = "pointer";
+      row.querySelector(".cf-chev").onclick = (e) => { e.stopPropagation(); onToggle(); };
+      row.querySelector(".cf-lab span").style.cursor = "pointer";
+      row.querySelector(".cf-lab span").onclick = () => onToggle();
+    }
+    if (ref) cfRefByKey.set(key, ref);
+    return row;
+  }
+
+  function renderCfTree() {
+    const tree = $("#cfTree");
+    tree.innerHTML = "";
+    for (const cat of lib.categories || []) {
+      const cKey = `cat:${cat.name.toLowerCase()}`;
+      const cRef = { kind: "cat", value: cat.name };
+      if (cfSubject.kind === "cat" && cfSubject.value === cat.name) {
+        continue;  // 不和自己建立
+      }
+      const cOpen = cfOpen.has(cKey);
+      tree.appendChild(cfRowEl(cKey, cRef, `${cat.icon || ""} ${cat.name} (${countTags(cat)})`,
+                               0, cOpen, () => {
+        cOpen ? cfOpen.delete(cKey) : cfOpen.add(cKey);
+        renderCfTree();
+      }));
+      if (!cOpen) continue;
+      for (const sub of cat.subcategories || []) {
+        const sKey = `sub:${cat.name}/${sub.name}`.toLowerCase();
+        if (cfSubject.kind === "sub" &&
+            String(cfSubject.value).toLowerCase() === sKey.slice(4)) {
+          continue;
+        }
+        const sOpen = cfOpen.has(sKey);
+        tree.appendChild(cfRowEl(sKey, { kind: "sub", value: `${cat.name}/${sub.name}` },
+                                 `${sub.name} (${(sub.tags || []).length})`, 1, sOpen, () => {
+          sOpen ? cfOpen.delete(sKey) : cfOpen.add(sKey);
+          renderCfTree();
+        }));
+        if (!sOpen) continue;
+        const flow = document.createElement("div");
+        flow.className = "cf-tags-flow";
+        flow.style.marginLeft = 46 + "px";
+        for (const t of sub.tags || []) {
+          const tKey = `tag:${String(t.en).toLowerCase()}`;
+          if (cfSubject.kind === "tag" &&
+              String(cfSubject.value).toLowerCase() === tKey.slice(4)) {
+            continue;
+          }
+          const chip = document.createElement("span");
+          chip.className = "cf-tag" + (t.nsfw ? " nsfw" : "") + (cfChecked.has(tKey) ? " checked" : "");
+          chip.innerHTML = `<input type="checkbox" ${cfChecked.has(tKey) ? "checked" : ""}/>${escapeHtml(t.en)}`;
+          chip.querySelector("input").onchange = (e) => {
+            e.target.checked ? cfChecked.add(tKey) : cfChecked.delete(tKey);
+            chip.classList.toggle("checked", e.target.checked);
+          };
+          cfRefByKey.set(tKey, { kind: "tag", value: t.en });
+          flow.appendChild(chip);
+        }
+        tree.appendChild(flow);
+      }
+    }
+  }
+
+  async function saveConflictDialog() {
+    const before = cfInitialKeys();
+    const toRemove = [...before].filter((k) => !cfChecked.has(k));
+    const toAdd = [...cfChecked].filter((k) => !before.has(k));
+    // 删除: 走关系上的移除逻辑
+    for (const k of toRemove) {
+      const rel = cfRelations.find((x) => x.key === k);
+      if (rel) removeRelation(rel);
+    }
+    // 新增: 统一挂到 left=subject 的一条规则
+    const adds = toAdd.map((k) => cfRefByKey.get(k)).filter(Boolean);
+    if (adds.length) {
+      const sKey = refKey(cfSubject);
+      let rule = cfRules.find((r) => r.left.kind !== "tags" && refKey(r.left) === sKey);
+      if (!rule) {
+        rule = { id: `cf.${Date.now().toString(36)}.${Math.floor(Math.random() * 999)}`,
+                 left: { kind: cfSubject.kind, value: cfSubject.value }, right: [] };
+        cfRules.push(rule);
+      }
+      for (const ref of adds) {
+        if (!rule.right.some((x) => refKey(x) === refKey(ref))) rule.right.push(ref);
+      }
+    }
+    try {
+      const res = await fetch("/taglib/api/conflicts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules: cfRules }),
+      });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      const badN = (out.invalid || []).length;
+      toast(`✅ 反冲突规则已保存 (${out.count} 条${badN ? `, ${badN} 条失效引用` : ""})`);
+      $("#conflictDialog").classList.add("hidden");
+    } catch (err) {
+      toast(`保存失败: ${err.message}`, true);
+    }
+  }
+
+  async function exportConflicts() {
+    const st = await fetch("/taglib/api/conflicts").then((r) => r.json());
+    downloadText(JSON.stringify({ _说明: st.doc, version: 1, rules: st.rules }, null, 1),
+                 "conflicts.json");
+  }
+
+  /* 反冲突文件导入: 预览 -> 替换/合并 -> 落盘 */
+  let cfiPending = null;
+  async function openConflictsImport(rules) {
+    const res = await fetch("/taglib/api/conflicts/preview-import", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rules }),
+    });
+    const out = await res.json();
+    if (!res.ok || !out.ok) { toast(`反冲突文件解析失败: ${out.error || ""}`, true); return; }
+    cfiPending = rules;
+    $("#cfiTotal").textContent = out.total;
+    $("#cfiValid").textContent = out.valid;
+    $("#cfiInvalid").textContent = (out.invalid || []).length;
+    const list = $("#cfiInvalidList");
+    if ((out.invalid || []).length) {
+      list.classList.remove("hidden");
+      list.innerHTML = out.invalid
+        .map((x) => `<div>⚠ <b>${escapeHtml(String(x.id || ""))}</b> — ${escapeHtml(x.reason || x.value || "")}</div>`)
+        .join("");
+    } else {
+      list.classList.add("hidden");
+      list.innerHTML = "";
+    }
+    $("#conflictImportDialog").classList.remove("hidden");
+  }
+
+  async function confirmConflictsImport() {
+    if (!cfiPending) return;
+    const mode = document.querySelector('input[name="cfiMode"]:checked')?.value || "replace";
+    $("#cfiOk").disabled = true;
+    try {
+      const res = await fetch("/taglib/api/conflicts/import", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rules: cfiPending, mode }),
+      });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      const badN = (out.invalid || []).length;
+      toast(`✅ 反冲突规则已${mode === "merge" ? "合并" : "替换"} (${out.count} 条${badN ? `, ${badN} 条失效` : ""})`);
+      $("#conflictImportDialog").classList.add("hidden");
+      cfiPending = null;
+    } catch (err) {
+      toast(`导入失败: ${err.message}`, true);
+    } finally {
+      $("#cfiOk").disabled = false;
+    }
+  }
+
+  $("#cfCancel").onclick = () => $("#conflictDialog").classList.add("hidden");
+  $("#cfSave").onclick = saveConflictDialog;
+  $("#cfiOk").onclick = confirmConflictsImport;
+  $("#cfiCancel").onclick = () => { $("#conflictImportDialog").classList.add("hidden"); cfiPending = null; };
+
   /* ---------------- bind UI ---------------- */
   $("#btnAddCat").onclick = addCategory;
   $("#btnAddSub").onclick = addSubcategory;
@@ -786,6 +1126,17 @@ ${TPL_RULES}
   $("#btnTemplate").onclick = () => $("#templateDialog").classList.remove("hidden");
   $("#tplBasic").onclick = () => exportTemplate(false);
   $("#tplFull").onclick = () => exportTemplate(true);
+  $("#tplConflicts").onclick = async () => {
+    $("#templateDialog").classList.add("hidden");
+    await exportConflicts();
+    toast("反冲突文件 conflicts.json 已下载 (可自由导入/替换)");
+  };
+  $("#tplConflictsFull").onclick = async () => {
+    $("#templateDialog").classList.add("hidden");
+    await exportConflicts();
+    exportTemplate(true);
+    toast("已导出两个文件: conflicts.json + taglib_模板_全量.md, 一起发给 AI 即可生成反冲突文件");
+  };
   $("#tplCancel").onclick = () => $("#templateDialog").classList.add("hidden");
   $("#btnImport").onclick = () => $("#fileInput").click();
   $("#fileInput").onchange = (e) => {
@@ -859,7 +1210,7 @@ ${TPL_RULES}
   });
 
   // 调试/测试钩子 (不参与 UI)
-  window.__taglib = { openImportPreview, getLib: () => lib };
+  window.__taglib = { openImportPreview, openConflictsImport, getLib: () => lib };
 
   load().catch((err) => toast(`加载失败: ${err.message}`, true));
 })();

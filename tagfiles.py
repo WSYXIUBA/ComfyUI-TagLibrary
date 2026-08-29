@@ -32,7 +32,7 @@ from typing import Any
 
 # 预编译
 BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "tagfiles")
-LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "标签库")
+LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "taglib")
 
 _LINE_CAT = re.compile(r"^#\s+(.+)$")
 _LINE_SUB = re.compile(r"^##\s+(.+)$")
@@ -446,6 +446,19 @@ def export_to_folder(lib: dict, folder: str) -> dict:
 # ---------------------------------------------------------------- 热同步: 文件夹 -> 库
 
 SYNC_STATE_NAME = "_sync_state.json"
+
+
+def _migrate_legacy_folder() -> None:
+    """旧版中文目录 数据/标签库 → data/taglib (一次性, 旧在新无时执行)。"""
+    legacy = os.path.join(os.path.dirname(LIBRARY_DIR), "标签库")
+    if os.path.isdir(legacy) and not os.path.isdir(LIBRARY_DIR):
+        try:
+            os.rename(legacy, LIBRARY_DIR)
+        except OSError:
+            pass
+
+
+_migrate_legacy_folder()
 
 
 def _scan_fingerprint(folder: str) -> dict[str, list]:

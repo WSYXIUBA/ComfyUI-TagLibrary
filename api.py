@@ -297,19 +297,79 @@ async def export_folder(request: web.Request) -> web.Response:
 # ------------------------------------------------------------ conflicts
 
 async def get_conflicts(_request: web.Request) -> web.Response:
-    return _json_response({"ok": True, "groups": tagconflicts.get_groups()})
+    """GET /taglib/api/conflicts -> 规则 + 失效清单 + AI 说明。"""
+    return _json_response(tagconflicts.get_state(library.get_merged()))
 
 
 async def save_conflicts(request: web.Request) -> web.Response:
+    """POST /taglib/api/conflicts {rules} -> 整树保存 (设置弹窗用)。"""
     try:
         payload = await request.json()
     except Exception:
         return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
-    groups = payload.get("groups")
-    if not isinstance(groups, list):
-        return _json_response({"ok": False, "error": "groups 必须是数组"}, 400)
-    tagconflicts.save_groups(groups)
-    return _json_response({"ok": True, "count": len(tagconflicts.get_groups())})
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return _json_response({"ok": False, "error": "rules 必须是数组"}, 400)
+    result = tagconflicts.save_rules(rules)
+    state = tagconflicts.get_state(library.get_merged())
+    return _json_response({**result, "invalid": state["invalid"]})
+
+
+async def preview_conflicts_import(request: web.Request) -> web.Response:
+    """POST /taglib/api/conflicts/preview-import {rules} -> dry-run 校验 (不落盘)。"""
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return _json_response({"ok": False, "error": "rules 必须是数组"}, 400)
+    lib = library.get_merged()
+    idx = tagconflicts._lib_index(lib)
+    invalid = []
+    kept = []
+    for i, r in enumerate(rules):
+        if not tagconflicts._valid_shape(r):
+            invalid.append({"index": i, "id": r.get("id") or f"#{i}", "reason": "格式不合法"})
+            continue
+        kept.append(r)
+        _, ok_l = tagconflicts.resolve_ref(r["left"], idx)
+        if not ok_l:
+            invalid.append({"index": i, "id": r.get("id"), "reason":
+                            f"库中不存在: {r['left'].get('value')}"})
+        for ref in r.get("right", []):
+            _, ok_r = tagconflicts.resolve_ref(ref, idx)
+            if not ok_r:
+                invalid.append({"index": i, "id": r.get("id"), "reason":
+                                f"库中不存在: {ref.get('value')}"})
+    return _json_response({"ok": True, "total": len(rules), "valid": len(kept),
+                           "invalid": invalid})
+
+
+async def apply_conflicts_import(request: web.Request) -> web.Response:
+    """POST /taglib/api/conflicts/import {rules, mode: replace|merge} -> 落盘。"""
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return _json_response({"ok": False, "error": "rules 必须是数组"}, 400)
+    mode = payload.get("mode") or "replace"
+    if mode == "merge":
+        existing = tagconflicts.load_rules()
+        have = {(str(r.get("id")), json.dumps(r.get("left"), sort_keys=True),
+                 json.dumps(r.get("right"), sort_keys=True)) for r in existing}
+        for r in rules:
+            key = (str(r.get("id")), json.dumps(r.get("left"), sort_keys=True),
+                   json.dumps(r.get("right"), sort_keys=True))
+            if key not in have:
+                existing.append(r)
+                have.add(key)
+        rules = existing
+    result = tagconflicts.save_rules(rules)
+    state = tagconflicts.get_state(library.get_merged())
+    return _json_response({**result, "mode": mode, "invalid": state["invalid"]})
 
 
 async def check_conflicts(request: web.Request) -> web.Response:
@@ -319,7 +379,8 @@ async def check_conflicts(request: web.Request) -> web.Response:
     except Exception:
         return _json_response({"ok": False, "error": "bad json"}, 400)
     ens = [str(e) for e in (payload.get("ens") or [])]
-    return _json_response({"ok": True, "conflicts": tagconflicts.check_selection(ens)})
+    return _json_response({"ok": True,
+                           "conflicts": tagconflicts.check_selection(ens, library.get_merged())})
 
 
 def register_routes() -> None:
@@ -343,3 +404,5 @@ def register_routes() -> None:
     app.router.add_get("/taglib/api/conflicts", get_conflicts)
     app.router.add_post("/taglib/api/conflicts", save_conflicts)
     app.router.add_post("/taglib/api/conflicts/check", check_conflicts)
+    app.router.add_post("/taglib/api/conflicts/preview-import", preview_conflicts_import)
+    app.router.add_post("/taglib/api/conflicts/import", apply_conflicts_import)
