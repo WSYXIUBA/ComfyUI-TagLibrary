@@ -375,6 +375,9 @@ def _folder_hot_sync() -> None:
     try:
         lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
         action, changed = tagfiles.folder_sync_plan(tagfiles.LIBRARY_DIR, lib_key)
+        if action != "none":
+            print(f"[TagLibrary] 🔄 热同步动作: {action}"
+                  + (f" ({len(changed)} 文件)" if changed else ""))
         if action == "baseline" or action == "mirror":
             sync_to_folder_snapshot(lib_key)
         elif action == "pull" and changed:
@@ -403,7 +406,12 @@ def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
         pass
 
 def get_merged() -> dict[str, Any]:
-    _folder_hot_sync()  # 热同步: 外部文件改动先吸入, 再给合并视图
+    import time as _t
+    _t0 = _t.perf_counter()
+    _folder_hot_sync()  # 热同步: 外部文件改动先吸入, 再给合并视图 (扫描已节流)
+    _ms = (_t.perf_counter() - _t0) * 1000
+    if _ms > 300:  # 正常 <5ms; 超标 = GIL 被其他插件后台线程占住 (Manager/bsk_UI 轮询), 留痕便于排查
+        print(f"[TagLibrary] ⏱ 热同步窗口 {_ms:.0f}ms (非本插件计算, 为后台线程 GIL 竞争)")
     global _cache, _cache_key
     key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
     with _lock:

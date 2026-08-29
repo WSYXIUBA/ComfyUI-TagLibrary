@@ -6,6 +6,27 @@ import json
 import random
 from typing import Any
 
+import gc as _gc
+import time as _tmod
+
+_gc_t0 = 0.0
+
+
+def _gc_cb(phase, info):
+    global _gc_t0
+    if phase == "start":
+        _gc_t0 = _tmod.perf_counter()
+    else:
+        _d = (_tmod.perf_counter() - _gc_t0) * 1000
+        if _d > 200:
+            print(f"[TagLibrary] 🗑 GC gen{info['generation']} 暂停 {_d:.0f}ms (进程级, 与本插件计算量无关)")
+
+
+try:
+    _gc.callbacks.append(_gc_cb)
+except Exception:
+    pass
+
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import library
     from . import tagconflicts
@@ -120,7 +141,17 @@ class TagLibraryNode:
             out_cats.append(cat)
         return {**lib, "categories": out_cats}
 
-    def build(self, selection_state: str, mode: str, seed: int,
+    def build(self, *args, **kwargs):
+        import time as _t
+        _t0 = _t.perf_counter()
+        result = self._build_impl(*args, **kwargs)
+        _ms = (_t.perf_counter() - _t0) * 1000
+        if _ms > 50:  # 正常应在个位数 ms; 超标才打日志便于排查
+            mode = kwargs.get("mode") or (args[1] if len(args) > 1 else "?")
+            print(f"[TagLibrary] ⏱ build 耗时 {_ms:.0f}ms (mode={mode})")
+        return result
+
+    def _build_impl(self, selection_state: str, mode: str, seed: int,
               prefix: str | None = None,
               suffix: str | None = None, **legacy):
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
