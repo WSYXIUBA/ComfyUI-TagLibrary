@@ -11,6 +11,10 @@ import { app } from "../../scripts/app.js";
 import { injectPanelStyle } from "./tagpanel-css.js";
 
 const NODE_NAME = "TagLibraryNode";
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
 const MANAGER_URL = "/taglib?embed=1";
 const SETTING_PREFIX = "TagLibrary.";
 
@@ -685,6 +689,41 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-set-row select:focus, .tp-set-row input:focus { border-color:rgba(84,160,255,.55); }
       .tp-set-row input[type="checkbox"] { width:15px; height:15px; accent-color:#54a0ff; }
       .tp-sync-note { font-size:11px; color:#6b7385; margin-top:14px; line-height:1.6; max-width:560px; }
+      .tp-cf-stats { font-size:12px; color:#aab3c5; margin-bottom:12px; }
+      .tp-cf-list { display:flex; flex-direction:column; gap:6px; margin-bottom:20px; }
+      .tp-cf-rule { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+        border:1px solid rgba(255,255,255,.09); border-radius:10px;
+        background:rgba(255,255,255,.03); padding:8px 12px; font-size:12.5px; }
+      .tp-cf-rule .cf-l { font-weight:600; color:#cfe4ff; }
+      .tp-cf-rule .cf-vs { color:#8b93a5; }
+      .tp-cf-rule .cf-rt { border:1px solid rgba(255,255,255,.16); border-radius:6px;
+        padding:1px 7px; font-size:11.5px; color:#cfd6e4; }
+      .tp-cf-rule .cf-note { color:#6b7385; font-size:11px; }
+      .tp-cf-rule .cf-warn { color:#ff6b6b; font-size:11px; }
+      .tp-cf-rule .cf-del { margin-left:auto; background:transparent; cursor:pointer;
+        border:1px solid rgba(255,107,107,.4); color:#ff9d9d; border-radius:6px;
+        padding:2px 8px; font-size:11px; }
+      .tp-cf-rule .cf-del:hover { background:rgba(255,71,87,.15); }
+      .tp-cf-h { font-size:12px; font-weight:700; color:#8fb8ff; margin:16px 0 10px; }
+      .tp-cf-form { border:1px solid rgba(255,255,255,.09); border-radius:12px;
+        background:rgba(255,255,255,.03); padding:14px 16px; max-width:640px; }
+      .tp-cf-frow { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
+      .tp-cf-frow .cf-klab { font-size:11.5px; color:#8b93a5; width:52px; }
+      .tp-cf-frow select, .tp-cf-frow input {
+        background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); border-radius:8px;
+        color:#e3e7ee; padding:5px 9px; font-size:12px; outline:none; }
+      .tp-cf-frow input:focus { border-color:rgba(84,160,255,.55); }
+      .tp-cf-add { border:1px solid rgba(84,160,255,.5); background:rgba(84,160,255,.12);
+        color:#9ecbff; border-radius:7px; padding:4px 12px; cursor:pointer; font-size:12px; }
+      .tp-cf-add:hover { background:rgba(84,160,255,.22); }
+      .tp-cf-rights { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 10px 60px; min-height:24px; }
+      .tp-cf-rights .cf-rt-chip { display:inline-flex; align-items:center; gap:5px;
+        border:1px solid rgba(46,204,113,.45); background:rgba(46,204,113,.08);
+        border-radius:6px; padding:1px 7px; font-size:11.5px; }
+      .tp-cf-rights .cf-rt-chip .x { cursor:pointer; opacity:.6; }
+      .tp-cf-rights .cf-rt-chip .x:hover { opacity:1; color:#ff6b6b; }
+      .tp-cf-save { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
+        border-radius:8px; padding:6px 18px; cursor:pointer; font-weight:600; font-size:12.5px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
@@ -692,6 +731,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <button class="tp-tabbtn tp-picktab active">挑标签</button>
         <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
         <button class="tp-tabbtn tp-mgrtab">🏷 标签库管理</button>
+        <button class="tp-tabbtn tp-cftab">🧷 防冲突关系</button>
         <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
         <span style="flex:1"></span>
@@ -701,6 +741,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
         <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
         <section class="tp-mgrview" style="display:none;flex:1;min-width:0;"></section>
+        <section class="tp-cfview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-setview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
       </div>
       <div class="tp-foot">
@@ -1191,16 +1232,184 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     $(".sv-glang").onchange = (e) => saveGlobal(SET_LANG, e.target.value);
   }
 
+  /* ---------- 🧷 防冲突关系页签 ---------- */
+  const cfView = $(".tp-cfview");
+  let cfRights = [];   // 新增规则的右侧引用 [{kind, value}]
+
+  function cfKindName(kind) {
+    return kind === "tag" ? "标签" : kind === "sub" ? "二级分类" : "一级分类";
+  }
+
+  function cfDatalist(kind) {
+    const opts = [];
+    if (kind === "tag") {
+      for (const c of libCats()) for (const s of c.subcategories || [])
+        for (const t of s.tags || []) opts.push(t.en);
+    } else if (kind === "sub") {
+      for (const c of libCats()) for (const s of c.subcategories || [])
+        opts.push(`${c.name}/${s.name}`);
+    } else {
+      for (const c of libCats()) opts.push(c.name);
+    }
+    return `<datalist id="tp-cf-dl-${kind}">${opts.map((v) => `<option value="${escapeHtml(String(v))}"/>`).join("")}</datalist>`;
+  }
+
+  async function renderCfView() {
+    cfView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
+    let st;
+    try {
+      st = await fetch("/taglib/api/conflicts").then((r) => r.json());
+    } catch {
+      cfView.innerHTML = `<div class="tp-empty" style="padding:30px;color:#8b93a5">反冲突规则加载失败</div>`;
+      return;
+    }
+    const rules = st.rules || [];
+    cfRights = [];
+    const invalidVals = new Set((st.invalid || []).map((x) => String(x.value)));
+    cfView.innerHTML = `
+      <div class="tp-cf-stats">
+        共 <b style="color:#54a0ff">${rules.length}</b> 条双向互斥规则
+        ${(st.invalid || []).length ? `，<span style="color:#ff6b6b">⚠ ${invalidVals.size} 个失效引用</span>` : ""}
+        —— 填充/自动模式抽到一侧，另一侧自动让位（手动点选不受影响）
+      </div>
+      <div class="tp-cf-list"></div>
+      <div class="tp-cf-h">新增规则</div>
+      <div class="tp-cf-form">
+        <div class="tp-cf-frow">
+          <span class="cf-klab">左侧</span>
+          <select class="cf-lkind">
+            <option value="tag">标签</option>
+            <option value="sub">二级分类</option>
+            <option value="cat">一级分类</option>
+          </select>
+          <input class="cf-linput" list="tp-cf-dl-tag" placeholder="标签英文…" style="flex:1;min-width:180px"/>
+        </div>
+        <div class="tp-cf-frow">
+          <span class="cf-klab">右侧</span>
+          <select class="cf-rkind">
+            <option value="tag">标签</option>
+            <option value="sub">二级分类</option>
+            <option value="cat">一级分类</option>
+          </select>
+          <input class="cf-rinput" list="tp-cf-dl-tag" placeholder="可连续添加多个…" style="flex:1;min-width:180px"/>
+          <button class="tp-cf-add">＋ 添加到右侧</button>
+        </div>
+        <div class="tp-cf-rights"></div>
+        <button class="tp-cf-save">💾 保存规则</button>
+        <span class="tp-cf-note" style="font-size:11px;color:#6b7385;margin-left:10px">保存后立即写入 data/taglib/conflicts.json</span>
+      </div>
+      ${cfDatalist("tag")}${cfDatalist("sub")}${cfDatalist("cat")}`;
+
+    const listBox = cfView.querySelector(".tp-cf-list");
+    if (!rules.length) {
+      listBox.innerHTML = `<div style="color:#8b93a5;font-size:12px">暂无规则</div>`;
+    }
+    for (const r of rules) {
+      const card = document.createElement("div");
+      card.className = "tp-cf-rule";
+      const warns = [];
+      if (invalidVals.has(String(r.left?.value))) warns.push(escapeHtml(String(r.left?.value)));
+      const rts = (r.right || []).map((ref) => {
+        const bad = invalidVals.has(String(ref.value));
+        if (bad) warns.push(escapeHtml(String(ref.value)));
+        return `<span class="cf-rt">${escapeHtml(String(ref.value))}</span>`;
+      }).join(" ");
+      card.innerHTML = `
+        <span class="cf-l">${escapeHtml(String(r.left?.value ?? "?"))}</span>
+        <span class="cf-vs">⟂</span>${rts}
+        ${r.note ? `<span class="cf-note">${escapeHtml(String(r.note))}</span>` : ""}
+        ${warns.length ? `<span class="cf-warn">⚠ 失效: ${warns.join("、")}</span>` : ""}
+        <button class="cf-del" title="删除规则">✕</button>`;
+      card.querySelector(".cf-del").onclick = async () => {
+        const rest = rules.filter((x) => x !== r);
+        try {
+          const res = await fetch("/taglib/api/conflicts", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ rules: rest }),
+          });
+          const out = await res.json();
+          if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+          toast("规则已删除");
+          renderCfView();
+        } catch (err) {
+          toast(`删除失败: ${err.message}`, true);
+        }
+      };
+      listBox.appendChild(card);
+    }
+
+    // 新增表单
+    const lkind = cfView.querySelector(".cf-lkind");
+    const linput = cfView.querySelector(".cf-linput");
+    const rkind = cfView.querySelector(".cf-rkind");
+    const rinput = cfView.querySelector(".cf-rinput");
+    const rightsBox = cfView.querySelector(".tp-cf-rights");
+    const renderRights = () => {
+      rightsBox.innerHTML = cfRights.length
+        ? cfRights.map((ref, i) =>
+            `<span class="cf-rt-chip">${escapeHtml(String(ref.value))}<span class="x" data-i="${i}">✕</span></span>`).join("")
+        : `<span style="color:#6b7385;font-size:11px">尚未添加右侧对象</span>`;
+      rightsBox.querySelectorAll(".x").forEach((x) => {
+        x.onclick = () => { cfRights.splice(Number(x.dataset.i), 1); renderRights(); };
+      });
+    };
+    renderRights();
+    lkind.onchange = () => {
+      const dl = cfView.querySelector(`#tp-cf-dl-${lkind.value}`);
+      linput.setAttribute("list", `tp-cf-dl-${lkind.value}`);
+      if (dl) { dl.remove(); cfView.appendChild(dl); }
+      linput.value = "";
+    };
+    rkind.onchange = () => {
+      const dl = cfView.querySelector(`#tp-cf-dl-${rkind.value}`);
+      rinput.setAttribute("list", `tp-cf-dl-${rkind.value}`);
+      if (dl) { dl.remove(); cfView.appendChild(dl); }
+      rinput.value = "";
+    };
+    cfView.querySelector(".tp-cf-add").onclick = () => {
+      const v = rinput.value.trim();
+      if (!v) return toast("先填右侧对象", true);
+      const ref = { kind: rkind.value, value: v };
+      if (cfRights.some((x) => x.kind === ref.kind && String(x.value).toLowerCase() === String(v).toLowerCase()))
+        return toast("已添加过", true);
+      cfRights.push(ref);
+      rinput.value = "";
+      renderRights();
+    };
+    cfView.querySelector(".tp-cf-save").onclick = async () => {
+      const lv = linput.value.trim();
+      if (!lv) return toast("先填左侧对象", true);
+      if (!cfRights.length) return toast("至少添加一个右侧对象", true);
+      const rule = { id: `cf.${Date.now().toString(36)}.${Math.floor(Math.random() * 999)}`,
+                     left: { kind: lkind.value, value: lv },
+                     right: cfRights.slice() };
+      try {
+        const res = await fetch("/taglib/api/conflicts", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ rules: [...rules, rule] }),
+        });
+        const out = await res.json();
+        if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+        toast(`✅ 规则已保存 (共 ${out.count} 条)`);
+        renderCfView();
+      } catch (err) {
+        toast(`保存失败: ${err.message}`, true);
+      }
+    };
+  }
+
   function switchTab(tab) {
     if (ui.tab === "manager" && tab !== "manager") refreshLibIfTouched();
     ui.tab = tab;
     rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
     rootEl.querySelector(".tp-excludetab").classList.toggle("active", tab === "exclude");
     rootEl.querySelector(".tp-mgrtab").classList.toggle("active", tab === "manager");
+    rootEl.querySelector(".tp-cftab").classList.toggle("active", tab === "cf");
     rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
     excView.style.display = tab === "exclude" ? "block" : "none";
     mgrView.style.display = tab === "manager" ? "flex" : "none";
+    cfView.style.display = tab === "cf" ? "block" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     searchEl.style.visibility = tab === "pick" ? "visible" : "hidden";
     const info = $(".tp-footinfo");
@@ -1211,20 +1420,24 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       info.innerHTML = `已排除 <b style="color:#ff6b6b">${n}</b> 个分类`;
     } else if (tab === "manager") {
       info.innerHTML = `管理页改动保存后全局生效`;
+    } else if (tab === "cf") {
+      info.innerHTML = `反冲突规则双向互斥 · 填充/自动模式生效`;
     } else {
       info.innerHTML = `节点参数即改即存 · 全局偏好双向同步`;
     }
-    // 底部按钮: 挑选/排除 -> 取消+确定; 管理/设置 -> 仅关闭
+    // 底部按钮: 挑选/排除 -> 取消+确定; 管理/防冲突/设置 -> 仅关闭
     const pickLike = tab === "pick" || tab === "exclude";
     $(".tp-cancel").style.display = pickLike ? "" : "none";
     $(".tp-ok").style.display = pickLike ? "" : "none";
     $(".tp-close2").style.display = pickLike ? "none" : "";
     if (tab === "exclude") renderExclude();
     if (tab === "settings") renderSettingsView();
+    if (tab === "cf") renderCfView();
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
   rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
   rootEl.querySelector(".tp-mgrtab").onclick = () => { ensureMgrFrame(); switchTab("manager"); };
+  rootEl.querySelector(".tp-cftab").onclick = () => switchTab("cf");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
   $(".tp-close2").onclick = onCancel;
 
@@ -1724,6 +1937,13 @@ app.registerExtension({
             return p && excluded.has(p[0]);
           });
           const have = new Set(kept.map((t) => t.en.toLowerCase()));
+          // NSFW 反查集: 回显数据没带 nsfw 时从库补 (旧后端兼容)
+          const nsfwSet = new Set();
+          for (const c of (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || []) {
+            for (const s of c.subcategories || []) {
+              for (const t of s.tags || []) if (t.nsfw) nsfwSet.add(String(t.en).toLowerCase());
+            }
+          }
           const fresh = [];
           for (const t of parsed) {
             if (!t.en || have.has(t.en.toLowerCase())) continue;
@@ -1732,7 +1952,11 @@ app.registerExtension({
             const p = libPath.get(t.en.toLowerCase());
             if (!cat && p) cat = p[0];
             have.add(t.en.toLowerCase());
-            fresh.push({ en: t.en, zh: t.zh || "", nsfw: !!t.nsfw, enabled: true, _cat: cat });
+            fresh.push({
+              en: t.en, zh: t.zh || "",
+              nsfw: !!t.nsfw || nsfwSet.has(String(t.en).toLowerCase()),
+              enabled: true, _cat: cat,
+            });
           }
           // 分组标题数据: cat → fillGroups
           const groups = new Map();
