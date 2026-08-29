@@ -24,12 +24,16 @@ id 生成: category:slug(en), 冲突时追加序号 —— 由 import_conflicts 
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import unicodedata
 from typing import Any
 
 # 预编译
+BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "tagfiles")
+LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "标签库")
+
 _LINE_CAT = re.compile(r"^#\s+(.+)$")
 _LINE_SUB = re.compile(r"^##\s+(.+)$")
 _LINE_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
@@ -291,18 +295,9 @@ def sanitize_fsname(name: str, fallback: str = "未命名") -> str:
     return clean[:60] or fallback
 
 
-def export_to_folder(lib: dict, folder: str) -> dict:
-    """把库镜像导出为两级文件夹结构: <folder>/<大类>/<子分类>.md。
-
-    - 每个子分类一个 .md, 文件内容自带 `# 大类` / `## 子类` 标题 (可再次导入/直接发 AI)
-    - 同名文件覆盖写, 不删除文件夹里的其他既有文件
-    - 孙分类 groups (若有) 的标签并入子分类文件
-    返回统计 {categories, subcategories, files, tags, folder}。
-    """
-    os.makedirs(folder, exist_ok=True)
-    used_cats: set[str] = set()
-    stats = {"categories": 0, "subcategories": 0, "files": 0, "tags": 0,
-             "folder": folder}
+def _desired_files(lib: dict, folder: str) -> dict[str, str]:
+    """库 -> {相对路径: 文件内容}。路径形如 <大类>/<子分类>/<子分类>.md。"""
+    out: dict[str, str] = {}
 
     def _uniq(taken: set[str], base: str) -> str:
         cand, n = base, 2
@@ -325,11 +320,10 @@ def export_to_folder(lib: dict, folder: str) -> dict:
             s += "[nsfw]"
         return s
 
+    used_cats: set[str] = set()
     for cat in lib.get("categories", []):
         cat_name = cat.get("name") or cat.get("id") or "未命名"
         cdir_name = _uniq(used_cats, sanitize_fsname(cat_name))
-        cdir = os.path.join(folder, cdir_name)
-        os.makedirs(cdir, exist_ok=True)
         used_subs: set[str] = set()
         for sub in cat.get("subcategories", []):
             sub_name = sub.get("name") or "未命名"
@@ -337,41 +331,218 @@ def export_to_folder(lib: dict, folder: str) -> dict:
             for g in sub.get("groups") or []:
                 tags.extend(g.get("tags") or [])
             sdir_name = _uniq(used_subs, sanitize_fsname(sub_name))
-            sdir = os.path.join(cdir, sdir_name)
-            os.makedirs(sdir, exist_ok=True)
-            fname = f"{sdir_name}.md"
             lines = [f"# {cat_name}", f"## {sub_name}", ""]
-            pieces = [_tag_piece(t) for t in tags]
-            pieces = [p for p in pieces if p]
+            pieces = [p for p in (_tag_piece(t) for t in tags) if p]
             if pieces:
                 for i in range(0, len(pieces), 6):
                     lines.append(", ".join(pieces[i:i + 6]))
             else:
                 lines.append("<!-- (此子分类暂无标签) -->")
-            with open(os.path.join(sdir, fname), "w", encoding="utf-8") as f:
-                f.write("\n".join(lines) + "\n")
-            stats["subcategories"] += 1
-            stats["files"] += 1
-            stats["tags"] += len(pieces)
-        stats["categories"] += 1
+            rel = os.path.join(cdir_name, sdir_name, f"{sdir_name}.md")
+            out[rel] = "\n".join(lines) + "\n"
+    return out
 
+
+_GUIDE_TEXT = (
+    "# 标签库文件夹\n"
+    "<!-- 本文件以 _ 开头, 插件扫描时自动跳过 -->\n\n"
+    "本文件夹就是标签库的存储路径, 与管理页实时双向同步:\n"
+    "- 第一层子文件夹 = 一级分类 (如 质量与技术)\n"
+    "- 第二层子文件夹 = 二级分类 (如 画质强化)\n"
+    "- 二级分类文件夹里的 .md = 该子分类的标签\n"
+    "- 管理页里增删/改名分类, 这里的文件夹会同步增删/改名\n"
+    "- 手动在文件里加标签 (格式: `english(中文翻译){权重}[nsfw]`, 逗号分隔)\n"
+    "  保存文件后, 刷新网页即可在插件里看到 (自动按文件夹归类+去重)\n"
+    "- 没有标题的文件按所在文件夹名归分类; `_` 开头的文件跳过\n"
+)
+
+
+def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR) -> dict:
+    """把库严格镜像到两级文件夹 (库 -> 文件夹方向的实时同步)。
+
+    - 写出/更新 <大类>/<子分类>/<子分类>.md (内容未变则跳过, 避免无效 mtime 抖动)
+    - 大类文件夹下不在期望集合里的 .md/.txt 会被删除 (文件夹=库, 严格一致);
+      根目录散文件与 `_` 开头文件不动
+    - 清空后空文件夹向上清理
+    - 更新同步清单 (_sync_state.json: 指纹基线), 防止刚写的文件被回吸
+    返回统计。
+    """
+    os.makedirs(folder, exist_ok=True)
+    desired = _desired_files(lib, folder)
+    stats = {"categories": 0, "subcategories": len(desired), "files_written": 0,
+             "files_removed": 0, "tags": 0, "folder": folder}
+    stats["categories"] = len({rel.split(os.sep)[0] for rel in desired})
+
+    def _count_tags(content: str) -> int:
+        n = 0
+        for line in content.splitlines():
+            s = line.strip()
+            if not s or s.startswith("#") or s.startswith("<!--"):
+                continue
+            n += s.count(",") + 1
+        return n
+
+    stats["tags"] = sum(_count_tags(c) for c in desired.values())
+
+    # ① 删除大类文件夹下多余的 .md/.txt (严格镜像)
+    for entry in sorted(os.listdir(folder)):
+        cdir = os.path.join(folder, entry)
+        if not os.path.isdir(cdir) or entry.startswith(("_", ".", "~$")):
+            continue
+        for root, _dirs, files in os.walk(cdir):
+            for fn in files:
+                if fn.startswith(("_", ".", "~$")) or not fn.lower().endswith((".md", ".txt")):
+                    continue
+                rel = os.path.relpath(os.path.join(root, fn), folder)
+                if rel not in desired:
+                    try:
+                        os.remove(os.path.join(root, fn))
+                        stats["files_removed"] += 1
+                    except OSError:
+                        pass
+
+    # ② 写出期望文件 (内容相同则跳过)
+    for rel, content in desired.items():
+        path = os.path.join(folder, rel)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        if os.path.isfile(path):
+            try:
+                with open(path, "r", encoding="utf-8") as f:
+                    if f.read() == content:
+                        continue
+            except OSError:
+                pass
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        stats["files_written"] += 1
+
+    # ③ 清理空文件夹 (第二层先清, 再看第一层)
+    for entry in sorted(os.listdir(folder)):
+        cdir = os.path.join(folder, entry)
+        if not os.path.isdir(cdir) or entry.startswith(("_", ".", "~$")):
+            continue
+        for sub in sorted(os.listdir(cdir)):
+            sdir = os.path.join(cdir, sub)
+            if os.path.isdir(sdir) and not os.listdir(sdir):
+                os.rmdir(sdir)
+        if not os.listdir(cdir):
+            os.rmdir(cdir)
+
+    # ④ 说明文件
     guide = os.path.join(folder, "_说明.md")
     if not os.path.exists(guide):
         with open(guide, "w", encoding="utf-8") as f:
-            f.write(
-                "# 标签库文件夹\n"
-                "<!-- 本文件以 _ 开头, 插件扫描时自动跳过 -->\n\n"
-                "目录结构 = 标签库分类结构:\n"
-                "- 第一层子文件夹 = 一级分类 (如 质量与技术)\n"
-                "- 第二层子文件夹 = 二级分类 (如 画质强化)\n"
-                "- 二级分类文件夹里的 .md = 该子分类的标签 (可放多个文件)\n"
-                "- .md 文件格式: `# 大类` / `## 子类` 两级标题 + 标签行\n"
-                "  标签语法: `english(中文翻译){权重}[nsfw]`, 逗号分隔\n"
-                "  没有标题的文件会按所在文件夹名自动归分类\n\n"
-                "在标签库管理页「📂 标签文件」可: 扫描导入本文件夹的文件 / "
-                "把当前库同步导出到这里。\n"
-            )
+            f.write(_GUIDE_TEXT)
+
+    _save_sync_state(folder)
     return stats
+
+
+def export_to_folder(lib: dict, folder: str) -> dict:
+    """兼容旧名: 见 sync_to_folder。"""
+    return sync_to_folder(lib, folder)
+
+
+# ---------------------------------------------------------------- 热同步: 文件夹 -> 库
+
+SYNC_STATE_NAME = "_sync_state.json"
+
+
+def _scan_fingerprint(folder: str) -> dict[str, list]:
+    """收集非 `_` 开头的 .md/.txt 的 {相对路径: [mtime, size]}。目录不存在返回 None。"""
+    if not os.path.isdir(folder):
+        return None
+    fp: dict[str, list] = {}
+    for root, _dirs, files in os.walk(folder):
+        for fn in files:
+            if fn.startswith(("_", ".", "~$")) or not fn.lower().endswith((".md", ".txt")):
+                continue
+            p = os.path.join(root, fn)
+            try:
+                st = os.stat(p)
+            except OSError:
+                continue
+            rel = os.path.relpath(p, folder)
+            fp[rel] = [round(st.st_mtime, 3), st.st_size]
+    return fp
+
+
+def _load_sync_state(folder: str) -> dict | None:
+    path = os.path.join(folder, SYNC_STATE_NAME)
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+def _save_sync_state(folder: str) -> None:
+    """以当前磁盘指纹写入清单 (基线)。"""
+    fp = _scan_fingerprint(folder)
+    if fp is None:
+        return
+    os.makedirs(folder, exist_ok=True)
+    tmp = os.path.join(folder, SYNC_STATE_NAME + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"fingerprint": fp}, f, ensure_ascii=False)
+    os.replace(tmp, os.path.join(folder, SYNC_STATE_NAME))
+
+
+def mark_synced(folder: str = LIBRARY_DIR, lib_key: tuple = ()) -> None:
+    """把当前磁盘指纹 + 库 mtime 记为已同步基线 (公开接口)。"""
+    fp = _scan_fingerprint(folder)
+    if fp is None:
+        return
+    os.makedirs(folder, exist_ok=True)
+    tmp = os.path.join(folder, SYNC_STATE_NAME + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump({"fingerprint": fp, "lib_key": list(lib_key)}, f, ensure_ascii=False)
+    os.replace(tmp, os.path.join(folder, SYNC_STATE_NAME))
+
+
+def folder_sync_plan(folder: str, lib_key: tuple) -> tuple:
+    """热同步决策 (双向核对): 清单同时记录 文件夹指纹 与 库 mtime。
+
+    返回:
+      ("baseline", None)         无清单/目录缺失 -> 整体镜像建立基线 (自动修复漂移)
+      ("pull", [changed files])  文件夹有外部改动 -> 增量吸入
+      ("mirror", None)           库在清单之后变过 (保存漏镜像/JSON 被手改) -> 重新镜像
+      ("none", None)             两侧一致, 无需动作
+    """
+    state = _load_sync_state(folder)
+    fp = _scan_fingerprint(folder)
+    if state is None or fp is None:
+        return ("baseline", None)
+    if fp != (state.get("fingerprint") or {}):
+        changed = []
+        for rel, meta in fp.items():
+            if (state.get("fingerprint") or {}).get(rel) != meta:
+                parts = rel.split(os.sep)
+                cat_dir = parts[0] if len(parts) >= 2 else None
+                sub_dir = parts[1] if len(parts) >= 3 else None
+                changed.append({"path": os.path.join(folder, rel),
+                                "cat_dir": cat_dir, "sub_dir": sub_dir})
+        return ("pull", changed)
+    if tuple(state.get("lib_key") or ()) != tuple(lib_key):
+        return ("mirror", None)
+    return ("none", None)
+
+
+def import_files_into(base: dict, files: list[dict]) -> dict:
+    """把变更文件解析后按名称吸入 base 快照 (只增不删, 自动去重)。"""
+    total_new = 0
+    for info in files:
+        try:
+            text = load_file_text(info["path"])
+        except OSError:
+            continue
+        text = apply_implied_headings(text, info.get("cat_dir"), info.get("sub_dir"))
+        tree = parse_tagfile(text)
+        _tree, stats = dedupe_against(tree, base)
+        if stats["total_new"]:
+            merge_tree_by_name(base, _tree)
+            total_new += stats["total_new"]
+    return {"total_new": total_new, "files": len(files)}
 
 
 def load_file_text(path: str) -> str:
@@ -466,8 +637,6 @@ def merge_tree_by_name(base: dict, new_tree: dict) -> dict:
     return base
 
 
-BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "tagfiles")
-LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "标签库")
 
 
 def default_external_dir() -> str:

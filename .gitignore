@@ -5,3 +5,6 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+
+# 文件夹式标签库 = 用户活数据 (首启自动从库重建), 不进仓库
+data/标签库/

@@ -12,8 +12,9 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tagfiles
-from tagfiles import (apply_implied_headings, export_to_folder, merge_tree_by_name,
-                      parse_tagfile, scan_folder)
+from tagfiles import (apply_implied_headings, folder_sync_plan, import_files_into,
+                      mark_synced, merge_tree_by_name, parse_tagfile, scan_folder,
+                      sync_to_folder)
 
 PASS, FAIL = [], []
 
@@ -51,7 +52,7 @@ def test_export_and_scan():
     tmp = tempfile.mkdtemp(prefix="taglib_test_")
     try:
         lib = make_lib()
-        stats = export_to_folder(lib, tmp)
+        stats = sync_to_folder(lib, tmp)
         check("统计: 2分类/3子分类/4标签", (stats["categories"], stats["subcategories"], stats["tags"]) == (2, 3, 4), str(stats))
         p1 = os.path.join(tmp, "质量与技术", "画质强化", "画质强化.md")
         p2 = os.path.join(tmp, "质量与技术", "真实感", "真实感.md")
@@ -65,14 +66,53 @@ def test_export_and_scan():
 
         files = scan_folder(tmp)
         by_name = {f["file_name"]: f for f in files}
-        check("扫描跳过 _说明.md", "_说明.md" not in by_name)
+        check("扫描跳过 _说明.md/_sync_state.json",
+              "_说明.md" not in by_name and "_sync_state.json" not in by_name)
         f1 = by_name.get("画质强化.md", {})
         check("扫描归属: cat=质量与技术 sub=画质强化",
               f1.get("cat_dir") == "质量与技术" and f1.get("sub_dir") == "画质强化", str(f1))
 
-        # 重导出 (同名覆盖, 幂等)
-        stats2 = export_to_folder(lib, tmp)
-        check("重复导出幂等", stats2["files"] == 3)
+        # 幂等: 内容未变不重写
+        stats2 = sync_to_folder(lib, tmp)
+        check("重复导出幂等 (0 重写)", stats2["files_written"] == 0, str(stats2["files_written"]))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_hot_sync_roundtrip():
+    print("== 热同步往返: 删分类→文件夹删 / 手改文件→吸入 ==")
+    tmp = tempfile.mkdtemp(prefix="taglib_hot_")
+    try:
+        lib = make_lib()
+        sync_to_folder(lib, tmp)
+        # ① 库里删掉整个 人物主体 分类 → 镜像后文件夹消失
+        lib2 = make_lib()
+        lib2["categories"] = [c for c in lib2["categories"] if c["name"] != "人物主体"]
+        stats = sync_to_folder(lib2, tmp)
+        check("删除分类 → 文件夹被清理", not os.path.isdir(os.path.join(tmp, "人物主体")),
+              f"removed={stats['files_removed']}")
+        # ② 手改文件加标签 → 决策为 pull → 吸入快照
+        p1 = os.path.join(tmp, "质量与技术", "画质强化", "画质强化.md")
+        with open(p1, "a", encoding="utf-8") as f:
+            f.write("hot_sync_word(热同步词)\n")
+        action, changes = folder_sync_plan(tmp, (0, 0))
+        check("决策 pull 且检出 1 个变更文件", action == "pull" and len(changes) == 1, str(changes))
+        base = json.loads(json.dumps(lib2))
+        stats3 = import_files_into(base, changes)
+        subs = {s["name"]: s for c in base["categories"] for s in c["subcategories"]}
+        ens = [t["en"] for t in subs["画质强化"]["tags"]]
+        check("新标签吸入 (按名称并入)", "hot_sync_word" in ens, str(stats3))
+        # ③ 吸入后镜像 + 记账 → 决策 none; 库 mtime 变化 → 决策 mirror
+        sync_to_folder(base, tmp)
+        mark_synced(tmp, (0, 0))
+        action2, _ = folder_sync_plan(tmp, (0, 0))
+        check("镜像+记账后决策 none", action2 == "none", action2)
+        action3, _ = folder_sync_plan(tmp, (9, 9))
+        check("库 mtime 变化决策 mirror", action3 == "mirror", action3)
+        # ④ 无清单 → baseline
+        os.remove(os.path.join(tmp, "_sync_state.json"))
+        action4, _ = folder_sync_plan(tmp, (0, 0))
+        check("无清单决策 baseline", action4 == "baseline", action4)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
@@ -158,6 +198,7 @@ ultra detailed(超精细)
 
 if __name__ == "__main__":
     test_export_and_scan()
+    test_hot_sync_roundtrip()
     test_implied_headings()
     test_merge_by_name()
     test_template_roundtrip()

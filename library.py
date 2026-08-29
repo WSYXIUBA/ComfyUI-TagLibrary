@@ -22,6 +22,11 @@ import threading
 import time
 from typing import Any
 
+try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
+    from . import tagfiles
+except ImportError:  # pragma: no cover
+    import tagfiles
+
 _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_PKG_DIR, "data")
 DEFAULT_PATH = os.path.join(DATA_DIR, "tag_library.json")
@@ -347,7 +352,54 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
 
 # ---------------------------------------------------------------- cache
 
+_sync_busy = False
+
+
+def _folder_hot_sync() -> None:
+    """热同步: data/标签库/ 与库双向实时一致。
+
+    - baseline: 无清单 -> 以当前库镜像文件夹并建基线 (自动修复两侧漂移,
+      如删除分类后残留的文件夹、新建分类缺失的文件夹)
+    - pull: 外部手改/新增了 .md -> 增量解析按名称吸入用户库 (只增不删, 自动去重),
+      然后镜像让文件内容规范化, 最后刷新清单
+    - mirror: 库在清单之后变过 (保存漏镜像/JSON 被手改) -> 重新镜像
+    任何同步失败都不阻塞主流程。
+    """
+    global _sync_busy
+    if _sync_busy:
+        return
+    _sync_busy = True
+    try:
+        lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
+        action, changed = tagfiles.folder_sync_plan(tagfiles.LIBRARY_DIR, lib_key)
+        if action == "baseline" or action == "mirror":
+            sync_to_folder_snapshot(lib_key)
+        elif action == "pull" and changed:
+            merged = deep_merge(load_default(), load_user_raw())
+            base = json.loads(json.dumps(merged))
+            base.pop("_meta", None)
+            stats = tagfiles.import_files_into(base, changed)
+            if stats.get("total_new"):
+                save_user_library(base)
+            # 吸入后镜像一次: 文件内容规范化 (含新标签), 并刷新清单
+            sync_to_folder_snapshot(lib_key)
+    except Exception:  # noqa: BLE001 — 同步失败不影响读库
+        pass
+    finally:
+        _sync_busy = False
+
+
+def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
+    """把当前合并库镜像到 data/标签库/ 并记录同步基线。"""
+    try:
+        merged = deep_merge(load_default(), load_user_raw())
+        tagfiles.sync_to_folder(merged)
+        tagfiles.mark_synced(lib_key=lib_key or (_mtime(DEFAULT_PATH), _mtime(USER_PATH)))
+    except Exception:  # noqa: BLE001
+        pass
+
 def get_merged() -> dict[str, Any]:
+    _folder_hot_sync()  # 热同步: 外部文件改动先吸入, 再给合并视图
     global _cache, _cache_key
     key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
     with _lock:

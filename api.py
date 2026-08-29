@@ -51,6 +51,17 @@ async def get_library(_request: web.Request) -> web.Response:
     })
 
 
+def _mirror_folder() -> None:
+    """库 -> 文件夹实时同步 (保存/导入/重置后调用)。失败不影响请求。"""
+    try:
+        lib_key = (library._mtime(library.DEFAULT_PATH),
+                   library._mtime(library.USER_PATH))
+        tagfiles.sync_to_folder(library.get_merged())
+        tagfiles.mark_synced(lib_key=lib_key)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 async def save_library(request: web.Request) -> web.Response:
     try:
         payload = await request.json()
@@ -62,6 +73,7 @@ async def save_library(request: web.Request) -> web.Response:
             payload,
             client_mtime=float(client_mtime) if client_mtime else None,
         )
+        _mirror_folder()  # 实时镜像: 分类/子分类增删改名即刻落到 data/标签库/
         return _json_response(result)
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
@@ -75,6 +87,7 @@ async def reset_library(_request: web.Request) -> web.Response:
         if os.path.exists(library.USER_PATH):
             os.remove(library.USER_PATH)
         library.invalidate_cache()
+        _mirror_folder()
         return _json_response({"ok": True})
     except OSError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 500)
@@ -143,6 +156,7 @@ async def import_tagfile(request: web.Request) -> web.Response:
     client_mtime = request.headers.get("X-TagLib-Mtime")
     result = library.save_user_library(
         base, float(client_mtime) if client_mtime else None)
+    _mirror_folder()
     return _json_response({
         "ok": True,
         "imported_categories": len(new_tree["categories"]),
