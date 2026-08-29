@@ -10,3 +10,4 @@ __pycache__/
 data/taglib/
 data/备份库/
 node.zip
+tests/*.png
