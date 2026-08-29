@@ -22,6 +22,8 @@ except ModuleNotFoundError:  # 独立导入时不炸
     PromptServer = None
 
 _WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "备份库")
+BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.backup.json")
 
 
 def _json_response(data, status: int = 200) -> web.Response:
@@ -93,6 +95,49 @@ async def reset_library(_request: web.Request) -> web.Response:
         return _json_response({"ok": False, "error": str(exc)}, 500)
 
 
+async def backup_library(_request: web.Request) -> web.Response:
+    """POST /taglib/api/library/backup -> 把当前合并库存入 data/备份库/。"""
+    try:
+        lib = library.get_merged()
+        lib.pop("_meta", None)
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        tmp = BACKUP_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(lib, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, BACKUP_PATH)
+        return _json_response({"ok": True, "path": BACKUP_PATH,
+                               "mtime": int(os.stat(BACKUP_PATH).st_mtime)})
+    except OSError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 500)
+
+
+async def backup_info(_request: web.Request) -> web.Response:
+    """GET /taglib/api/library/backup -> 备份是否存在及时间。"""
+    if os.path.isfile(BACKUP_PATH):
+        st = os.stat(BACKUP_PATH)
+        return _json_response({"ok": True, "exists": True,
+                               "mtime": int(st.st_mtime), "size": st.st_size})
+    return _json_response({"ok": True, "exists": False})
+
+
+async def restore_backup(_request: web.Request) -> web.Response:
+    """POST /taglib/api/library/restore-backup -> 从备份恢复 (整体覆盖当前库)。"""
+    if not os.path.isfile(BACKUP_PATH):
+        return _json_response({"ok": False, "error": "还没有备份 (先「💾 存为默认库」)"}, 404)
+    try:
+        with open(BACKUP_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        if not isinstance(data.get("categories"), list):
+            raise ValueError("备份文件缺少 categories")
+        library.save_user_library(data)
+        _mirror_folder()
+        return _json_response({"ok": True})
+    except library.LibraryError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 409)
+    except Exception as exc:  # noqa: BLE001
+        return _json_response({"ok": False, "error": f"恢复失败: {exc}"}, 500)
+
+
 # ------------------------------------------------------------ tagfiles
 
 async def list_tagfiles(request: web.Request) -> web.Response:
@@ -109,49 +154,113 @@ async def list_tagfiles(request: web.Request) -> web.Response:
     })
 
 
-async def import_tagfile(request: web.Request) -> web.Response:
-    """POST /taglib/api/tagfiles/import  {path, external_dir?} 或 {text}
+def _collect_texts(payload: dict) -> list[dict]:
+    """从请求体收集待导入文本列表 [{text, cat_dir, sub_dir}]。
 
-    解析 -> 跨库 en 去重 -> 按【名称】合并进现有分类/子分类 (全量快照落盘)。
-    返回统计。
+    兼容三种写法: {text} / {path, external_dir?} / {items: [{text} | {path,...}]}
+    路径只允许 内置/标签库/外置 目录 (防目录穿越)。文件无标题时按文件夹补隐含分类。
+    """
+    allowed_roots = [tagfiles.BUILTIN_DIR, tagfiles.LIBRARY_DIR]
+    ext_dir = payload.get("external_dir")
+    if ext_dir and os.path.isdir(ext_dir):
+        allowed_roots.append(os.path.abspath(ext_dir))
+
+    raw_items: list[dict] = []
+    if payload.get("items"):
+        raw_items = list(payload["items"])
+    elif payload.get("text") or payload.get("path"):
+        raw_items = [payload]
+    else:
+        raise ValueError("没有可导入的内容")
+
+    out: list[dict] = []
+    for item in raw_items:
+        text = item.get("text")
+        if not text and item.get("path"):
+            real = os.path.realpath(item["path"])
+            root_match = next((r for r in allowed_roots
+                               if real.lower().startswith(os.path.realpath(r).lower())), None)
+            if not root_match or not os.path.isfile(real):
+                raise ValueError(f"不允许读取该路径: {item['path']}")
+            text = tagfiles.load_file_text(real)
+        if not text:
+            continue
+        cat_dir = item.get("cat_dir")
+        sub_dir = item.get("sub_dir")
+        if cat_dir:
+            text = tagfiles.apply_implied_headings(text, cat_dir, sub_dir)
+        out.append({"text": text, "cat_dir": cat_dir, "sub_dir": sub_dir})
+    if not out:
+        raise ValueError("空文件或空文本")
+    return out
+
+
+def _parse_and_merge_tree(payload: dict) -> tuple[dict, dict]:
+    """解析请求内容 -> (聚合导入树, 统计)。已对现有合并库去重, 多文件聚合归组。"""
+    merged_now = library.get_merged()
+    agg: dict = {"version": 1, "categories": []}
+    dup_total = 0
+    for item in _collect_texts(payload):
+        tree = tagfiles.parse_tagfile(item["text"])
+        tree, stats = tagfiles.dedupe_against(tree, merged_now)
+        dup_total += stats["duplicates_removed"]
+        tagfiles.merge_tree_by_name(agg, tree)
+    return agg, {"total_new": sum(len(s.get("tags", []))
+                                  for c in agg["categories"] for s in c["subcategories"]),
+                 "duplicates_removed": dup_total}
+
+
+async def preview_import(request: web.Request) -> web.Response:
+    """POST /taglib/api/tagfiles/preview-import  (dry-run, 不落盘)
+
+    返回按 大类/子分类 分组的新增标签预览 + 去重统计, 供前端确认弹窗。
     """
     try:
         payload = await request.json()
     except Exception:
         return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
-    text = payload.get("text")
-    path = payload.get("path")
-    cat_dir = payload.get("cat_dir")
-    sub_dir = payload.get("sub_dir")
-    if not text and path:
-        # 路径只允许在 内置目录 / 标签库目录 / 用户配置的外置目录 下 (防目录穿越随便读盘)
-        allowed_roots = [tagfiles.BUILTIN_DIR, tagfiles.LIBRARY_DIR]
-        ext_dir = payload.get("external_dir")
-        if ext_dir and os.path.isdir(ext_dir):
-            allowed_roots.append(os.path.abspath(ext_dir))
-        real = os.path.realpath(path)
-        root_match = next((r for r in allowed_roots
-                           if real.lower().startswith(os.path.realpath(r).lower())), None)
-        if not root_match or not os.path.isfile(real):
-            return _json_response({"ok": False, "error": f"不允许读取该路径: {path}"}, 403)
-        text = tagfiles.load_file_text(real)
-    if not text:
-        return _json_response({"ok": False, "error": "空文件或空文本"}, 400)
+    try:
+        agg, stats = _parse_and_merge_tree(payload)
+    except ValueError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 400)
+    except Exception as exc:  # noqa: BLE001
+        return _json_response({"ok": False, "error": f"解析失败: {exc}"}, 500)
+    groups = [{"cat": c.get("name"), "cat_icon": c.get("icon", "📦"),
+               "sub": s.get("name"),
+               "tags": [{"en": t.get("en"), "zh": t.get("zh", ""),
+                         "weight": t.get("weight", 1.0), "nsfw": bool(t.get("nsfw"))}
+                        for t in s.get("tags", [])]}
+              for c in agg.get("categories", []) for s in c.get("subcategories", [])]
+    return _json_response({"ok": True, "groups": groups,
+                           "total_new": stats["total_new"],
+                           "duplicates_removed": stats["duplicates_removed"]})
 
-    # 文件夹扫描进来的文件若没有任何标题, 按所在文件夹名补隐含分类 (文件夹即分类)
-    if cat_dir:
-        text = tagfiles.apply_implied_headings(text, cat_dir, sub_dir)
 
-    merged_now = library.get_merged()
-    new_tree, stats = tagfiles.dedupe_against(tagfiles.parse_tagfile(text), merged_now)
+async def import_tagfile(request: web.Request) -> web.Response:
+    """POST /taglib/api/tagfiles/import  {text|path|items}
+
+    解析 -> 跨库 en 去重 -> 按【名称】合并进现有分类/子分类 (全量快照落盘 + 文件夹镜像)。
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "请求体不是合法 JSON"}, 400)
+    try:
+        merged_now = library.get_merged()
+        agg, stats = _parse_and_merge_tree(payload)
+    except ValueError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 400)
+    except Exception as exc:  # noqa: BLE001
+        return _json_response({"ok": False, "error": f"导入失败: {exc}"}, 500)
     if not stats["total_new"]:
         return _json_response({"ok": True, "imported_categories": 0,
-                               "imported_new_tags": 0, "duplicates_removed": stats["duplicates_removed"]})
+                               "imported_new_tags": 0,
+                               "duplicates_removed": stats["duplicates_removed"]})
 
     # 基座 = 当前合并库的完整快照 (与管理页保存同语义), 按名称并入后整体落盘
     base = json.loads(json.dumps(merged_now))
     base.pop("_meta", None)
-    tagfiles.merge_tree_by_name(base, new_tree)
+    tagfiles.merge_tree_by_name(base, agg)
 
     client_mtime = request.headers.get("X-TagLib-Mtime")
     result = library.save_user_library(
@@ -159,7 +268,7 @@ async def import_tagfile(request: web.Request) -> web.Response:
     _mirror_folder()
     return _json_response({
         "ok": True,
-        "imported_categories": len(new_tree["categories"]),
+        "imported_categories": len(agg["categories"]),
         "imported_new_tags": stats["total_new"],
         "duplicates_removed": stats["duplicates_removed"],
         "save": result,
@@ -224,8 +333,12 @@ def register_routes() -> None:
     app.router.add_get("/taglib/api/library", get_library)
     app.router.add_post("/taglib/api/library", save_library)
     app.router.add_delete("/taglib/api/library", reset_library)
+    app.router.add_post("/taglib/api/library/backup", backup_library)
+    app.router.add_get("/taglib/api/library/backup", backup_info)
+    app.router.add_post("/taglib/api/library/restore-backup", restore_backup)
     app.router.add_get("/taglib/api/tagfiles", list_tagfiles)
     app.router.add_post("/taglib/api/tagfiles/import", import_tagfile)
+    app.router.add_post("/taglib/api/tagfiles/preview-import", preview_import)
     app.router.add_post("/taglib/api/tagfiles/export-folder", export_folder)
     app.router.add_get("/taglib/api/conflicts", get_conflicts)
     app.router.add_post("/taglib/api/conflicts", save_conflicts)
