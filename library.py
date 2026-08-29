@@ -34,7 +34,9 @@ USER_PATH = os.path.join(DATA_DIR, "tag_library.user.json")
 
 _ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,79}$")
 
-_lock = threading.RLock()  # 可重入: save_user_library 持锁期间还会调 invalidate_cache/get_merged
+_lock = threading.RLock()
+_last_hot_sync = 0.0          # monotonic 时间戳: 指纹扫描节流
+HOT_SYNC_MIN_INTERVAL = 1.5   # 秒; 队列内多次 get_merged 只扫一次磁盘  # 可重入: save_user_library 持锁期间还会调 invalidate_cache/get_merged
 _cache: dict[str, Any] | None = None
 _cache_key: tuple[float, float] | None = None
 
@@ -365,8 +367,9 @@ def _folder_hot_sync() -> None:
     - mirror: 库在清单之后变过 (保存漏镜像/JSON 被手改) -> 重新镜像
     任何同步失败都不阻塞主流程。
     """
-    global _sync_busy
-    if _sync_busy:
+    global _sync_busy, _last_hot_sync
+    now = time.monotonic()
+    if _sync_busy or (now - _last_hot_sync) < HOT_SYNC_MIN_INTERVAL:
         return
     _sync_busy = True
     try:
@@ -386,6 +389,7 @@ def _folder_hot_sync() -> None:
     except Exception:  # noqa: BLE001 — 同步失败不影响读库
         pass
     finally:
+        _last_hot_sync = time.monotonic()
         _sync_busy = False
 
 

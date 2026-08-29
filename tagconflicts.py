@@ -360,40 +360,6 @@ def save_groups(groups: list[dict]) -> None:
     save_rules(rules)
 
 
-def conflicts_for(tag_names: list[str], lib: dict | None = None) -> dict[str, list[dict]]:
-    """给定标签 -> 各自命中的规则引用 (展示用)。"""
-    rules = load_rules()
-    idx = _lib_index(lib) if lib is not None else None
-    wanted = {_norm_en(t) for t in tag_names}
-    out: dict[str, list[dict]] = {}
-    for r in rules:
-        lset, _ = resolve_ref(r["left"], idx) if idx else (set(), True)
-        for ref in r.get("right", []):
-            rset, _ = resolve_ref(ref, idx) if idx else (set(), True)
-            for w in wanted & lset:
-                out.setdefault(w, []).append({"rule": r.get("id"), "ref": ref})
-            for w in wanted & rset:
-                out.setdefault(w, []).append({"rule": r.get("id"), "ref": r["left"]})
-    return out
-
-
-def filter_conflicts(candidates: list[dict], already_chosen: list[str],
-                     lib: dict | None = None) -> tuple[list[dict], int]:
-    """随机池静态过滤: 与已选标签互斥的候选剔除。"""
-    lib = lib if lib is not None else library.get_merged()
-    ex = ExclusionIndex(lib)
-    banned = ex.banned_for(_norm_en(c) for c in already_chosen)
-    if not banned:
-        return candidates, 0
-    out, blocked = [], 0
-    for c in candidates:
-        if _norm_en(c.get("en")) in banned:
-            blocked += 1
-            continue
-        out.append(c)
-    return out, blocked
-
-
 def check_selection(en_list: list[str], lib: dict | None = None) -> dict[str, list[str]]:
     """勾选集冲突体检: {标签: 与之互斥的其他已选标签}。"""
     lib = lib if lib is not None else library.get_merged()
