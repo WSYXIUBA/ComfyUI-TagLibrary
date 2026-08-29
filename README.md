@@ -26,6 +26,19 @@
 
 ## 安装
 
+### 方式一：ComfyUI Manager（推荐）
+
+1. 点击顶栏 Manager（管理器）图标 → **Custom Nodes Manager**（自定义节点管理）
+2. **Install via Git URL**（通过 Git URL 安装）→ 粘贴：
+   ```
+   https://github.com/WSYXIUBA/ComfyUI-TagLibrary
+   ```
+3. 点击 Install，完成后按提示重启 ComfyUI
+
+> 本插件尚未上架 Manager 搜索目录，搜索"TagLibrary"暂时搜不到，请用 Git URL 方式安装。
+
+### 方式二：Git clone
+
 ```bash
 cd ComfyUI/custom_nodes
 git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
