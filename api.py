@@ -44,13 +44,85 @@ async def serve_manager_page(_request: web.Request) -> web.Response:
 
 # ---------------------------------------------------------------- api
 
-async def get_library(_request: web.Request) -> web.Response:
+def _skeleton(lib: dict) -> dict:
+    """分类树骨架: 不含标签正文, 只有 id/名称/计数 (方案 V2.1 阶段 4)。"""
+    cats = []
+    for c in lib.get("categories", []):
+        subs = [{"id": s.get("id"), "name": s.get("name"),
+                 "tag_count": len(s.get("tags") or [])}
+                for s in c.get("subcategories", [])]
+        cats.append({"id": c.get("id"), "name": c.get("name"),
+                     "icon": c.get("icon"), "color": c.get("color"),
+                     "subcategories": subs})
+    return {"version": lib.get("version", 1),
+            "schema_version": lib.get("schema_version", 2),
+            "categories": cats}
+
+
+async def get_library(request: web.Request) -> web.Response:
+    """GET /taglib/api/library[?mode=skeleton]
+
+    skeleton 模式返回分类树骨架 (无标签正文), 供管理页首屏快速渲染;
+    标签正文经 /taglib/api/subtags 按子分类懒加载。
+    """
     lib = library.get_merged()
+    if request.query.get("mode") == "skeleton":
+        return _json_response({
+            "ok": True,
+            "mtime": library._mtime(library.USER_PATH),
+            "library": _skeleton(lib),
+        })
     return _json_response({
         "ok": True,
         "mtime": library._mtime(library.USER_PATH),
         "library": lib,
     })
+
+
+async def get_subtags(request: web.Request) -> web.Response:
+    """GET /taglib/api/subtags?cat_id=&sub_id= -> 单个子分类的标签正文 (懒加载)。"""
+    cat_id = request.query.get("cat_id") or ""
+    sub_id = request.query.get("sub_id") or ""
+    lib = library.get_merged()
+    for c in lib.get("categories", []):
+        if c.get("id") != cat_id:
+            continue
+        for s in c.get("subcategories", []):
+            if s.get("id") == sub_id:
+                return _json_response({
+                    "ok": True,
+                    "tags": s.get("tags") or [],
+                    "groups": s.get("groups") or [],
+                })
+    return _json_response({"ok": False, "error": f"子分类不存在: {sub_id}"}, 404)
+
+
+async def search_tags(request: web.Request) -> web.Response:
+    """GET /taglib/api/search?q= -> 服务端全文搜索 (en/zh/别名), 上限 500 条。"""
+    q = (request.query.get("q") or "").strip().lower()
+    if not q:
+        return _json_response({"ok": True, "results": []})
+    lib = library.get_merged()
+    results = []
+    for c in lib.get("categories", []):
+        cname = c.get("name", "")
+        for s in c.get("subcategories", []):
+            sname = s.get("name", "")
+            for t in s.get("tags", []) or []:
+                en = str(t.get("en", ""))
+                if (q in en.lower() or q in str(t.get("zh", "")).lower()
+                        or any(q in str(a).lower() for a in (t.get("aliases") or []))):
+                    results.append({
+                        "cat": cname, "cat_id": c.get("id"),
+                        "sub": sname, "sub_id": s.get("id"),
+                        "en": en, "zh": t.get("zh", ""),
+                        "nsfw": bool(t.get("nsfw")),
+                        "weight": t.get("weight", 1.0),
+                    })
+                    if len(results) >= 500:
+                        return _json_response({"ok": True, "results": results,
+                                               "truncated": True, "count": len(results)})
+    return _json_response({"ok": True, "results": results, "count": len(results)})
 
 
 def _mirror_folder() -> None:
@@ -392,6 +464,8 @@ def register_routes() -> None:
     # 管理页的 js/css 走静态子路径 (避免相对路径解析到根 404)
     app.router.add_static("/taglib/static/", _WEB_DIR)
     app.router.add_get("/taglib/api/library", get_library)
+    app.router.add_get("/taglib/api/subtags", get_subtags)
+    app.router.add_get("/taglib/api/search", search_tags)
     app.router.add_post("/taglib/api/library", save_library)
     app.router.add_delete("/taglib/api/library", reset_library)
     app.router.add_post("/taglib/api/library/backup", backup_library)
