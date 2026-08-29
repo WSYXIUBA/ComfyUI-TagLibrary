@@ -6,7 +6,9 @@
 import copy
 import json
 import os
+import shutil
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -15,12 +17,24 @@ from nodes import TagLibraryNode
 
 
 def clean_user_lib() -> None:
-    """测试前后都清理用户库, 保证可重复运行。"""
+    """把库文件指向沙箱副本: 真实用户库与标签库文件夹永不被测试触碰。
+
+    沙箱 = 默认库拷贝 + 空用户库 + 空的标签库文件夹 (热同步不会写到真实 data/标签库)。
+    """
+    global _SANDBOX
+    _SANDBOX = tempfile.mkdtemp(prefix="taglib_smoke_")
+    shutil.copy(library.DEFAULT_PATH, os.path.join(_SANDBOX, "tag_library.json"))
+    library.DEFAULT_PATH = os.path.join(_SANDBOX, "tag_library.json")
+    library.USER_PATH = os.path.join(_SANDBOX, "tag_library.user.json")
     try:
-        os.remove(library.USER_PATH)
-        library.invalidate_cache()
-    except OSError:
+        import tagfiles
+        tagfiles.LIBRARY_DIR = os.path.join(_SANDBOX, "标签库")
+    except Exception:
         pass
+    library.invalidate_cache()
+
+
+_SANDBOX = None
 
 
 def full_tree_from_merged() -> dict:
@@ -58,6 +72,23 @@ def main() -> None:
     # ---- 默认库与首次合并
     lib = library.load_default()
     check("默认库加载", len(lib["categories"]) >= 8, str(len(lib["categories"])))
+
+    # ---- 负面标签防回归: 本节点只连正面提示词 ----
+    NEG_SUB = "负面"
+    NEG_TAGS = {"lowres", "worst quality", "low quality", "blurry",
+                "jpeg artifacts", "noise", "bad anatomy", "bad hands"}
+    def _scan_neg(tree):
+        subs = [s["name"] for c in tree.get("categories", [])
+                for s in c.get("subcategories", []) if NEG_SUB in s.get("name", "")]
+        tags = [t.get("en", "") for c in tree.get("categories", [])
+                for s in c.get("subcategories", []) for t in s.get("tags", [])
+                if t.get("en", "").strip().lower() in NEG_TAGS]
+        return subs, tags
+    for label, tree in (("默认库", library.load_default()),
+                        ("用户库", library.load_user_raw() if os.path.exists(library.USER_PATH) else {"categories": []})):
+        ns, ts = _scan_neg(tree)
+        check(f"无负面标签({label})", not ns and not ts, f"子分类{ns} 标签{ts[:4]}")
+
     n_tags = sum(len(s["tags"]) for c in lib["categories"] for s in c["subcategories"])
     check("默认库标签数>60", n_tags >= 60, str(n_tags))
 
