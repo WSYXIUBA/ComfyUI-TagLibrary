@@ -1,5 +1,7 @@
 # 🏷 ComfyUI-TagLibrary
 
+**中文** | [English](README_EN.md)
+
 结构化提示词标签库节点：节点内点选面板 + 独立管理页 + 双模式随机引擎 + 反冲突系统 + 文件夹式存储（热同步）。
 输出纯 `STRING`，用 Convert to Input 连上任何工作流的 `CLIPTextEncode.text` 就能用。单次生成 1-4ms。
 
@@ -32,18 +34,22 @@
 
 ## 安装
 
-### 方式一：ComfyUI Manager（推荐）
+### 方式一：ComfyUI Manager 搜索安装（推荐）
 
 1. 点击顶栏 Manager（管理器）图标 → **Custom Nodes Manager**（自定义节点管理）
-2. **Install via Git URL**（通过 Git URL 安装）→ 粘贴：
-   ```
-   https://github.com/WSYXIUBA/ComfyUI-TagLibrary
-   ```
-3. 点击 Install，完成后按提示重启 ComfyUI
+2. 搜索 **`Tag Library`**（或 `taglibrary`）→ 找到「🏷 Tag Library 标签库」→ **Install**
+3. 完成后按提示重启 ComfyUI
 
-> 本插件尚未上架 Manager 搜索目录，搜索"TagLibrary"暂时搜不到，请用 Git URL 方式安装。
+> 搜不到时先在 Manager 里更新一下节点数据库缓存（或重启 ComfyUI 后再搜）。
 
-### 方式二：Git clone
+### 方式二：Git URL 安装
+
+Manager → **Install via Git URL** → 粘贴：
+```
+https://github.com/WSYXIUBA/ComfyUI-TagLibrary
+```
+
+### 方式三：Git clone
 
 ```bash
 cd ComfyUI/custom_nodes
