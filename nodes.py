@@ -380,9 +380,11 @@ class TagLibraryNode:
                 echo_items = [{"en": str(t.get("en", "")),
                                "zh": t.get("zh") or "",
                                "cat": t.get("_cat", ""),
+                               "nsfw": bool(t.get("nsfw")),
                                "enabled": True} for t in _auto_chosen]
             else:
-                echo_items = [{"en": p.strip(), "zh": "", "cat": "", "enabled": True}
+                echo_items = [{"en": p.strip(), "zh": "", "cat": "", "nsfw": False,
+                               "enabled": True}
                               for p in tags]
             return {
                 "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False)},
