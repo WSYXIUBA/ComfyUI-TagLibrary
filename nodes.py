@@ -147,8 +147,11 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
+        # 被 mutex 让位的标签 (少量, 前端灰显+删除线)
+        dropped_en = [snap.tag_text[i] for i in res.mutex_dropped_ids]
         return {
-            "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False)},
+            "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False),
+                   "taglib_echo_dropped": json.dumps(dropped_en, ensure_ascii=False)},
             "result": (text, text),
         }
 

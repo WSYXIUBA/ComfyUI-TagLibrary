@@ -11,6 +11,12 @@ from __future__ import annotations
 
 import random as _random
 
+# 内置命名方案 (state.random_config_ref 引用; 不需要 lib settings 就能用)
+BUILTIN_CONFIGS = {
+    "default_fast": {"engine": "fast"},
+    "default_smart": {"engine": "smart", "diversity": 0.7, "avoid_recent": 3},
+}
+
 DEFAULT_CONFIG = {
     "engine": "fast",              # fast | smart
     "diversity": 0.0,              # 0-1; >0 时最近出现过的标签权重 ×0.5
@@ -25,12 +31,13 @@ MAX_REROLL = 3                    # 组合撞最近缓存时的重抽上限
 
 
 class AutoResult:
-    __slots__ = ("fixed_ids", "rest_ids", "mutex_dropped")
+    __slots__ = ("fixed_ids", "rest_ids", "mutex_dropped", "mutex_dropped_ids")
 
-    def __init__(self, fixed_ids, rest_ids, mutex_dropped):
+    def __init__(self, fixed_ids, rest_ids, mutex_dropped, mutex_dropped_ids=None):
         self.fixed_ids = fixed_ids      # 钉选强制包含的 id
         self.rest_ids = rest_ids        # 引擎抽到的 id (按输出顺序)
-        self.mutex_dropped = mutex_dropped  # 被 mutex 让位掉的 id 数 (诊断/回显灰显用)
+        self.mutex_dropped = mutex_dropped  # 被 mutex 让位掉的 id 数 (诊断)
+        self.mutex_dropped_ids = mutex_dropped_ids or []  # 让位标签 id (回显灰显, 上限24)
 
 
 class _Ctx:
@@ -44,14 +51,17 @@ class _Ctx:
 
 
 def resolve_config(state: dict, lib_settings: dict | None) -> dict:
-    """state.random_config_ref → 命名配置; 缺省 Fast。"""
+    """state.random_config_ref → 命名配置 (内置 default_fast/default_smart +
+    库 settings.random_configs 自定义方案); 缺省 Fast。"""
     cfg = {}
-    ref = state.get("random_config_ref")
+    ref = str(state.get("random_config_ref") or "")
     if ref:
         configs = (lib_settings or {}).get("random_configs") or {}
-        cfg = configs.get(str(ref)) or {}
+        cfg = configs.get(ref) or BUILTIN_CONFIGS.get(ref) or {}
     out = dict(DEFAULT_CONFIG)
     out.update(cfg or {})
+    if not out.get("engine"):
+        out["engine"] = "fast"
     return out
 
 
@@ -83,6 +93,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     require_closure = snap.require_closure if smart else {}
 
     search_l = search_text.strip().lower()
+
+    mutex_dropped_ids: list[int] = []
 
     def grow(ids) -> None:
         if conflict_map:
@@ -207,7 +219,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         cands = []
         for tid in pools[si]:
             lo = snap.tag_lower[tid]
-            if lo in ctx.used or tid in ctx.banned:
+            if lo in ctx.used:
+                continue
+            if tid in ctx.banned:
+                if len(mutex_dropped_ids) < 24:
+                    mutex_dropped_ids.append(tid)
                 continue
             if not tag_match(lo, tid):
                 continue
@@ -270,7 +286,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             rest_ids = [i for i in rest_ids if i not in drop]
             ctx.used.difference_update(drop)
 
-    return AutoResult(fixed_ids, rest_ids, len(ctx.banned))
+    return AutoResult(fixed_ids, rest_ids, len(ctx.banned), mutex_dropped_ids)
 
 
 def _si_of(snap, tid: int) -> int:
