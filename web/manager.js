@@ -63,18 +63,59 @@
     return taken;
   }
 
+  function subTagCount(s) {
+    // 骨架模式: 未懒加载的子分类用服务端计数
+    return s._loaded ? (s.tags || []).length : (s._count ?? (s.tags || []).length);
+  }
+
   function countTags(cat) {
     let n = 0;
-    for (const s of cat.subcategories || []) n += (s.tags || []).length;
+    for (const s of cat.subcategories || []) n += subTagCount(s);
     return n;
+  }
+
+  /* ---------------- 子分类懒加载 (骨架 → 按需取正文) ---------------- */
+  const subFetches = new Map();   // 防重复拉取 (sub.id -> Promise)
+
+  function ensureSubLoaded(cat, sub) {
+    if (sub._loaded) return Promise.resolve();
+    if (subFetches.has(sub.id)) return subFetches.get(sub.id);
+    const p = fetch(`/taglib/api/subtags?cat_id=${encodeURIComponent(cat.id)}&sub_id=${encodeURIComponent(sub.id)}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.ok) {
+          sub.tags = data.tags || [];
+          sub.groups = data.groups || [];
+          sub._loaded = true;
+        }
+      });
+    subFetches.set(sub.id, p);
+    return p;
+  }
+
+  async function ensureAllLoaded() {
+    // 保存/导出模板前兜底: 所有非空子分类必须已加载正文
+    const jobs = [];
+    for (const c of lib.categories)
+      for (const s of c.subcategories || [])
+        if (!s._loaded && (s._count || 0) > 0) jobs.push(ensureSubLoaded(c, s));
+    await Promise.all(jobs);
   }
 
   /* ---------------- load / save ---------------- */
   async function load() {
-    const r = await fetch(API);
+    // 骨架模式: 先拿分类树 (无标签正文), 子分类标签懒加载
+    const r = await fetch(API + "?mode=skeleton");
     const data = await r.json();
     // 深拷贝进工作树
     lib = JSON.parse(JSON.stringify(data.library || { categories: [] }));
+    for (const c of lib.categories)
+      for (const s of c.subcategories || []) {
+        s._count = (s.tags || []).length || s.tag_count || 0;
+        s.tags = [];
+        s._loaded = !s._count;   // 空子分类视为已加载
+      }
+    subFetches.clear();
     serverMtime = data.mtime || 0;
     activeCatId = lib.categories[0]?.id || null;
     activeSubId = lib.categories[0]?.subcategories?.[0]?.id || null;
@@ -87,7 +128,13 @@
 
   async function save() {
     try {
+      await ensureAllLoaded();
       const payload = JSON.parse(JSON.stringify(lib));
+      for (const c of payload.categories)
+        for (const s of c.subcategories || []) {
+          delete s._loaded;
+          delete s._count;
+        }
       delete payload._meta;
       const r = await fetch(API, {
         method: "POST",
@@ -176,11 +223,8 @@
   }
 
   function visibleSubs(cat) {
-    if (!filterQ) return cat.subcategories || [];
-    // 搜索时高亮含命中标签的子分类 (其余折叠为空)
-    return (cat.subcategories || []).filter((s) =>
-      (s.tags || []).some(tagHits)
-    );
+    // 骨架懒加载: 本地标签过滤不可靠, 搜索走服务端 /taglib/api/search
+    return cat.subcategories || [];
   }
 
   function tagHits(tag) {
@@ -203,7 +247,7 @@
       el.className = "tab" + (sub.id === activeSubId ? " active" : "");
       el.draggable = true;
       el.title = "点击切换 / 右键: 重命名·删除 / 拖拽排序";
-      const hits = filterQ ? (sub.tags || []).filter(tagHits).length : (sub.tags || []).length;
+      const hits = filterQ ? "…" : subTagCount(sub);
       el.innerHTML = `${escapeHtml(sub.name)} <span class="t-count">${hits}</span>`;
       el.onclick = () => { activeSubId = sub.id; renderTabs(); renderTable(); };
       el.oncontextmenu = (e) => {
@@ -315,8 +359,14 @@
   function renderTable() {
     const flow = $("#tagFlow");
     flow.innerHTML = "";
+    const cat = catById(activeCatId);
     const sub = subById(activeSubId);
     if (!sub) { $("#emptyHint").classList.remove("hidden"); return; }
+    if (!sub._loaded) {
+      flow.innerHTML = `<div class="empty">子分类加载中…</div>`;
+      ensureSubLoaded(cat, sub).then(() => renderTable());
+      return;
+    }
     $("#emptyHint").classList.add("hidden");
 
     const tags = (sub.tags || []).filter(tagHits);
@@ -480,14 +530,16 @@
     if (!name || !name.trim()) return;
     const taken = new Set((cat.subcategories || []).map((s) => s.id));
     const sid = `${cat.id}.${uidIn(taken, slugify(name))}`;
-    (cat.subcategories ||= []).push({ id: sid, name: name.trim(), tags: [] });
+    (cat.subcategories ||= []).push({ id: sid, name: name.trim(), tags: [], _loaded: true });
     activeSubId = sid;
     markDirty(); renderAll();
   }
 
-  function addTagRow() {
+  async function addTagRow() {
     const sub = subById(activeSubId);
     if (!sub) return toast("先选一个子分类页签", true);
+    await ensureSubLoaded(catById(activeCatId), sub);
+    if (!sub._loaded) sub._loaded = true;
     const en = prompt("英文文本 (出图用):", "");
     if (!en || !en.trim()) return;
     const zh = prompt("中文显示名 (可空):", "") || "";
@@ -497,10 +549,12 @@
     markDirty(); renderTable(); renderStats();
   }
 
-  function openPasteDialog() {
+  async function openPasteDialog() {
     const cat = catById(activeCatId);
     const sub = subById(activeSubId);
     if (!cat || !sub) return toast("先选好分类和子分类", true);
+    if (!sub._loaded) await ensureSubLoaded(cat, sub);
+    if (!sub._loaded) sub._loaded = true;
     $("#pasteTarget").textContent = `${cat.name} / ${sub.name}`;
     $("#pasteArea").value = "";
     $("#pasteDialog").classList.remove("hidden");
@@ -599,7 +653,8 @@ ${TPL_RULES}
     URL.revokeObjectURL(a.href);
   }
 
-  function exportTemplate(full) {
+  async function exportTemplate(full) {
+    await ensureAllLoaded();   // 模板覆盖整库, 未加载的子分类先拉正文
     downloadText(buildTemplateMd(full), full ? "taglib_模板_全量.md" : "taglib_模板.md");
     toast(full ? "全量模板已下载" : "基础模板已下载: 发给 AI, 回填后从「📥 导入」预览入库");
     $("#templateDialog").classList.add("hidden");
@@ -615,6 +670,7 @@ ${TPL_RULES}
         // 合并策略: 按 id 去重追加 (同名覆盖属性)
         const exist = new Map(lib.categories.map((c) => [c.id, c]));
         for (const icat of incoming.categories) {
+          for (const s of icat.subcategories || []) s._loaded = true;
           if (exist.has(icat.id)) {
             Object.assign(exist.get(icat.id), icat);  // 整体替换该分类
           } else {
@@ -1196,13 +1252,62 @@ ${TPL_RULES}
     await load();
     toast("已还原到上次保存的状态");
   };
+  let searchTimer = null;
   $("#globalSearch").oninput = (e) => {
     filterQ = e.target.value.trim();
-    const cat = catById(activeCatId);
-    if (cat && !(visibleSubs(cat)).some((s) => s.id === activeSubId))
-      activeSubId = visibleSubs(cat)[0]?.id || null;
-    renderTabs(); renderTable();
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(runSearchView, 150);   // 防抖
   };
+
+  async function runSearchView() {
+    if (!filterQ) {
+      renderAll();
+      return;
+    }
+    const cat = catById(activeCatId);
+    if (cat && !visibleSubs(cat).some((s) => s.id === activeSubId))
+      activeSubId = visibleSubs(cat)[0]?.id || null;
+    renderTabs();
+    // 服务端全文搜索 (en/zh/别名), 10k 库也 <100ms
+    try {
+      const r = await fetch(`/taglib/api/search?q=${encodeURIComponent(filterQ)}`);
+      const data = await r.json();
+      if (!data.ok) return;
+      renderSearchResults(data.results || [], data.count || 0);
+    } catch { /* 保持原视图 */ }
+  }
+
+  function renderSearchResults(results, count) {
+    const flow = $("#tagFlow");
+    flow.innerHTML = "";
+    if (!results.length) {
+      flow.innerHTML = `<div class="empty">没有匹配 “${escapeHtml(filterQ)}” 的标签</div>`;
+      return;
+    }
+    const head = document.createElement("div");
+    head.className = "file-group";
+    head.textContent = `🔍 ${count} 条匹配 (显示前 ${results.length}) — 点击定位到子分类`;
+    flow.appendChild(head);
+    const grid = document.createElement("div");
+    grid.className = "cf-tags-flow";
+    for (const t of results) {
+      const chip = document.createElement("span");
+      chip.className = "cf-tag" + (t.nsfw ? " nsfw" : "");
+      chip.title = `${t.cat} / ${t.sub}`;
+      chip.textContent = `${t.en} ${t.zh || ""}`;
+      chip.onclick = () => {
+        activeCatId = t.cat_id;
+        const c = catById(activeCatId);
+        const sub = (c.subcategories || []).find((x) => x.id === t.sub_id);
+        if (sub) { activeSubId = sub.id; ensureSubLoaded(c, sub); }
+        filterQ = "";
+        $("#globalSearch").value = "";
+        renderAll();
+      };
+      grid.appendChild(chip);
+    }
+    flow.appendChild(grid);
+  }
 
   window.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "s") { e.preventDefault(); save(); }
