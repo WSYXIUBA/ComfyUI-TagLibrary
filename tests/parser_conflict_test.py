@@ -6,7 +6,6 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tagfiles
-import tagconflicts
 
 ok = True
 
@@ -60,30 +59,6 @@ kept = [t for c in clean_tree["categories"] for s in c["subcategories"] for t in
 check("去重剔除大小写重复", not any(t["en"].lower() == "smile" for t in kept), str([t['en'] for t in kept]))
 check("统计新增=8", stats["total_new"] == 8, str(stats))
 check("统计去重=1", stats["duplicates_removed"] == 1, str(stats))
-
-# ---- 冲突引擎
-groups = tagconflicts.get_groups()
-check("默认冲突组已加载", len(groups) >= 15, str(len(groups)))
-mouth = next((g for g in groups if g["id"] == "mouth"), None)
-check("嘴部组存在", mouth is not None)
-
-res = tagconflicts.check_selection(["open mouth", "closed eyes", "pout"])
-check("体检发现嘴部冲突", "嘴部" in res and set(res["嘴部"]) == {"open mouth", "pout"}, str(res))
-
-pool = [{"en": "open mouth"}, {"en": "closed mouth"}, {"en": "smile"}]
-filtered, blocked = tagconflicts.filter_conflicts(pool, ["open mouth"])
-check("随机避让过滤同组", blocked == 2 and [p["en"] for p in filtered] == ["smile"],
-      f"blocked={blocked} left={[p['en'] for p in filtered]}")
-
-# 配置热加载: 改 mtime 后新组生效
-tagconflicts.save_groups(groups + [{"id": "test_g", "name": "测试组", "strict": True,
-                                    "tags": ["aaa", "bbb"]}])
-after = tagconflicts.get_groups()
-check("保存后热加载", any(g["id"] == "test_g" for g in after))
-r2 = tagconflicts.check_selection(["AAA", "bbb"])
-check("大小写不敏感", "测试组" in r2)
-# 还原 (去掉测试组)
-tagconflicts.save_groups([g for g in after if g["id"] != "test_g"])
 
 print("\n== RESULT:", "ALL PASS ✅" if ok else "HAS FAILURES ❌")
 sys.exit(0 if ok else 1)

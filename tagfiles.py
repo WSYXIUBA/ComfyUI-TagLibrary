@@ -651,6 +651,3 @@ def merge_tree_by_name(base: dict, new_tree: dict) -> dict:
 
 
 
-
-def default_external_dir() -> str:
-    return BUILTIN_DIR

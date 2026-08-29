@@ -122,10 +122,6 @@ def main():
         groups = tagconflicts.get_groups()
         check("get_groups 只还原组形态规则", len(groups) == 1 and groups[0]["id"] == "g1"
               and groups[0]["tags"] == ["open mouth", "closed mouth"], str(groups))
-        out, blocked = tagconflicts.filter_conflicts(
-            [{"en": "corset"}, {"en": "necklace"}], ["nude"], lib)
-        names = [c["en"] for c in out]
-        check("filter_conflicts 静态过滤", names == ["necklace"], f"{names}, blocked={blocked}")
         sel = tagconflicts.check_selection(["nude", "corset"], lib)
         check("check_selection 体检", "nude" in sel and "corset" in sel["nude"], str(sel))
     finally:

@@ -349,7 +349,6 @@ export function buildPanelWidget(node, container) {
     return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
   }
 
-  let CONFLICT_INDEX = null; // Map(en_lower -> Set(互斥 en_lower)), 每次填充现取 (规则可随时改)
   async function fetchConflicts() {
     try {
       const r = await fetch("/taglib/api/conflicts");
@@ -388,9 +387,8 @@ export function buildPanelWidget(node, container) {
         const Rs = (rule.right || []).flatMap(resolve);
         for (const a of Ls) for (const b of Rs) { link(a, b); link(b, a); }
       }
-      CONFLICT_INDEX = map;
-    } catch { CONFLICT_INDEX = new Map(); }
-    return CONFLICT_INDEX;
+      return map;
+    } catch { return new Map(); }
   }
 
   function pickFrom(list, n, usedEn, conflictMap) {
@@ -598,9 +596,13 @@ export function buildPanelWidget(node, container) {
     .catch((err) => { container.innerHTML = `<div class="tl-empty">标签库加载失败: ${err}</div>`; });
 
   return {
-    refresh: async () => {
-      invalidateLibraryCache();
-      await fetchLibrary();
+    refresh: async (opts = {}) => {
+      // reloadLib 仅在库真的变了时用 (管理页保存/热同步导入);
+      // 每轮队列的自动回显刷新不重拉, 避免无谓的 200KB 请求
+      if (opts.reloadLib) {
+        invalidateLibraryCache();
+        await fetchLibrary();
+      }
       applyScale();
       // executed 回显预存的分组数据 → 应用到 ui.fillGroups
       if (node._taglibPendingGroups instanceof Map) {
@@ -1885,7 +1887,7 @@ app.registerExtension({
         } catch {}
       }, 400);
 
-      window.addEventListener("taglib-updated", () => panelApi.refresh());
+      window.addEventListener("taglib-updated", () => panelApi.refresh({ reloadLib: true }));
       return r;
     };
   },

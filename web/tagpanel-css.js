@@ -237,36 +237,6 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 .tl-sub-head::after { content: ""; flex: 1; height: 1px; align-self: center;
   background: linear-gradient(to right, rgba(255,255,255,.14), transparent); }
 .tl-sub-name { color: var(--tl-text); font-weight: 600; }
-.tl-chips { display: flex; flex-wrap: wrap; gap: 4px; }
-
-.tl-chip {
-  --c: #54a0ff;
-  display: inline-flex; align-items: center; gap: 4px;
-  border: 1px solid color-mix(in srgb, var(--c) 28%, rgba(255,255,255,0.14));
-  background: color-mix(in srgb, var(--c) 9%, rgba(255,255,255,0.04));
-  color: var(--tl-text);
-  border-radius: 7px;
-  font-size: 11px;
-  line-height: 1.4;
-  padding: 2.5px 8px;
-  cursor: pointer;
-  transition: all .12s ease;
-}
-.tl-chip:hover {
-  background: color-mix(in srgb, var(--c) 20%, transparent);
-  border-color: color-mix(in srgb, var(--c) 55%, transparent);
-  transform: translateY(-1px);
-}
-.tl-chip.sel {
-  color: #fff;
-  background: color-mix(in srgb, var(--c) 32%, transparent);
-  border-color: var(--c);
-  box-shadow: 0 0 8px -3px var(--c), inset 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent);
-}
-.tl-chip.sel::before { content: "✓"; font-size: 9px; opacity: .95; }
-.tl-chip.nsfw:not(.sel) { opacity: .68; }
-.tl-chip .tl-n { font-size: 10px; color: #ffb3b3; }
-
 .tl-empty { color: var(--tl-muted); font-size: 11px; padding: 12px 4px; text-align: center; }
 
 /* ---------- 已选区 ---------- */
