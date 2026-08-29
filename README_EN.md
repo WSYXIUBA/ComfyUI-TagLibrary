@@ -10,9 +10,9 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 
 ## UI Preview
 
-| Node panel (pick / grouped fill / NSFW toggle) | Manager page (chip flow / full editing / stats) |
+| Node panel (pick / grouped fill / NSFW toggle) | Add-Tags picker (5 tabs / grouped chips / master control) |
 |---|---|
-| ![Node panel](docs/screenshot_node_panel.png) | ![Manager page](docs/screenshot_manager.png) |
+| ![Node panel](docs/screenshot_node_panel.png) | ![Add-Tags picker](docs/screenshot_tag_picker.png) |
 
 ## Features
 

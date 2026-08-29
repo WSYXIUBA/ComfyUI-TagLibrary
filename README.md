@@ -28,9 +28,9 @@
 
 ## 界面预览
 
-| 节点面板（点选 / 分组填充 / NSFW 开关） | 标签库管理页（chip 流 / 全级编辑 / 统计） |
+| 节点面板（点选 / 分组填充 / NSFW 开关） | 添加标签挑选器（5 页签 / 分组 chips / 总控制） |
 |---|---|
-| ![节点面板](docs/screenshot_node_panel.png) | ![标签库管理页](docs/screenshot_manager.png) |
+| ![节点面板](docs/screenshot_node_panel.png) | ![添加标签挑选器](docs/screenshot_tag_picker.png) |
 
 ## 安装
 
