@@ -40,10 +40,10 @@ _LINE_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _TAG_SPLIT = re.compile(r"[,，\n]")
 _TAG_RE = re.compile(
     r"""^\s*
-    (?P<en>[^(\[]+?)              # en 文本: 贪婪到第一个 ( 或 [ 前, 允许含空格
+    (?P<en>(?:[^(\[]|\([^)]*\))*?)   # en 文本: 允许一层圆括号 (如 bow (weapon))
     \s*(?:\((?P<zh>[^)]*)\))?     # 可选 (中文)
     \s*(?:\{(?P<weight>[0-9.]+)\})?  # 可选 {权重}
-    \s*(?:\[(?P<flags>[^\]]*)\])?    # 可选 [flags] e.g. nsfw
+    \s*(?:((?:\[(?P<flags>[^\]]*)\]\s*)+))?  # 可选多组 [flags]: nsfw / ♀ / ♂ (解析时逐组收集)
     \s*$""",
     re.VERBOSE,
 )
@@ -125,8 +125,17 @@ def parse_tagfile(text: str) -> dict[str, Any]:
                 continue
             en = _clean(m.group("en"))
             zh = _clean(m.group("zh") or "")
+            # 歧义消解: 'pantyhose (white)' 无中文时 (white) 会被误当日文/英文翻译组 —
+            # zh 无 CJK 且 en 本身无括号 → 该括号其实是 en 一部分
+            if zh and not any("\u4e00" <= ch <= "\u9fff" for ch in zh) and "(" not in en:
+                en = f"{en} ({zh})"
+                zh = ""
             weight_s = m.group("weight")
-            flags = (m.group("flags") or "").lower()
+            # 收集全部 [flags] 组 (多组: [nsfw][♀])
+            all_flags = []
+            for fm in re.finditer(r"\[([^\]]*)\]", piece):
+                all_flags.append(fm.group(1))
+            flags = " ".join(all_flags).lower()
             if not en:
                 continue
             weight = 1.0
@@ -145,6 +154,11 @@ def parse_tagfile(text: str) -> dict[str, Any]:
                 tag["zh"] = zh
             if "nsfw" in flags:
                 tag["nsfw"] = True
+            # 性别标记: [♀]/[♂] (也兼容文字 female/male)
+            if "♀" in flags or "female" in flags:
+                tag["gender"] = "female"
+            elif "♂" in flags or "male" in flags:
+                tag["gender"] = "male"
             cur_sub["tags"].append(tag)
 
     # 清理内部标记字段
@@ -311,13 +325,19 @@ def _desired_files(lib: dict, folder: str) -> dict[str, str]:
         s = (t.get("en") or "").strip()
         if not s:
             return ""
-        if t.get("zh"):
-            s += f"({t['zh']})"
+        zh = t.get("zh") or ""
+        # zh 无 CJK (如 'HDR') 时丢弃 — 解析端无法区分括号归属
+        if zh and any("\u4e00" <= ch <= "\u9fff" for ch in zh):
+            s += f"({zh})"
         w = float(t.get("weight") or 1.0)
         if abs(w - 1.0) > 1e-6:
             s += f"{{{w:g}}}"
         if t.get("nsfw"):
             s += "[nsfw]"
+        if t.get("gender") == "female":
+            s += "[♀]"
+        elif t.get("gender") == "male":
+            s += "[♂]"
         return s
 
     used_cats: set[str] = set()
@@ -351,7 +371,8 @@ _GUIDE_TEXT = (
     "- 第二层子文件夹 = 二级分类 (如 画质强化)\n"
     "- 二级分类文件夹里的 .md = 该子分类的标签\n"
     "- 管理页里增删/改名分类, 这里的文件夹会同步增删/改名\n"
-    "- 手动在文件里加标签 (格式: `english(中文翻译){权重}[nsfw]`, 逗号分隔)\n"
+    "- 手动在文件里加标签 (格式: `english(中文翻译){权重}[nsfw][♀|♂]`, 逗号分隔)\n"
+    "- [nsfw]=NSFW标记; [♀]=女性专属 [♂]=男性专属 (绝对性别词才标)\n"
     "  保存文件后, 刷新网页即可在插件里看到 (自动按文件夹归类+去重)\n"
     "- 没有标题的文件按所在文件夹名归分类; `_` 开头的文件跳过\n"
 )
