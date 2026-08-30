@@ -379,15 +379,6 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 
 /* NSFW 开关行内提示 */
 .tl-hint { font-size: 10px; color: var(--tl-muted); }
-`;
-
-export function injectPanelStyle() {
-  if (document.getElementById("taglib-panel-style")) return;
-  const el = document.createElement("style");
-  el.id = "taglib-panel-style";
-  el.textContent = CSS;
-  document.head.appendChild(el);
-}
 
 /* chip 右键菜单 (钉选/移除) */
 .tl-chip-menu {
@@ -404,3 +395,12 @@ export function injectPanelStyle() {
 .tl-chip-menu button.danger { color: #ff8a8a; }
 /* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) */
 .tl-pin.ghost { opacity: .28; cursor: default; }
+`;
+
+export function injectPanelStyle() {
+  if (document.getElementById("taglib-panel-style")) return;
+  const el = document.createElement("style");
+  el.id = "taglib-panel-style";
+  el.textContent = CSS;
+  document.head.appendChild(el);
+}
