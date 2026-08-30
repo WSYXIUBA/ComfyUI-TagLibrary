@@ -23,7 +23,15 @@ except ModuleNotFoundError:  # 独立导入时不炸
 
 _WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
 BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "备份库")
-BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.backup.json")
+# 双备份体系 (2026-08-30 用户设计):
+#   出厂备份  = 插件包内自带, 随升级覆盖, 代表"当前版本官方库"
+#   用户备份  = 用户点「存为默认库」生成, 插件包不带, 升级后存活, 代表"用户自己的基准"
+FACTORY_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.出厂.backup.json")
+USER_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.用户.backup.json")
+# 升级弹窗标记: 插件包内自带; 恢复/取消后销毁; 下次升级随包重新出现
+UPGRADE_PROMPT_PATH = os.path.join(BACKUP_DIR, ".升级待确认")
+# 兼容旧名 (v1.x 的单备份文件 → 首次迁移为出厂备份)
+LEGACY_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.backup.json")
 
 
 def _json_response(data, status: int = 200) -> web.Response:
@@ -174,58 +182,182 @@ async def save_library(request: web.Request) -> web.Response:
 
 
 async def reset_library(_request: web.Request) -> web.Response:
-    """DELETE /taglib/api/library -> 删除用户库, 回到纯默认库。"""
+    """DELETE /taglib/api/library -> 「🗑 清空标签库」: 用户库清成空库 (0分类0标签)。
+
+    不动默认库文件、不动备份文件。空库状态由 user.json 的 _cleared 标记表达,
+    下次导入模板/管理页保存会自动退出空库状态。
+    """
     try:
-        if os.path.exists(library.USER_PATH):
-            os.remove(library.USER_PATH)
+        os.makedirs(library.DATA_DIR, exist_ok=True)
+        cleared = {"version": 1, "categories": [], "_cleared": True, "_tombstones": []}
+        tmp = library.USER_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(cleared, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, library.USER_PATH)
         library.invalidate_cache()
-        _mirror_folder()
+        # taglib 镜像文件夹同步清空 (删除全部分类文件夹, 保留 _ 开头文件与 conflicts.json)
+        keep = {"conflicts.json", "_sync_state.json", "_说明.md"}
+        lib_dir = tagfiles.LIBRARY_DIR
+        if os.path.isdir(lib_dir):
+            for entry in os.listdir(lib_dir):
+                p = os.path.join(lib_dir, entry)
+                if entry in keep or entry.startswith("_"):
+                    continue
+                import shutil
+                if os.path.isdir(p):
+                    shutil.rmtree(p, ignore_errors=True)
+                else:
+                    try: os.remove(p)
+                    except OSError: pass
+        # 重建空基线, 防止热同步把清空前状态判定为 pull
+        library.sync_to_folder_snapshot()
         return _json_response({"ok": True})
     except OSError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 500)
 
 
 async def backup_library(_request: web.Request) -> web.Response:
-    """POST /taglib/api/library/backup -> 把当前合并库存入 data/备份库/。"""
+    """POST /taglib/api/library/backup -> 「💾 存为默认库」。
+
+    当前合并库存为 用户备份 (tag_library.用户.backup.json) 并升格为默认库基准。
+    出厂备份 (tag_library.出厂.backup.json) 永不被此操作覆盖。
+    """
     try:
         lib = library.get_merged()
         lib.pop("_meta", None)
         os.makedirs(BACKUP_DIR, exist_ok=True)
-        tmp = BACKUP_PATH + ".tmp"
+        tmp = USER_BACKUP_PATH + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(lib, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, BACKUP_PATH)
-        return _json_response({"ok": True, "path": BACKUP_PATH,
-                               "mtime": int(os.stat(BACKUP_PATH).st_mtime)})
+        os.replace(tmp, USER_BACKUP_PATH)
+        # 用户备份不存在时 (首次点存为默认库), 出厂备份尚未生成 → 从当前默认库补生成
+        if not os.path.isfile(FACTORY_BACKUP_PATH) and os.path.isfile(LEGACY_BACKUP_PATH):
+            try:
+                import shutil
+                shutil.copy(LEGACY_BACKUP_PATH, FACTORY_BACKUP_PATH)
+            except OSError:
+                pass
+        return _json_response({"ok": True, "path": USER_BACKUP_PATH,
+                               "mtime": int(os.stat(USER_BACKUP_PATH).st_mtime)})
     except OSError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 500)
 
 
 async def backup_info(_request: web.Request) -> web.Response:
-    """GET /taglib/api/library/backup -> 备份是否存在及时间。"""
-    if os.path.isfile(BACKUP_PATH):
-        st = os.stat(BACKUP_PATH)
-        return _json_response({"ok": True, "exists": True,
-                               "mtime": int(st.st_mtime), "size": st.st_size})
-    return _json_response({"ok": True, "exists": False})
+    """GET /taglib/api/library/backup -> 双备份状态 + 升级弹窗标记。
+
+    惰性迁移: v1.x 旧单备份 (tag_library.backup.json) 首次访问时复制为出厂备份。
+    """
+    if not os.path.isfile(FACTORY_BACKUP_PATH) and os.path.isfile(LEGACY_BACKUP_PATH):
+        try:
+            import shutil
+            shutil.copy(LEGACY_BACKUP_PATH, FACTORY_BACKUP_PATH)
+        except OSError:
+            pass
+    def _info(path):
+        if os.path.isfile(path):
+            st = os.stat(path)
+            return {"exists": True, "mtime": int(st.st_mtime), "size": st.st_size}
+        return {"exists": False}
+    out = {"ok": True,
+           "factory": _info(FACTORY_BACKUP_PATH),
+           "user": _info(USER_BACKUP_PATH),
+           "upgrade_prompt": os.path.isfile(UPGRADE_PROMPT_PATH),
+           "legacy": _info(LEGACY_BACKUP_PATH)}
+    return _json_response(out)
 
 
 async def restore_backup(_request: web.Request) -> web.Response:
-    """POST /taglib/api/library/restore-backup -> 从备份恢复 (整体覆盖当前库)。"""
-    if not os.path.isfile(BACKUP_PATH):
-        return _json_response({"ok": False, "error": "还没有备份 (先「💾 存为默认库」)"}, 404)
+    """POST /taglib/api/library/restore-backup {source?: "user"|"factory"} -> 「↺ 恢复默认库」。
+
+    优先用户备份; 用户备份不存在时回落出厂备份。恢复后销毁升级弹窗标记。
+    """
+    payload = {}
+    if _request.can_read_body:
+        try:
+            payload = await _request.json()
+        except Exception:
+            payload = {}
+    source = str(payload.get("source") or "auto")
+    if source == "user":
+        path = USER_BACKUP_PATH
+    elif source == "factory":
+        path = FACTORY_BACKUP_PATH
+    else:  # auto: 用户备份优先
+        path = USER_BACKUP_PATH if os.path.isfile(USER_BACKUP_PATH) else FACTORY_BACKUP_PATH
+        if not os.path.isfile(path) and os.path.isfile(LEGACY_BACKUP_PATH):
+            path = LEGACY_BACKUP_PATH  # v1.x 旧单备份兼容
+    if not os.path.isfile(path):
+        return _json_response({"ok": False,
+                               "error": "还没有备份文件 (点「💾 存为默认库」生成用户备份)"}, 404)
     try:
-        with open(BACKUP_PATH, "r", encoding="utf-8") as f:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         if not isinstance(data.get("categories"), list):
             raise ValueError("备份文件缺少 categories")
         library.save_user_library(data)
         _mirror_folder()
-        return _json_response({"ok": True})
+        # 恢复成功 → 升级弹窗使命完成, 销毁标记
+        try:
+            if os.path.isfile(UPGRADE_PROMPT_PATH):
+                os.remove(UPGRADE_PROMPT_PATH)
+        except OSError:
+            pass
+        return _json_response({"ok": True, "source": "user" if path == USER_BACKUP_PATH
+                               else "factory"})
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
     except Exception as exc:  # noqa: BLE001
         return _json_response({"ok": False, "error": f"恢复失败: {exc}"}, 500)
+
+
+async def get_settings(_request: web.Request) -> web.Response:
+    """GET /taglib/api/settings -> 合并后的 settings (含 one_way_delete 等开关)。"""
+    lib = library.get_merged()
+    settings = dict(lib.get("settings") or {})
+    settings.setdefault("one_way_delete", True)
+    return _json_response({"ok": True, "settings": settings})
+
+
+async def save_settings(request: web.Request) -> web.Response:
+    """POST /taglib/api/settings {settings} -> 合并进用户库 settings 并落盘。"""
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "bad json"}, 400)
+    incoming = payload.get("settings")
+    if not isinstance(incoming, dict):
+        return _json_response({"ok": False, "error": "settings 必须是对象"}, 400)
+    # 在当前用户库快照上合并 settings (不动分类树)
+    user_raw = library.load_user_raw()
+    if user_raw.get("_cleared"):
+        user_raw["settings"] = {**(user_raw.get("settings") or {}), **incoming}
+        tmp = library.USER_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(user_raw, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, library.USER_PATH)
+        library.invalidate_cache()
+    else:
+        merged = json.loads(json.dumps(library.get_merged()))
+        merged.pop("_meta", None)
+        merged.setdefault("settings", {})
+        merged["settings"].update(incoming)
+        client_mtime = request.headers.get("X-TagLib-Mtime")
+        library.save_user_library(merged, float(client_mtime) if client_mtime else None)
+    lib = library.get_merged()
+    settings = dict(lib.get("settings") or {})
+    settings.setdefault("one_way_delete", True)
+    return _json_response({"ok": True, "settings": settings})
+
+
+async def dismiss_upgrade_prompt(_request: web.Request) -> web.Response:
+    """POST /taglib/api/library/upgrade-dismiss -> 用户点「取消」: 销毁弹窗标记, 不恢复。"""
+    try:
+        if os.path.isfile(UPGRADE_PROMPT_PATH):
+            os.remove(UPGRADE_PROMPT_PATH)
+        return _json_response({"ok": True})
+    except OSError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 500)
 
 
 # ------------------------------------------------------------ tagfiles
@@ -489,6 +621,9 @@ def register_routes() -> None:
     app.router.add_post("/taglib/api/library/backup", backup_library)
     app.router.add_get("/taglib/api/library/backup", backup_info)
     app.router.add_post("/taglib/api/library/restore-backup", restore_backup)
+    app.router.add_post("/taglib/api/library/upgrade-dismiss", dismiss_upgrade_prompt)
+    app.router.add_get("/taglib/api/settings", get_settings)
+    app.router.add_post("/taglib/api/settings", save_settings)
     app.router.add_get("/taglib/api/tagfiles", list_tagfiles)
     app.router.add_post("/taglib/api/tagfiles/import", import_tagfile)
     app.router.add_post("/taglib/api/tagfiles/preview-import", preview_import)

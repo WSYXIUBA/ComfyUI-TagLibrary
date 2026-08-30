@@ -348,6 +348,7 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
         new_tombs = (old_tombs | gone) - keep_ids  # 重新添加过的自动除名
 
         out = dict(payload)
+        out.pop("_cleared", None)  # 显式保存 = 退出空库状态 (清空标记只在 DELETE 端点写入)
         out["_tombstones"] = sorted(new_tombs)
         out["settings"] = {**load_default().get("settings", {}),
                            **payload.get("settings", {})}
@@ -367,14 +368,87 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
 _sync_busy = False
 
 
-def _folder_hot_sync() -> None:
-    """热同步: data/标签库/ 与库双向实时一致。
+def _user_settings_value(key: str, default):
+    """读用户库 settings 开关 (不经缓存, 避免同步循环)。"""
+    try:
+        raw = load_user_raw()
+        return (raw.get("settings") or {}).get(key, default)
+    except Exception:  # noqa: BLE001
+        return default
 
-    - baseline: 无清单 -> 以当前库镜像文件夹并建基线 (自动修复两侧漂移,
-      如删除分类后残留的文件夹、新建分类缺失的文件夹)
-    - pull: 外部手改/新增了 .md -> 增量解析按名称吸入用户库 (只增不删, 自动去重),
-      然后镜像让文件内容规范化, 最后刷新清单
-    - mirror: 库在清单之后变过 (保存漏镜像/JSON 被手改) -> 重新镜像
+
+def _apply_folder_deletions(base: dict, missing_rels: list[str]) -> int:
+    """双向删除模式: 文件夹里被删除的文件 → 同步删除库里的分类/子分类。
+
+    删除前快照到 data/备份库/_trash/ (带时间戳), 可手动找回。
+    返回删除的分类数 (整分类删才计 1; 子分类删除随文件处理)。
+    """
+    import shutil
+    trash = os.path.join(os.path.dirname(DEFAULT_PATH), "备份库", "_trash")
+    n_cat = 0
+    touched_cats = set()
+    for rel in missing_rels:
+        parts = rel.replace("/", os.sep).split(os.sep)
+        if len(parts) < 2:
+            continue
+        cat_name = parts[0]
+        touched_cats.add(cat_name)
+        # 快照原文件内容无法找回 (已删), 但库侧数据会体现在被删的分类树里 —
+        # 把受影响分类的 JSON 快照存档
+        try:
+            os.makedirs(trash, exist_ok=True)
+            stamp = time.strftime("%Y%m%d_%H%M%S")
+            for cat in base.get("categories", []):
+                if cat.get("name") == cat_name:
+                    safe = re.sub(r'[^\w\-（）()·]', '_', cat_name)[:40]
+                    dst = os.path.join(trash, f"{stamp}_{safe}.json")
+                    if not os.path.exists(dst):
+                        with open(dst, "w", encoding="utf-8") as f:
+                            json.dump(cat, f, ensure_ascii=False, indent=1)
+                    break
+        except OSError:
+            pass
+    # 整个分类文件夹被删 → 删分类; 只删了子分类文件 → 删对应子分类
+    for cat_name in sorted(touched_cats):
+        cat = next((c for c in base.get("categories", []) if c.get("name") == cat_name), None)
+        if cat is None:
+            continue
+        cat_dir = os.path.join(tagfiles.LIBRARY_DIR, cat_name)
+        if not os.path.isdir(cat_dir):
+            # 整分类没了
+            base["categories"] = [c for c in base["categories"] if c.get("name") != cat_name]
+            n_cat += 1
+            continue
+        # 分类还在: 删掉没有对应 md 的子分类
+        remaining = set()
+        for fn in os.listdir(cat_dir):
+            if fn.lower().endswith((".md", ".txt")):
+                remaining.add(os.path.splitext(fn)[0])
+        kept_subs = []
+        for s in cat.get("subcategories", []):
+            safe_sub = None
+            for fn in remaining:
+                # md 文件名 = sanitize_fsname(子分类名); 反向匹配用包含判断
+                if fn == s.get("name") or fn.replace("(", "").replace(")", "") in s.get("name", ""):
+                    safe_sub = fn
+                    break
+            if safe_sub or not remaining:
+                kept_subs.append(s)
+            else:
+                # 找不到对应文件 → 该子分类被删除
+                pass
+        cat["subcategories"] = kept_subs
+    return n_cat
+
+
+def _folder_hot_sync() -> None:
+    """热同步: data/taglib/ 与库双向实时一致。
+
+    - baseline: 无清单 -> 以当前库镜像文件夹并建基线 (自动修复两侧漂移)
+    - pull: 文件夹新增/修改 .md -> 吸入用户库; 文件夹删除 -> 按「单向删除」开关:
+        开 (默认) = 库为权威, 镜像回填 (mirror)
+        关 (双向) = 库同步删除 (先快照进 _trash 可找回)
+    - mirror: 库在清单之后变过 -> 重新镜像
     任何同步失败都不阻塞主流程。
     """
     global _sync_busy, _last_hot_sync
@@ -384,19 +458,36 @@ def _folder_hot_sync() -> None:
     _sync_busy = True
     try:
         lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
-        action, changed = tagfiles.folder_sync_plan(tagfiles.LIBRARY_DIR, lib_key)
+        action, changed, missing = tagfiles.folder_sync_plan(tagfiles.LIBRARY_DIR, lib_key)
         if action != "none":
             print(f"[TagLibrary] 🔄 热同步动作: {action}"
-                  + (f" ({len(changed)} 文件)" if changed else ""))
-        if action == "baseline" or action == "mirror":
+                  + (f" (+{len(changed)} 文件)" if changed else "")
+                  + (f" (-{len(missing)} 缺失)" if missing else ""))
+        if action in ("baseline", "mirror"):
             sync_to_folder_snapshot(lib_key)
-        elif action == "pull" and changed:
-            merged = deep_merge(load_default(), load_user_raw())
+        elif action == "pull" and (changed or missing):
+            one_way = bool(_user_settings_value("one_way_delete", True))
+            user_now = load_user_raw()
+            if user_now.get("_cleared") and not missing:
+                # 空库状态: 新增文件照常吸入 (用户在文件夹里建新分类准备导入场景)
+                pass
+            merged = deep_merge(load_default(), user_now) if not user_now.get("_cleared") \
+                else {"version": 1, "categories": []}
             base = json.loads(json.dumps(merged))
             base.pop("_meta", None)
-            stats = tagfiles.import_files_into(base, changed)
-            if stats.get("total_new"):
+            if changed:
+                stats = tagfiles.import_files_into(base, changed)
+            else:
+                stats = {"total_new": 0}
+            deleted_cats = 0
+            if missing and not one_way:
+                deleted_cats = _apply_folder_deletions(base, missing)
+            if stats.get("total_new") or deleted_cats:
                 save_user_library(base)
+            elif missing and one_way:
+                # 单向删除: 不改库, 走 mirror 把文件夹补回来
+                sync_to_folder_snapshot(lib_key)
+                return
             # 吸入后镜像一次: 文件内容规范化 (含新标签), 并刷新清单
             sync_to_folder_snapshot(lib_key)
     except Exception:  # noqa: BLE001 — 同步失败不影响读库
@@ -407,9 +498,12 @@ def _folder_hot_sync() -> None:
 
 
 def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
-    """把当前合并库镜像到 data/标签库/ 并记录同步基线。"""
+    """把当前合并库镜像到 data/标签库/ 并记录同步基线。
+
+    ⚠ 必须经 get_merged() 取库 — 它处理 _cleared 空库标记 (清空后镜像应为空)。
+    """
     try:
-        merged = deep_merge(load_default(), load_user_raw())
+        merged = get_merged()
         tagfiles.sync_to_folder(merged)
         tagfiles.mark_synced(lib_key=lib_key or (_mtime(DEFAULT_PATH), _mtime(USER_PATH)))
     except Exception:  # noqa: BLE001
@@ -427,12 +521,19 @@ def get_merged() -> dict[str, Any]:
     with _lock:
         if _cache is not None and _cache_key == key:
             return _cache
-        merged = deep_merge(load_default(), load_user_raw())
-        # v2 只读迁移: 内存中升级编辑层字段 (type/rarity/priority/...), 不写盘
-        try:
-            schema.migrate_library(merged)
-        except Exception:  # noqa: BLE001 — 迁移失败不阻塞读库
-            pass
+        user_raw = load_user_raw()
+        if user_raw.get("_cleared"):
+            # 「🗑 清空标签库」后的空库标记: 用户库显式清空, 默认库不透传 (等导入重建)
+            merged = {"version": 1, "schema_version": schema.SCHEMA_VERSION,
+                      "categories": [], "settings": user_raw.get("settings", {}),
+                      "_meta": {"cleared": True}}
+        else:
+            merged = deep_merge(load_default(), user_raw)
+            # v2 只读迁移: 内存中升级编辑层字段 (type/rarity/priority/...), 不写盘
+            try:
+                schema.migrate_library(merged)
+            except Exception:  # noqa: BLE001 — 迁移失败不阻塞读库
+                pass
         _cache, _cache_key = merged, key
         return merged
 

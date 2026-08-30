@@ -1,0 +1,2204 @@
+{
+ "_说明": "这是 ComfyUI-TagLibrary 的反冲突文件 (conflicts.json)。把本文件和「全量模板 taglib_模板_全量.md」一起发给 AI, AI 即可认识库中全部标签,按下面的规则格式生成新的反冲突文件; 拿回来在管理页「📥 导入」预览确认即可。\n规则 = left 与 right 双向互斥: 随机填充/自动模式抽到 left 一侧时, right 一侧的标签自动让位 (手动点选不受影响)。\nleft/right 的 kind 取值:\n  tag  = 单个标签, value 填标签英文 (如 \"nude\")\n  tags = 多个标签, value 填英文数组 (仅 left 使用)\n  sub  = 二级分类, value 填 \"一级分类名/二级分类名\" (如 \"服装系统/上装\")\n  cat  = 一级分类, value 填一级分类名 (如 \"光影氛围\")\n每条规则必须有唯一 id; note 为可选备注。完成后输出整个 JSON 文件内容。",
+ "version": 1,
+ "rules": [
+  {
+   "id": "nude-vs-clothes",
+   "note": "裸露类 ↔ 上装/下装/套装 (配饰不冲突, 项链等可保留)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "nude",
+     "topless",
+     "completely nude",
+     "partially nude",
+     "bottomless",
+     "naked towel",
+     "naked ribbon",
+     "naked apron",
+     "covered nipples",
+     "hair over breasts"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/上装"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/下装"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/套装与制服"
+    }
+   ]
+  },
+  {
+   "id": "swimsuit-vs-top",
+   "note": "普通泳装 ↔ 上装",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "swimsuit",
+     "competition swimsuit"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/上装"
+    }
+   ]
+  },
+  {
+   "id": "bikini-vs-clothes",
+   "note": "比基尼 ↔ 上装+下装",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "micro bikini",
+     "string bikini"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/上装"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/下装"
+    }
+   ]
+  },
+  {
+   "id": "nipple-vs-top",
+   "note": "露点类 ↔ 上装",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "nipples",
+     "puffy nipples",
+     "underboob",
+     "sideboob"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/上装"
+    }
+   ]
+  },
+  {
+   "id": "legacy.mouth",
+   "note": "旧互斥组: 嘴部",
+   "left": {
+    "kind": "tags",
+    "value": [
+     ":3",
+     "biting lip",
+     "cat mouth",
+     "closed mouth",
+     "drinking",
+     "eating",
+     "open mouth",
+     "pout",
+     "screaming",
+     "shushing",
+     "singing",
+     "smirk",
+     "yelling"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": ":3"
+    },
+    {
+     "kind": "tag",
+     "value": "biting lip"
+    },
+    {
+     "kind": "tag",
+     "value": "cat mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "closed mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "drinking"
+    },
+    {
+     "kind": "tag",
+     "value": "eating"
+    },
+    {
+     "kind": "tag",
+     "value": "open mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "pout"
+    },
+    {
+     "kind": "tag",
+     "value": "screaming"
+    },
+    {
+     "kind": "tag",
+     "value": "shushing"
+    },
+    {
+     "kind": "tag",
+     "value": "singing"
+    },
+    {
+     "kind": "tag",
+     "value": "smirk"
+    },
+    {
+     "kind": "tag",
+     "value": "yelling"
+    }
+   ]
+  },
+  {
+   "id": "legacy.smile_mouth",
+   "note": "旧互斥组: 微笑系嘴型",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "evil smile",
+     "gentle smile",
+     "grin",
+     "light smile",
+     "smile",
+     "smirk",
+     "wide grin"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "evil smile"
+    },
+    {
+     "kind": "tag",
+     "value": "gentle smile"
+    },
+    {
+     "kind": "tag",
+     "value": "grin"
+    },
+    {
+     "kind": "tag",
+     "value": "light smile"
+    },
+    {
+     "kind": "tag",
+     "value": "smile"
+    },
+    {
+     "kind": "tag",
+     "value": "smirk"
+    },
+    {
+     "kind": "tag",
+     "value": "wide grin"
+    }
+   ]
+  },
+  {
+   "id": "legacy.eyes",
+   "note": "旧互斥组: 眼睛开闭",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "closed eyes",
+     "eyes visible through hair",
+     "half-closed eyes",
+     "looking afar",
+     "looking at viewer",
+     "looking away",
+     "looking back",
+     "looking down",
+     "looking up",
+     "one eye closed",
+     "wink"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "closed eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "eyes visible through hair"
+    },
+    {
+     "kind": "tag",
+     "value": "half-closed eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "looking afar"
+    },
+    {
+     "kind": "tag",
+     "value": "looking at viewer"
+    },
+    {
+     "kind": "tag",
+     "value": "looking away"
+    },
+    {
+     "kind": "tag",
+     "value": "looking back"
+    },
+    {
+     "kind": "tag",
+     "value": "looking down"
+    },
+    {
+     "kind": "tag",
+     "value": "looking up"
+    },
+    {
+     "kind": "tag",
+     "value": "one eye closed"
+    },
+    {
+     "kind": "tag",
+     "value": "wink"
+    }
+   ]
+  },
+  {
+   "id": "legacy.wink_eye",
+   "note": "旧互斥组: 眨眼组合",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "both eyes open",
+     "wink"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "both eyes open"
+    },
+    {
+     "kind": "tag",
+     "value": "wink"
+    }
+   ]
+  },
+  {
+   "id": "legacy.tears_vs_smile",
+   "note": "旧互斥组: 哭笑组合",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "crying",
+     "giggle",
+     "laughing",
+     "sobbing",
+     "tears"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "crying"
+    },
+    {
+     "kind": "tag",
+     "value": "giggle"
+    },
+    {
+     "kind": "tag",
+     "value": "laughing"
+    },
+    {
+     "kind": "tag",
+     "value": "sobbing"
+    },
+    {
+     "kind": "tag",
+     "value": "tears"
+    }
+   ]
+  },
+  {
+   "id": "legacy.pose_basic",
+   "note": "旧互斥组: 基础姿势",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "all fours",
+     "crossed legs (standing)",
+     "crouching",
+     "floating",
+     "jumping",
+     "kneeling",
+     "leaning forward",
+     "lying on bed",
+     "lying on side",
+     "lying on stomach",
+     "running",
+     "seiza",
+     "sitting",
+     "squatting",
+     "standing",
+     "walking",
+     "wariza"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "all fours"
+    },
+    {
+     "kind": "tag",
+     "value": "crossed legs (standing)"
+    },
+    {
+     "kind": "tag",
+     "value": "crouching"
+    },
+    {
+     "kind": "tag",
+     "value": "floating"
+    },
+    {
+     "kind": "tag",
+     "value": "jumping"
+    },
+    {
+     "kind": "tag",
+     "value": "kneeling"
+    },
+    {
+     "kind": "tag",
+     "value": "leaning forward"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on bed"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on side"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on stomach"
+    },
+    {
+     "kind": "tag",
+     "value": "running"
+    },
+    {
+     "kind": "tag",
+     "value": "seiza"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting"
+    },
+    {
+     "kind": "tag",
+     "value": "squatting"
+    },
+    {
+     "kind": "tag",
+     "value": "standing"
+    },
+    {
+     "kind": "tag",
+     "value": "walking"
+    },
+    {
+     "kind": "tag",
+     "value": "wariza"
+    }
+   ]
+  },
+  {
+   "id": "legacy.facing",
+   "note": "旧互斥组: 朝向",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "backturned",
+     "facing away",
+     "facing viewer",
+     "from behind",
+     "from side",
+     "over shoulder",
+     "profile",
+     "sideways glance"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "backturned"
+    },
+    {
+     "kind": "tag",
+     "value": "facing away"
+    },
+    {
+     "kind": "tag",
+     "value": "facing viewer"
+    },
+    {
+     "kind": "tag",
+     "value": "from behind"
+    },
+    {
+     "kind": "tag",
+     "value": "from side"
+    },
+    {
+     "kind": "tag",
+     "value": "over shoulder"
+    },
+    {
+     "kind": "tag",
+     "value": "profile"
+    },
+    {
+     "kind": "tag",
+     "value": "sideways glance"
+    }
+   ]
+  },
+  {
+   "id": "legacy.camera_angle",
+   "note": "旧互斥组: 相机角度",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "dutch angle",
+     "eye-level shot",
+     "from above",
+     "from below",
+     "pov"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "dutch angle"
+    },
+    {
+     "kind": "tag",
+     "value": "eye-level shot"
+    },
+    {
+     "kind": "tag",
+     "value": "from above"
+    },
+    {
+     "kind": "tag",
+     "value": "from below"
+    },
+    {
+     "kind": "tag",
+     "value": "pov"
+    }
+   ]
+  },
+  {
+   "id": "legacy.camera_dist",
+   "note": "旧互斥组: 景别",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "close-up",
+     "cowboy shot",
+     "extreme close-up",
+     "full body",
+     "portrait",
+     "upper body",
+     "wide shot"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "close-up"
+    },
+    {
+     "kind": "tag",
+     "value": "cowboy shot"
+    },
+    {
+     "kind": "tag",
+     "value": "extreme close-up"
+    },
+    {
+     "kind": "tag",
+     "value": "full body"
+    },
+    {
+     "kind": "tag",
+     "value": "portrait"
+    },
+    {
+     "kind": "tag",
+     "value": "upper body"
+    },
+    {
+     "kind": "tag",
+     "value": "wide shot"
+    }
+   ]
+  },
+  {
+   "id": "legacy.arms_pos",
+   "note": "旧互斥组: 手臂姿态",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "arms behind back",
+     "arms crossed",
+     "arms up",
+     "covering eyes with hands",
+     "hand in own hair",
+     "hands on hips",
+     "hugging own legs",
+     "self hug"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "arms behind back"
+    },
+    {
+     "kind": "tag",
+     "value": "arms crossed"
+    },
+    {
+     "kind": "tag",
+     "value": "arms up"
+    },
+    {
+     "kind": "tag",
+     "value": "covering eyes with hands"
+    },
+    {
+     "kind": "tag",
+     "value": "hand in own hair"
+    },
+    {
+     "kind": "tag",
+     "value": "hands on hips"
+    },
+    {
+     "kind": "tag",
+     "value": "hugging own legs"
+    },
+    {
+     "kind": "tag",
+     "value": "self hug"
+    }
+   ]
+  },
+  {
+   "id": "legacy.emotion_opp",
+   "note": "旧互斥组: 情绪对立",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "angry",
+     "angry face",
+     "confident",
+     "embarrassed",
+     "happy",
+     "sad",
+     "scared",
+     "shy",
+     "smiling",
+     "smug",
+     "surprised"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "angry"
+    },
+    {
+     "kind": "tag",
+     "value": "angry face"
+    },
+    {
+     "kind": "tag",
+     "value": "confident"
+    },
+    {
+     "kind": "tag",
+     "value": "embarrassed"
+    },
+    {
+     "kind": "tag",
+     "value": "happy"
+    },
+    {
+     "kind": "tag",
+     "value": "sad"
+    },
+    {
+     "kind": "tag",
+     "value": "scared"
+    },
+    {
+     "kind": "tag",
+     "value": "shy"
+    },
+    {
+     "kind": "tag",
+     "value": "smiling"
+    },
+    {
+     "kind": "tag",
+     "value": "smug"
+    },
+    {
+     "kind": "tag",
+     "value": "surprised"
+    }
+   ]
+  },
+  {
+   "id": "legacy.body_wet",
+   "note": "旧互斥组: 身体状态",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "dirty",
+     "muddy",
+     "oiled skin",
+     "snow on skin",
+     "sweaty",
+     "wet",
+     "wet clothes",
+     "wet hair"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "dirty"
+    },
+    {
+     "kind": "tag",
+     "value": "muddy"
+    },
+    {
+     "kind": "tag",
+     "value": "oiled skin"
+    },
+    {
+     "kind": "tag",
+     "value": "snow on skin"
+    },
+    {
+     "kind": "tag",
+     "value": "sweaty"
+    },
+    {
+     "kind": "tag",
+     "value": "wet"
+    },
+    {
+     "kind": "tag",
+     "value": "wet clothes"
+    },
+    {
+     "kind": "tag",
+     "value": "wet hair"
+    }
+   ]
+  },
+  {
+   "id": "legacy.headwear",
+   "note": "旧互斥组: 头饰占用",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "animal ear headwear",
+     "baseball cap",
+     "beret",
+     "bunny ears headwear",
+     "flower crown",
+     "hairband",
+     "halo",
+     "headphones on head",
+     "straw hat",
+     "witch hat"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "animal ear headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "baseball cap"
+    },
+    {
+     "kind": "tag",
+     "value": "beret"
+    },
+    {
+     "kind": "tag",
+     "value": "bunny ears headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "flower crown"
+    },
+    {
+     "kind": "tag",
+     "value": "hairband"
+    },
+    {
+     "kind": "tag",
+     "value": "halo"
+    },
+    {
+     "kind": "tag",
+     "value": "headphones on head"
+    },
+    {
+     "kind": "tag",
+     "value": "straw hat"
+    },
+    {
+     "kind": "tag",
+     "value": "witch hat"
+    }
+   ]
+  },
+  {
+   "id": "legacy.eyewear_occ",
+   "note": "旧互斥组: 眼部位占用",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "blindfold",
+     "eye mask",
+     "glasses",
+     "mask over eyes",
+     "reading glasses",
+     "sunglasses"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "blindfold"
+    },
+    {
+     "kind": "tag",
+     "value": "eye mask"
+    },
+    {
+     "kind": "tag",
+     "value": "glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "mask over eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "reading glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "sunglasses"
+    }
+   ]
+  },
+  {
+   "id": "legacy.season",
+   "note": "旧互斥组: 季节",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "autumn",
+     "spring (season)",
+     "summer",
+     "winter"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "autumn"
+    },
+    {
+     "kind": "tag",
+     "value": "spring (season)"
+    },
+    {
+     "kind": "tag",
+     "value": "summer"
+    },
+    {
+     "kind": "tag",
+     "value": "winter"
+    }
+   ]
+  },
+  {
+   "id": "legacy.location_indoor",
+   "note": "旧互斥组: 室内外场景",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "beach",
+     "bedroom",
+     "cafe interior",
+     "city street",
+     "classroom",
+     "forest",
+     "indoors",
+     "laboratory",
+     "library",
+     "outdoors",
+     "rooftop"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "beach"
+    },
+    {
+     "kind": "tag",
+     "value": "bedroom"
+    },
+    {
+     "kind": "tag",
+     "value": "cafe interior"
+    },
+    {
+     "kind": "tag",
+     "value": "city street"
+    },
+    {
+     "kind": "tag",
+     "value": "classroom"
+    },
+    {
+     "kind": "tag",
+     "value": "forest"
+    },
+    {
+     "kind": "tag",
+     "value": "indoors"
+    },
+    {
+     "kind": "tag",
+     "value": "laboratory"
+    },
+    {
+     "kind": "tag",
+     "value": "library"
+    },
+    {
+     "kind": "tag",
+     "value": "outdoors"
+    },
+    {
+     "kind": "tag",
+     "value": "rooftop"
+    }
+   ]
+  },
+  {
+   "id": "legacy.art_style_core",
+   "note": "旧互斥组: 核心画风",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "anime screencap style",
+     "flat color",
+     "greyscale",
+     "lineart",
+     "monochrome",
+     "oil painting (medium)",
+     "sketch",
+     "watercolor (medium)"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "anime screencap style"
+    },
+    {
+     "kind": "tag",
+     "value": "flat color"
+    },
+    {
+     "kind": "tag",
+     "value": "greyscale"
+    },
+    {
+     "kind": "tag",
+     "value": "lineart"
+    },
+    {
+     "kind": "tag",
+     "value": "monochrome"
+    },
+    {
+     "kind": "tag",
+     "value": "oil painting (medium)"
+    },
+    {
+     "kind": "tag",
+     "value": "sketch"
+    },
+    {
+     "kind": "tag",
+     "value": "watercolor (medium)"
+    }
+   ]
+  },
+  {
+   "id": "legacy.mono_pair",
+   "note": "旧互斥组: 黑白成对",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "full color",
+     "greyscale",
+     "limited palette",
+     "monochrome"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "full color"
+    },
+    {
+     "kind": "tag",
+     "value": "greyscale"
+    },
+    {
+     "kind": "tag",
+     "value": "limited palette"
+    },
+    {
+     "kind": "tag",
+     "value": "monochrome"
+    }
+   ]
+  },
+  {
+   "id": "legacy.light_main",
+   "note": "旧互斥组: 主光源方向",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "backlighting",
+     "front lighting",
+     "rim lighting",
+     "side lighting"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "backlighting"
+    },
+    {
+     "kind": "tag",
+     "value": "front lighting"
+    },
+    {
+     "kind": "tag",
+     "value": "rim lighting"
+    },
+    {
+     "kind": "tag",
+     "value": "side lighting"
+    }
+   ]
+  },
+  {
+   "id": "suit-vs-tops",
+   "note": "连体套装(连衣裙/旗袍/制服) ↔ 分体上下装",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/套装与制服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/上装"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/下装"
+    }
+   ]
+  },
+  {
+   "id": "realism-vs-anime",
+   "note": "写实向 ↔ 二次元向",
+   "left": {
+    "kind": "sub",
+    "value": "风格媒介/写实向"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "风格媒介/二次元向"
+    }
+   ]
+  },
+  {
+   "id": "face_hair_cover",
+   "note": "遮脸发型 ↔ 露五官",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "hair over one eye",
+     "hair over both eyes",
+     "hidden eyes",
+     "shaded eyes"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "hair over one eye"
+    },
+    {
+     "kind": "tag",
+     "value": "hair over both eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "hidden eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "shaded eyes"
+    }
+   ]
+  },
+  {
+   "id": "ponytail_height",
+   "note": "马尾高度",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "ponytail",
+     "high ponytail",
+     "low ponytail",
+     "side ponytail"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "ponytail"
+    },
+    {
+     "kind": "tag",
+     "value": "high ponytail"
+    },
+    {
+     "kind": "tag",
+     "value": "low ponytail"
+    },
+    {
+     "kind": "tag",
+     "value": "side ponytail"
+    }
+   ]
+  },
+  {
+   "id": "buns_style",
+   "note": "丸子头形态",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "hair bun",
+     "double bun",
+     "messy bun"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "hair bun"
+    },
+    {
+     "kind": "tag",
+     "value": "double bun"
+    },
+    {
+     "kind": "tag",
+     "value": "messy bun"
+    }
+   ]
+  },
+  {
+   "id": "main_hand_weapon",
+   "note": "主武器单持",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "katana",
+     "sword",
+     "scythe",
+     "rapier",
+     "spear",
+     "axe",
+     "bow (weapon)",
+     "lightsaber",
+     "chainsaw"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "katana"
+    },
+    {
+     "kind": "tag",
+     "value": "sword"
+    },
+    {
+     "kind": "tag",
+     "value": "scythe"
+    },
+    {
+     "kind": "tag",
+     "value": "rapier"
+    },
+    {
+     "kind": "tag",
+     "value": "spear"
+    },
+    {
+     "kind": "tag",
+     "value": "axe"
+    },
+    {
+     "kind": "tag",
+     "value": "bow (weapon)"
+    },
+    {
+     "kind": "tag",
+     "value": "lightsaber"
+    },
+    {
+     "kind": "tag",
+     "value": "chainsaw"
+    }
+   ]
+  },
+  {
+   "id": "ranged_weapon",
+   "note": "远程武器",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "gun",
+     "pistol",
+     "sniper rifle"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "gun"
+    },
+    {
+     "kind": "tag",
+     "value": "pistol"
+    },
+    {
+     "kind": "tag",
+     "value": "sniper rifle"
+    }
+   ]
+  },
+  {
+   "id": "angle_group2",
+   "note": "拍摄角度细分",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "high angle",
+     "low angle",
+     "eye-level shot",
+     "first-person view",
+     "aerial view",
+     "drone shot"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "high angle"
+    },
+    {
+     "kind": "tag",
+     "value": "low angle"
+    },
+    {
+     "kind": "tag",
+     "value": "eye-level shot"
+    },
+    {
+     "kind": "tag",
+     "value": "first-person view"
+    },
+    {
+     "kind": "tag",
+     "value": "aerial view"
+    },
+    {
+     "kind": "tag",
+     "value": "drone shot"
+    }
+   ]
+  },
+  {
+   "id": "framing2",
+   "note": "取景细分",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "medium shot",
+     "medium close-up",
+     "close-up",
+     "extreme close-up"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "medium shot"
+    },
+    {
+     "kind": "tag",
+     "value": "medium close-up"
+    },
+    {
+     "kind": "tag",
+     "value": "close-up"
+    },
+    {
+     "kind": "tag",
+     "value": "extreme close-up"
+    }
+   ]
+  },
+  {
+   "id": "sit_style",
+   "note": "坐姿形态",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "seiza",
+     "wariza",
+     "yokozuwari",
+     "w-sitting",
+     "indian style",
+     "side sit",
+     "crossed legs",
+     "hugging own legs"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "seiza"
+    },
+    {
+     "kind": "tag",
+     "value": "wariza"
+    },
+    {
+     "kind": "tag",
+     "value": "yokozuwari"
+    },
+    {
+     "kind": "tag",
+     "value": "w-sitting"
+    },
+    {
+     "kind": "tag",
+     "value": "indian style"
+    },
+    {
+     "kind": "tag",
+     "value": "side sit"
+    },
+    {
+     "kind": "tag",
+     "value": "crossed legs"
+    },
+    {
+     "kind": "tag",
+     "value": "hugging own legs"
+    }
+   ]
+  },
+  {
+   "id": "orientation",
+   "note": "人物朝向",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "facing viewer",
+     "facing away",
+     "backturned",
+     "profile",
+     "from side",
+     "from behind"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "facing viewer"
+    },
+    {
+     "kind": "tag",
+     "value": "facing away"
+    },
+    {
+     "kind": "tag",
+     "value": "backturned"
+    },
+    {
+     "kind": "tag",
+     "value": "profile"
+    },
+    {
+     "kind": "tag",
+     "value": "from side"
+    },
+    {
+     "kind": "tag",
+     "value": "from behind"
+    }
+   ]
+  },
+  {
+   "id": "hold-sword-vs-katana",
+   "note": "泛指持剑 ↔ 具体刀种",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "holding sword"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "katana"
+    },
+    {
+     "kind": "tag",
+     "value": "rapier"
+    },
+    {
+     "kind": "tag",
+     "value": "sword"
+    },
+    {
+     "kind": "tag",
+     "value": "scythe"
+    }
+   ]
+  },
+  {
+   "id": "twilight_group",
+   "note": "晨昏词族",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "sunset",
+     "sunrise",
+     "dawn",
+     "dusk",
+     "golden hour"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "sunset"
+    },
+    {
+     "kind": "tag",
+     "value": "sunrise"
+    },
+    {
+     "kind": "tag",
+     "value": "dawn"
+    },
+    {
+     "kind": "tag",
+     "value": "dusk"
+    },
+    {
+     "kind": "tag",
+     "value": "golden hour"
+    }
+   ]
+  },
+  {
+   "id": "night_words",
+   "note": "夜晚词族",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "night",
+     "midnight",
+     "evening",
+     "blue hour"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "night"
+    },
+    {
+     "kind": "tag",
+     "value": "midnight"
+    },
+    {
+     "kind": "tag",
+     "value": "evening"
+    },
+    {
+     "kind": "tag",
+     "value": "blue hour"
+    }
+   ]
+  },
+  {
+   "id": "holiday_pick",
+   "note": "节日单选",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "christmas",
+     "halloween",
+     "valentine",
+     "new year"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "christmas"
+    },
+    {
+     "kind": "tag",
+     "value": "halloween"
+    },
+    {
+     "kind": "tag",
+     "value": "valentine"
+    },
+    {
+     "kind": "tag",
+     "value": "new year"
+    }
+   ]
+  },
+  {
+   "id": "legwear_suspender",
+   "note": "腿部固定件",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "garter straps",
+     "thigh strap",
+     "leg band"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "garter straps"
+    },
+    {
+     "kind": "tag",
+     "value": "thigh strap"
+    },
+    {
+     "kind": "tag",
+     "value": "leg band"
+    }
+   ]
+  },
+  {
+   "id": "swimsuit_type",
+   "note": "泳装类型",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "swimsuit",
+     "competition swimsuit",
+     "micro bikini",
+     "string bikini"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "swimsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "competition swimsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "micro bikini"
+    },
+    {
+     "kind": "tag",
+     "value": "string bikini"
+    }
+   ]
+  },
+  {
+   "id": "aged-vs-elderly",
+   "note": "幼态化 ↔ 老年",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "aged down",
+     "toddler",
+     "child"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "elderly"
+    },
+    {
+     "kind": "tag",
+     "value": "old woman"
+    },
+    {
+     "kind": "tag",
+     "value": "aged up"
+    },
+    {
+     "kind": "tag",
+     "value": "middle-aged"
+    }
+   ]
+  },
+  {
+   "id": "eye_shape",
+   "note": "眼型开合",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "wide eyes",
+     "narrow eyes",
+     "sleepy eyes",
+     "closed eyes",
+     "half-closed eyes"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "wide eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "narrow eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "sleepy eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "closed eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "half-closed eyes"
+    }
+   ]
+  },
+  {
+   "id": "mouth_state2",
+   "note": "嘴部状态2",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "pursed lips",
+     "quivering lips",
+     "lips parted slightly",
+     "wobbly mouth",
+     "wide grin",
+     "open mouth"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "pursed lips"
+    },
+    {
+     "kind": "tag",
+     "value": "quivering lips"
+    },
+    {
+     "kind": "tag",
+     "value": "lips parted slightly"
+    },
+    {
+     "kind": "tag",
+     "value": "wobbly mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "wide grin"
+    },
+    {
+     "kind": "tag",
+     "value": "open mouth"
+    }
+   ]
+  },
+  {
+   "id": "time_of_day",
+   "note": "时间点 (一天内互斥)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "daytime",
+     "noon",
+     "afternoon",
+     "sunset",
+     "sunrise",
+     "dawn",
+     "dusk",
+     "evening",
+     "night",
+     "midnight",
+     "blue hour"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "daytime"
+    },
+    {
+     "kind": "tag",
+     "value": "noon"
+    },
+    {
+     "kind": "tag",
+     "value": "afternoon"
+    },
+    {
+     "kind": "tag",
+     "value": "sunset"
+    },
+    {
+     "kind": "tag",
+     "value": "sunrise"
+    },
+    {
+     "kind": "tag",
+     "value": "dawn"
+    },
+    {
+     "kind": "tag",
+     "value": "dusk"
+    },
+    {
+     "kind": "tag",
+     "value": "evening"
+    },
+    {
+     "kind": "tag",
+     "value": "night"
+    },
+    {
+     "kind": "tag",
+     "value": "midnight"
+    },
+    {
+     "kind": "tag",
+     "value": "blue hour"
+    }
+   ]
+  },
+  {
+   "id": "weather_group",
+   "note": "天气并存 (non-strict: 重雨与闪电可并存)",
+   "strict": false,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "clear sky",
+     "overcast",
+     "rain",
+     "heavy rain",
+     "drizzle",
+     "thunderstorm",
+     "snowing",
+     "blizzard",
+     "hail",
+     "typhoon",
+     "tornado",
+     "sandstorm"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "clear sky"
+    },
+    {
+     "kind": "tag",
+     "value": "overcast"
+    },
+    {
+     "kind": "tag",
+     "value": "rain"
+    },
+    {
+     "kind": "tag",
+     "value": "heavy rain"
+    },
+    {
+     "kind": "tag",
+     "value": "drizzle"
+    },
+    {
+     "kind": "tag",
+     "value": "thunderstorm"
+    },
+    {
+     "kind": "tag",
+     "value": "snowing"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard"
+    },
+    {
+     "kind": "tag",
+     "value": "hail"
+    },
+    {
+     "kind": "tag",
+     "value": "typhoon"
+    },
+    {
+     "kind": "tag",
+     "value": "tornado"
+    },
+    {
+     "kind": "tag",
+     "value": "sandstorm"
+    }
+   ]
+  },
+  {
+   "id": "sky-visibility-vs-night",
+   "note": "晴空类 ↔ 夜晚时间点 (夜里看不见晴空)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "clear sky",
+     "daytime"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "night"
+    },
+    {
+     "kind": "tag",
+     "value": "midnight"
+    },
+    {
+     "kind": "tag",
+     "value": "starry sky"
+    },
+    {
+     "kind": "tag",
+     "value": "milky way"
+    },
+    {
+     "kind": "tag",
+     "value": "daytime"
+    }
+   ]
+  },
+  {
+   "id": "age_group",
+   "note": "年龄段 (单选)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "toddler",
+     "child",
+     "teen",
+     "young adult",
+     "middle-aged",
+     "mature",
+     "elderly",
+     "old woman",
+     "ageless"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "toddler"
+    },
+    {
+     "kind": "tag",
+     "value": "child"
+    },
+    {
+     "kind": "tag",
+     "value": "teen"
+    },
+    {
+     "kind": "tag",
+     "value": "young adult"
+    },
+    {
+     "kind": "tag",
+     "value": "middle-aged"
+    },
+    {
+     "kind": "tag",
+     "value": "mature"
+    },
+    {
+     "kind": "tag",
+     "value": "elderly"
+    },
+    {
+     "kind": "tag",
+     "value": "old woman"
+    },
+    {
+     "kind": "tag",
+     "value": "ageless"
+    }
+   ]
+  },
+  {
+   "id": "count_cardinality",
+   "note": "人数基数 (单选)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "1girl",
+     "1boy",
+     "2girls",
+     "3girls",
+     "2boys",
+     "multiple girls",
+     "multiple boys",
+     "crowd",
+     "1other"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "1girl"
+    },
+    {
+     "kind": "tag",
+     "value": "1boy"
+    },
+    {
+     "kind": "tag",
+     "value": "2girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3girls"
+    },
+    {
+     "kind": "tag",
+     "value": "2boys"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple girls"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple boys"
+    },
+    {
+     "kind": "tag",
+     "value": "crowd"
+    },
+    {
+     "kind": "tag",
+     "value": "1other"
+    }
+   ]
+  },
+  {
+   "id": "solo-vs-multi",
+   "note": "单人 ↔ 多人 (1girl+solo 黄金组合保留)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "solo",
+     "solo focus"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "2girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3girls"
+    },
+    {
+     "kind": "tag",
+     "value": "2boys"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple girls"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple boys"
+    },
+    {
+     "kind": "tag",
+     "value": "crowd"
+    }
+   ]
+  },
+  {
+   "id": "zero-others-vs-multi",
+   "note": "无他人 ↔ 多人卡 (0others 表示画面只有主体)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "0others"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "2girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3girls"
+    },
+    {
+     "kind": "tag",
+     "value": "2boys"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple girls"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple boys"
+    },
+    {
+     "kind": "tag",
+     "value": "crowd"
+    },
+    {
+     "kind": "tag",
+     "value": "1boy"
+    }
+   ]
+  },
+  {
+   "id": "season-vs-weather",
+   "note": "季节 ↔ 明显不符的天气",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "spring (season)",
+     "summer"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "snowing"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard"
+    },
+    {
+     "kind": "tag",
+     "value": "snowflakes falling"
+    }
+   ]
+  },
+  {
+   "id": "season-vs-weather2",
+   "note": "冬 ↔ 夏雨/酷暑表现",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "winter"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "heat haze"
+    }
+   ]
+  },
+  {
+   "id": "sleep-vs-active",
+   "note": "睡眠/困倦 ↔ 剧烈活动",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "sleeping",
+     "unconscious",
+     "sleepy",
+     "yawning",
+     "tired"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "dancing"
+    },
+    {
+     "kind": "tag",
+     "value": "running"
+    },
+    {
+     "kind": "tag",
+     "value": "jumping"
+    },
+    {
+     "kind": "tag",
+     "value": "sparring"
+    },
+    {
+     "kind": "tag",
+     "value": "swimming"
+    },
+    {
+     "kind": "tag",
+     "value": "excited"
+    }
+   ]
+  },
+  {
+   "id": "starry-vs-daytime",
+   "note": "星空/银河 ↔ 白天时间点 (夜里才见星)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "starry sky",
+     "milky way"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "daytime"
+    },
+    {
+     "kind": "tag",
+     "value": "noon"
+    },
+    {
+     "kind": "tag",
+     "value": "afternoon"
+    },
+    {
+     "kind": "tag",
+     "value": "morning mist"
+    }
+   ]
+  }
+ ]
+}

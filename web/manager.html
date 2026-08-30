@@ -23,8 +23,9 @@
       <button id="btnTemplate" class="btn" title="按当前分类结构导出模板 (基础/全量两种), 可发给 AI 补充后从「导入」回来">📤 导出模板</button>
       <button id="btnImport" class="btn" title="导入 .md 模板/标签文件 (预览确认后入库) 或 .json 库文件">📥 导入</button>
       <button id="btnBackupSave" class="btn" title="把当前标签库完整存入 data/备份库/, 可随时恢复">💾 存为默认库</button>
-      <button id="btnBackupRestore" class="btn" title="从 data/备份库/ 恢复上次保存的标签库 (覆盖当前)">↺ 恢复备份库</button>
-      <button id="btnClearLib" class="btn danger" title="清空全部修改, 回到出厂默认库 (可选先导出全量模板)">🗑 清空标签库</button>
+      <button id="btnBackupRestore" class="btn" title="恢复你的默认库 (有用户备份用用户备份; 没有则恢复出厂库)">↺ 恢复默认库</button>
+      <button id="btnClearLib" class="btn danger" title="完全清空标签库 (0分类0标签, 不动备份; 建议先导出全量模板)">🗑 清空标签库</button>
+      <button id="btnOneWay" class="btn" title="单向删除: 开=只能从管理页删(文件夹自动回填) / 关=双向同步(文件夹里删分类也会删库, 进 _trash 可找回)">🔒 单向删除</button>
     </div>
   </header>
 
@@ -70,6 +71,7 @@
   </footer>
 
   <input type="file" id="fileInput" accept=".md,.txt,.json" class="hidden" />
+  <input type="file" id="conflictsFileInput" accept=".json" class="hidden" />
 </div>
 
 <!-- 导出模板: 二选一 -->
@@ -102,10 +104,22 @@
 </div>
 
 <!-- 清空标签库: 三选一 -->
+<!-- 导入方式选择: 标签库文件 / 反冲突文件 -->
+<div id="importChoiceDialog" class="modal hidden">
+  <div class="modal-box">
+    <h3>📥 导入</h3>
+    <div class="modal-actions col">
+      <button id="importTags" class="btn primary">🏷 标签库文件 (.md 模板 / .json 库)</button>
+      <button id="importConflicts" class="btn">🧷 反冲突文件 (conflicts.json, 可替换/合并)</button>
+      <button id="importChoiceCancel" class="btn">取消</button>
+    </div>
+  </div>
+</div>
+
 <div id="clearDialog" class="modal hidden">
   <div class="modal-box">
     <h3>🗑 清空标签库</h3>
-    <p class="muted">清空 = 删除你的全部修改, 回到出厂默认库 (标签库文件夹同步重建)。<b>建议先导出全量模板或「💾 存为默认库」留底。</b></p>
+    <p class="muted">清空 = 用户库完全清空 (0 分类 0 标签, 文件夹同步清空), 等待导入新的全量模板。<b>不影响备份库; 建议先导出全量模板或「💾 存为默认库」留底。</b></p>
     <div class="modal-actions col">
       <button id="clearExport" class="btn primary">✅ 确定【先导出现有标签库完整模板文件】</button>
       <button id="clearOk" class="btn danger">✅ 确定（直接清空）</button>
