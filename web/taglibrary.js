@@ -344,14 +344,34 @@ export function buildPanelWidget(node, container) {
       el.title = t.enabled === false
         ? "已停用 — 点击启用"
         : "已启用 · 拖动排序 / 📌随机必含 / ✕移除";
+      const isFill = fillCats && filledSet.has(t.en.toLowerCase()) && !t.pinned;
       el.innerHTML =
-        `<span class="tl-pin${t.pinned ? " pinned" : ""}" title="随机时必含">📌</span>` +
+        (isFill ? `<span class="tl-pin ghost" title="自动载入 — 右键钉选后不被覆盖">📌</span>`
+                : `<span class="tl-pin${t.pinned ? " pinned" : ""}" title="随机时必含">📌</span>`) +
         `<b>${chipLabel(t)}</b>` +
         (t.zh && getLang() === "en" ? `<i class="t-zh">${t.zh}</i>` : "") +
         `<span class="tl-x" title="移除">✕</span>`;
       el.querySelector(".tl-pin").onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
       el.querySelector(".tl-x").onclick = (e) => { e.stopPropagation(); removeTagIdx(idx); };
       el.onclick = () => toggleEnabledIdx(idx);
+      el.oncontextmenu = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 右键菜单: 📌 钉选 (自动/填充不覆盖) / ✕ 移除
+        const menu = document.createElement("div");
+        menu.className = "tl-chip-menu";
+        menu.innerHTML = `
+          <button data-a="pin">${t.pinned ? "📍 取消钉选" : "📌 钉选 (自动/填充不覆盖)"}</button>
+          <button data-a="del" class="danger">✕ 移除标签</button>`;
+        document.body.appendChild(menu);
+        const r = menu.getBoundingClientRect();
+        menu.style.left = Math.min(e.clientX, innerWidth - r.width - 8) + "px";
+        menu.style.top = Math.min(e.clientY, innerHeight - r.height - 8) + "px";
+        const close = () => { menu.remove(); document.removeEventListener("click", close); };
+        setTimeout(() => document.addEventListener("click", close), 0);
+        menu.querySelector('[data-a="pin"]').onclick = (ev) => { ev.stopPropagation(); togglePinIdx(idx); close(); };
+        menu.querySelector('[data-a="del"]').onclick = (ev) => { ev.stopPropagation(); removeTagIdx(idx); close(); };
+      };
       el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", String(idx)); el.classList.add("dragging"); };
       el.ondragend = () => { el.classList.remove("dragging"); chipzoneEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); };
       el.ondragover = (e) => { e.preventDefault(); el.classList.add("drop-target"); };
@@ -535,8 +555,9 @@ export function buildPanelWidget(node, container) {
     const st = getState(node);
     const nsfwOn = getNsfwEffective(node);
     const excluded = new Set(st.exclude_categories || []);
-    // ① 清空: 非"排除类目"的已有标签全部清掉 (排除类目的标签保留不动)
+    // ① 清空: 非"排除类目"的已有标签清掉; 📌钉选标签与排除类目标签保留
     const keptTags = st.tags.filter((t) => {
+      if (t.pinned) return true;
       const p = LIB_PATH.get(String(t.en).toLowerCase());
       return p && excluded.has(p[0]);
     });

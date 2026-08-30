@@ -127,6 +127,9 @@ class TagLibraryNode:
         tags = []
         seen_cat = snap.cat_names
         cat_of_sub, sub_of = snap.cat_of_sub, snap.sub_of
+        # 按大类稳定排序 (分类序 = 库定义序): shuffle 抽取序会让同类词分散,
+        # 前端分组标题随 lastGroup 反复切换 (同一大类显示多次)。
+        ordered = sorted(ordered, key=lambda i: cat_of_sub[sub_of[i]])
         for i in ordered:
             d = {"en": snap.tag_text[i], "weight": snap.base_weights[i],
                  "zh": snap.tag_zh[i], "nsfw": bool(snap.nsfw_flag[i]),

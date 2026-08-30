@@ -388,3 +388,19 @@ export function injectPanelStyle() {
   el.textContent = CSS;
   document.head.appendChild(el);
 }
+
+/* chip 右键菜单 (钉选/移除) */
+.tl-chip-menu {
+  position: fixed; z-index: 99999; min-width: 180px;
+  background: rgba(28,30,38,.97); border: 1px solid rgba(128,140,160,.4);
+  border-radius: 8px; padding: 4px; box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  display: flex; flex-direction: column;
+}
+.tl-chip-menu button {
+  background: none; border: none; color: #e3e7ee; text-align: left;
+  padding: 6px 12px; font-size: 12.5px; cursor: pointer; border-radius: 5px;
+}
+.tl-chip-menu button:hover { background: rgba(255,255,255,.08); }
+.tl-chip-menu button.danger { color: #ff8a8a; }
+/* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) */
+.tl-pin.ghost { opacity: .28; cursor: default; }
