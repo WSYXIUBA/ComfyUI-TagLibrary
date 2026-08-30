@@ -194,6 +194,12 @@ input[type=checkbox] { accent-color: var(--accent); width: 15px; height: 15px; c
 tr.disabled-tag { opacity: 0.45; }
 .empty { padding: 40px; text-align: center; color: var(--muted); }
 
+/* 性别符号: ♀粉 / ♂蓝 */
+.mt-gsym { font-weight: 700; margin-right: 3px; }
+.mt-gsym.g-f { color: #ff6b9d; }
+.mt-gsym.g-m { color: #54a0ff; }
+.mtag .mt-gsym { text-shadow: 0 0 4px currentColor; }
+
 /* NSFW 标记行: 左侧细红条 + 轻微暖色 */
 .nsfw-chk { accent-color: #ff6b6b; }
 tr.nsfw-row td:first-child { box-shadow: inset 3px 0 0 rgba(255,107,107,.75); }

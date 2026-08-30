@@ -383,7 +383,10 @@
       el.className = "mtag" + (tag.nsfw ? " nsfw" : "") + (tag.enabled === false ? " off" : "");
       el.title = "右键: 编辑标签\\n左键拖拽排序不可用 (chip 模式), 编辑请右键";
       const zh = (tag.zh || "").trim();
+      const gsym = tag.gender === "female" ? '<span class="mt-gsym g-f">♀</span>'
+                 : tag.gender === "male" ? '<span class="mt-gsym g-m">♂</span>' : "";
       el.innerHTML =
+        gsym +
         `<span class="mt-en">${escapeHtml(tag.en)}</span>` +
         (zh ? `<span class="mt-zh">${escapeHtml(zh)}</span>` : "") +
         (tag.weight && tag.weight !== 1.0 ? `<span class="mt-w">${tag.weight}</span>` : "") +
@@ -418,6 +421,13 @@
       <div class="mt-row">
         <label class="mt-chk"><input type="checkbox" data-f="nsfw" ${tag.nsfw ? "checked" : ""}/> 🔞 NSFW</label>
         <label class="mt-chk"><input type="checkbox" data-f="enabled" ${tag.enabled !== false ? "checked" : ""}/> 启用</label>
+        <label class="mt-chk">性别
+          <select data-f="gender">
+            <option value="" ${!tag.gender ? "selected" : ""}>双性</option>
+            <option value="female" ${tag.gender === "female" ? "selected" : ""}>♀ 女性</option>
+            <option value="male" ${tag.gender === "male" ? "selected" : ""}>♂ 男性</option>
+          </select>
+        </label>
       </div>
       <button data-act="conf" class="mt-conf-btn">🧷 反冲突设置…</button>
       <div class="mt-actions">
@@ -445,6 +455,8 @@
       if (!Number.isNaN(w) && w > 0 && w <= 3) tag.weight = w; else delete tag.weight;
       tag.aliases = g("aliases").value.split(",").map((s) => s.trim()).filter(Boolean);
       if (g("nsfw").checked) tag.nsfw = true; else delete tag.nsfw;
+      const gv = g("gender") ? g("gender").value : "";
+      if (gv === "female" || gv === "male") tag.gender = gv; else delete tag.gender;
       tag.enabled = g("enabled").checked;
       markDirty(); renderTable(); closeTagMenu();
     };
@@ -572,9 +584,13 @@
       if (!en) { skipped++; continue; }
       const zh = parts[1] || "";
       const weight = Math.min(3, Math.max(0.05, parseFloat(parts[2]) || 1.0));
-      const nsfwFlag = (parts[3] || "").toLowerCase() === "nsfw" || undefined;
+      const flagCol = (parts[3] || "").toLowerCase();
+      const nsfwFlag = flagCol.includes("nsfw") || undefined;
+      const gFlag = flagCol.includes("♀") || flagCol.includes("female") ? "female"
+        : flagCol.includes("♂") || flagCol.includes("male") ? "male" : "";
       const tag = { id: uidIn(taken, `${sub.id}.${slugify(en)}`), en, zh, weight, aliases: [], enabled: true };
       if (nsfwFlag) tag.nsfw = true;
+      if (gFlag) tag.gender = gFlag;
       sub.tags.push(tag);
       added++;
     }
@@ -587,17 +603,25 @@
      按当前库的分类结构实时生成 .md; 说明写在 HTML 注释里 (导入解析时被忽略)。 */
   function fmtTag(t) {
     let s = t.en || "";
-    if (t.zh) s += `(${t.zh})`;
+    const hasCJK = (x) => /[一-鿿]/.test(x || "");
+    if (t.zh && hasCJK(t.zh)) s += `(${t.zh})`;
     if (t.weight && t.weight !== 1.0) s += `{${t.weight}}`;
     if (t.nsfw) s += "[nsfw]";
+    if (t.gender === "female") s += "[♀]";
+    else if (t.gender === "male") s += "[♂]";
     return s;
   }
 
   const TPL_RULES = ` 1. 保持「# 大分类」「## 子分类」两级标题结构 (全量模板重构分类时除外, 见下)
  2. 每行写多个标签, 用逗号分隔; 单个标签语法:
-      english(中文翻译){权重}[nsfw]
-    - 中文翻译尽量填写; 权重可省略 (默认 1.0); NSFW 词必须带 [nsfw] 后缀
-    - 例: smile(微笑){1.1}, long hair(长发), some_word(某描述){1.0}[nsfw]
+      english(中文翻译){权重}[nsfw][♀|♂]
+    - 中文翻译尽量填写; 权重可省略 (默认 1.0)
+    - [nsfw]: NSFW/裸露类词必须带此标记 (节点 NSFW 开关控制显示与输出)
+    - [♀] / [♂]: 绝对性别专属词标记 (女性专属如 1girl/milf 标 [♀]; 男性专属如
+      1boy/hunky 标 [♂])。只标绝对性别词! 比基尼/女仆装/连裤袜等双性可穿的不要标。
+      节点性别开关(♀模式剔男性词/♂模式剔女性词)按此标记过滤
+    - 例: smile(微笑){1.1}, 1girl(单女孩)[♀], hunky(健硕男性)[♂],
+          some_word(某描述){1.0}[nsfw]
  3. 完成后把整个文件内容直接输出返回 (保持 Markdown 格式)
 导入: 回填的文件 → 管理页「📥 导入」, 自动按分类归位+去重, 预览确认后入库`;
 
