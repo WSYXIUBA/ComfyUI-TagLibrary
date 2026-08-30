@@ -179,9 +179,6 @@ BATCH5 = {
             ("covering breasts", "遮挡胸口"),
         ],
     },
-    "subject.s3": {
-        "adds2": [],
-    },
 }
 
 # 清理占位 (None zh) 条目
