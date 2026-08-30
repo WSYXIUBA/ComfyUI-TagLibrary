@@ -242,10 +242,12 @@ def main() -> None:
                      "manual", 1)
     check("去重保序", dup[0] == "masterpiece, smile", dup[0])
 
-    # 中文搜索命中别名
+    # 中文搜索命中别名 (扩库后 zh 带"月光"的标签有4个, 断言改为: 命中即证明过滤生效)
     __r_sf = node.build('{"search_text":"月光","fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 11)
     sf = __r_sf["result"] if isinstance(__r_sf, dict) else __r_sf
-    check("中文搜索命中", "dappled moonlight" in sf[0], sf[0])
+    _moon_ok = any(w in sf[0] for w in ("dappled moonlight", "moonlight through window",
+                                        "blue moonlight", "silver moonlight")) and "moonlight" in sf[0]
+    check("中文搜索命中", _moon_ok, sf[0])
 
     # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
     ghost = node.build('{"selected":["no.such.tag","quality.s1.masterpiece"]}', "manual", 1)
