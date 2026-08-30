@@ -105,9 +105,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 banned = ctx.banned
                 banned.update(conflict_map.get(i, ()))
 
-    # ---------- 钉选 (含于排除类目时按 v1 语义丢弃) ----------
+    # ---------- 钉选 (用户拍板 B: 排除类目拦不住钉选; 钉选占用所在子类目配额) ----------
     fixed_ids: list[int] = []
     rest_ids: list[int] = []
+    pinned_sub_count: dict[int, int] = {}   # sub_id -> 该子分类被钉选占掉的名额数
     state_tags = state.get("tags") or []
 
     # v1 兼容: state["pinned"] 为标签原始 id 字符串列表 (旧工作流格式)
@@ -116,24 +117,23 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     for t in state_tags:
         if not isinstance(t, dict):
             continue
+        if not t.get("pinned"):
+            continue
         lo = str(t.get("en", "")).strip().lower()
         tid = snap.en_to_id.get(lo)
         if tid is None:
             continue
-        ci = cat_of_sub[sub_of[tid]]
-        if names[ci] in excl_cats:
+        if lo in ctx.used:
             continue
-        if t.get("pinned"):
-            if lo in ctx.used:
-                continue
-            # 钉选也受性别过滤 (与 NSFW 同语义: 排除类目钉选丢弃, 性别钉选丢弃)
-            g = str(t.get("gender") or "").strip().lower()
-            if gmode == "female" and g == "male":
-                continue
-            if gmode == "male" and g == "female":
-                continue
-            fixed_ids.append(tid)
-            ctx.used.add(lo)
+        # 钉选受性别过滤 (与 NSFW 同语义); 排除类目不再拦截 (钉选优先)
+        g = str(t.get("gender") or "").strip().lower()
+        if gmode == "female" and g == "male":
+            continue
+        if gmode == "male" and g == "female":
+            continue
+        fixed_ids.append(tid)
+        ctx.used.add(lo)
+        pinned_sub_count[sub_of[tid]] = pinned_sub_count.get(sub_of[tid], 0) + 1
     grow(fixed_ids)
 
     # ---------- recent 计数 (Smart diversity) ----------
@@ -208,6 +208,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             continue
         fixed_ids.append(tid)
         ctx.used.add(lo)
+        pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
     grow(fixed_ids)
 
     pool_order = list(range(len(snap.sub_names))) if not cfg.get("stage_order") else _stage_order(
@@ -232,6 +233,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             a = _int_or(r.get("min"), 1)
             b = _int_or(r.get("max"), 1)
             mn, mx = min(a, b), max(a, b)
+        # 钉选占用名额: 该子分类已钉 n 个 → 有效范围减 n (钉满上限则跳过)
+        if si in pinned_sub_count:
+            used_n = pinned_sub_count[si]
+            mn = max(0, mn - used_n)
+            mx = max(0, mx - used_n)
         if mx <= 0:
             continue
         want = rng.randint(mn, mx)
