@@ -12659,22 +12659,6 @@
        "meta": {}
       },
       {
-       "en": "crossed legs standing",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "交叉腿站",
-       "id": "pose.s1.crossed-legs-standing",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {}
-      },
-      {
        "en": "leaning forward",
        "aliases": [],
        "weight": 1.0,

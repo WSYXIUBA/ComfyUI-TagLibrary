@@ -106,13 +106,17 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
 
     cats = _merge_level(default.get("categories") or [],
                         user.get("categories") or [])
+    d_cat_map = {c.get("id"): c for c in (default.get("categories") or [])}
     out_cats: list[dict] = []
     for cat in cats:
         cid = cat.get("id")
         if cid in tombstones:
             continue
         cat = dict(cat)
-        subs = _merge_level(cat.get("subcategories") or [],
+        # ⚠ 默认库版本作二级 merge 底座: cats 里同 id 分类是"用户版整体优先",
+        # 直接用它会把默认库新增的子分类丢掉 (deep_merge 遮蔽 bug, 阶段6扩库踩中)
+        d_subs = (d_cat_map.get(cid) or {}).get("subcategories") or []
+        subs = _merge_level(d_subs,
                             _find_user_subcats(user, cid))
         out_subs: list[dict] = []
         for sub in subs:
@@ -120,7 +124,11 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             if sid in tombstones:
                 continue
             sub = dict(sub)
-            tags = _merge_level(sub.get("tags") or [],
+            # ⚠ 标签层同理: 用户库同 id 子分类快照整体优先, 默认库新增标签会丢 —
+            # 用默认库版本子分类的 tags 作 default 侧底座 (阶段6扩库踩中, 与二级修复配套)
+            d_sub = next((s for s in d_subs if s.get("id") == sid), None)
+            d_tags = (d_sub or sub).get("tags") or []
+            tags = _merge_level(d_tags,
                                 _find_user_tags(user, sid))
             sub["tags"] = [t for t in tags if t.get("id") not in tombstones]
             # 三级: 归并孙分类 groups (用户版本优先)

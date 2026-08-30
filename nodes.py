@@ -30,9 +30,13 @@ except Exception:
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import library
     from . import tagconflicts
+    from . import runtime_snapshot
+    from . import random_engine
 except ImportError:  # pragma: no cover
     import library
     import tagconflicts
+    import runtime_snapshot
+    import random_engine
 
 
 class TagLibraryNode:
@@ -95,9 +99,6 @@ class TagLibraryNode:
         NSFW / 排除类目 / 互斥让位 / 配额全部在引擎池层面处理;
         本方法只做: 引擎调用 → 顺序组装 → 权重语法/去重/prefix/suffix → 回显。
         """
-        import random_engine
-        import runtime_snapshot
-
         snap = runtime_snapshot.get_snapshot(lib)
         cfg = random_engine.resolve_config(state, lib.get("settings") or {})
         weights_map = self._safe_json(category_weights)
