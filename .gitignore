@@ -1,14 +1,19 @@
-# 用户库不进仓库（属于个人数据）
-data/tag_library.user.json
-
+# 代码与出厂数据进仓库/进包
 __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
-
-# 文件夹式标签库 = 用户活数据 (首启自动从库重建), 不进仓库
-data/taglib/
-data/备份库/
 node.zip
 tests/*.png
 ComfyUI-TagLibrary-*.zip
+
+# 备份库: 只排除用户个人数据和脚本 (出厂备份进包, 随升级覆盖)
+data/备份库/tag_library.用户.backup.json
+data/备份库/_trash/
+data/备份库/*.bat
+data/备份库/*.ps1
+data/备份库/*.sh
+data/备份库/*.cmd
+
+# 升级弹窗标记 (运行时生成, 但出厂状态进包由打包工具带上)
+data/备份库/.升级待确认

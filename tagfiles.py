@@ -539,27 +539,33 @@ def folder_sync_plan(folder: str, lib_key: tuple) -> tuple:
 
     返回:
       ("baseline", None)         无清单/目录缺失 -> 整体镜像建立基线 (自动修复漂移)
-      ("pull", [changed files])  文件夹有外部改动 -> 增量吸入
+      ("pull", [changed files], [missing rels])  文件夹有外部改动 -> 处理
+        - changed  = 新增/修改的文件 -> 吸入库
+        - missing  = 文件夹里被删除的文件 -> 单向删除开=镜像回填; 关=库同步删除
       ("mirror", None)           库在清单之后变过 (保存漏镜像/JSON 被手改) -> 重新镜像
       ("none", None)             两侧一致, 无需动作
     """
     state = _load_sync_state(folder)
     fp = _scan_fingerprint(folder)
     if state is None or fp is None:
-        return ("baseline", None)
-    if fp != (state.get("fingerprint") or {}):
-        changed = []
+        return ("baseline", None, [])
+    old_fp = state.get("fingerprint") or {}
+    if fp != old_fp:
+        changed, missing = [], []
         for rel, meta in fp.items():
-            if (state.get("fingerprint") or {}).get(rel) != meta:
+            if old_fp.get(rel) != meta:
                 parts = rel.split(os.sep)
                 cat_dir = parts[0] if len(parts) >= 2 else None
                 sub_dir = parts[1] if len(parts) >= 3 else None
                 changed.append({"path": os.path.join(folder, rel),
                                 "cat_dir": cat_dir, "sub_dir": sub_dir})
-        return ("pull", changed)
+        for rel in old_fp:
+            if rel not in fp:
+                missing.append(rel)
+        return ("pull", changed, missing)
     if tuple(state.get("lib_key") or ()) != tuple(lib_key):
-        return ("mirror", None)
-    return ("none", None)
+        return ("mirror", None, [])
+    return ("none", None, [])
 
 
 def import_files_into(base: dict, files: list[dict]) -> dict:

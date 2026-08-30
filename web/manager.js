@@ -1218,7 +1218,22 @@ ${TPL_RULES}
     toast("已导出两个文件: conflicts.json + taglib_模板_全量.md, 一起发给 AI 即可生成反冲突文件");
   };
   $("#tplCancel").onclick = () => $("#templateDialog").classList.add("hidden");
-  $("#btnImport").onclick = () => $("#fileInput").click();
+  $("#btnImport").onclick = () => $("#importChoiceDialog").classList.remove("hidden");
+  $("#importChoiceCancel").onclick = () => $("#importChoiceDialog").classList.add("hidden");
+  $("#importTags").onclick = () => { $("#importChoiceDialog").classList.add("hidden"); $("#fileInput").click(); };
+  $("#importConflicts").onclick = () => { $("#importChoiceDialog").classList.add("hidden"); $("#conflictsFileInput").click(); };
+  $("#conflictsFileInput").onchange = async (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    try {
+      const obj = JSON.parse(await file.text());
+      if (!Array.isArray(obj.rules)) throw new Error("不是反冲突文件 (缺少 rules 数组)");
+      await openConflictsImport(obj.rules);
+    } catch (err) {
+      toast(`反冲突文件读取失败: ${err.message}`, true);
+    }
+  };
   $("#fileInput").onchange = (e) => {
     if (e.target.files.length) uploadFiles([...e.target.files]);
     e.target.value = "";
@@ -1239,16 +1254,39 @@ ${TPL_RULES}
 
   async function backupRestore() {
     if (dirty && !confirm("有未保存修改, 恢复会覆盖工作树。继续?")) return;
-    if (!confirm("恢复备份库 = 用 data/备份库/ 里的内容整体覆盖当前标签库。确定?")) return;
+    // 备份状态提示: 有用户备份恢复用户基准, 没有恢复出厂
+    let info = {};
+    try { info = await (await fetch("/taglib/api/library/backup")).json(); } catch {}
+    const hasUser = info.user?.exists, hasFactory = info.factory?.exists || info.legacy?.exists;
+    if (!hasUser && !hasFactory) { toast("还没有备份文件 (先「💾 存为默认库」)", true); return; }
+    const srcName = hasUser ? "你的默认库备份 (用户备份)" : "出厂备份 (插件自带)";
+    if (!confirm(`恢复默认库 = 用 ${srcName} 整体覆盖当前标签库。确定?`)) return;
     try {
-      const res = await fetch("/taglib/api/library/restore-backup", { method: "POST" });
+      const res = await fetch("/taglib/api/library/restore-backup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source: hasUser ? "user" : "factory" }) });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      toast("✅ 已从备份恢复标签库");
+      toast(`✅ 已恢复默认库 (${out.source === "user" ? "用户基准" : "出厂"})`);
       await load();
     } catch (err) {
       toast(`恢复失败: ${err.message}`, true);
     }
+  }
+
+  /* ---------- 升级弹窗: 标记文件存在 + 用户备份存在 → 问一次 ---------- */
+  async function checkUpgradePrompt() {
+    try {
+      const info = await (await fetch("/taglib/api/library/backup")).json();
+      if (!info.upgrade_prompt || !info.user?.exists) return;
+      if (!confirm("插件已更新。\n\n是否恢复你的默认库 (上次「存为默认库」保存的内容)?\n\n确定=恢复我的库 / 取消=使用新版官方库")) {
+        await fetch("/taglib/api/library/upgrade-dismiss", { method: "POST" });
+        toast("已保留新版官方库");
+        await load();
+        return;
+      }
+      await backupRestore();
+    } catch {}
   }
 
   async function clearLibrary(withExport) {
@@ -1257,7 +1295,7 @@ ${TPL_RULES}
     try {
       const r = await fetch(API, { method: "DELETE" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      toast(withExport ? "全量模板已导出, 标签库已清空 (回出厂默认)" : "标签库已清空 (回出厂默认)");
+      toast(withExport ? "全量模板已导出, 标签库已完全清空 (等待导入)" : "标签库已完全清空 (等待导入)");
       await load();
     } catch (err) {
       toast(`清空失败: ${err.message}`, true);
@@ -1270,6 +1308,40 @@ ${TPL_RULES}
   $("#clearOk").onclick = () => clearLibrary(false);
   $("#clearExport").onclick = () => clearLibrary(true);
   $("#clearCancel").onclick = () => $("#clearDialog").classList.add("hidden");
+  /* ---------- 单向删除开关 (库 settings.one_way_delete, 默认开) ---------- */
+  let oneWayDelete = true;
+  function renderOneWay() {
+    const b = $("#btnOneWay");
+    b.textContent = oneWayDelete ? "🔒 单向删除" : "🔄 双向同步";
+    b.classList.toggle("on", oneWayDelete);
+    b.title = oneWayDelete
+      ? "单向删除 (开): 只能从管理页删分类/标签, 直接删文件夹会被自动回填。点击切换为双向同步"
+      : "双向同步 (关): 在文件夹里删除分类文件, 库里同步删除 (快照存入 备份库/_trash 可找回)。点击切回单向";
+  }
+  $("#btnOneWay").onclick = async () => {
+    const next = !oneWayDelete;
+    if (!next && !confirm("切换为双向同步?\n\n之后在文件夹里删除分类/标签文件, 库里会同步删除 (快照存入 备份库/_trash 可手动找回)。")) return;
+    try {
+      const res = await fetch("/taglib/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { one_way_delete: next } }) });
+      const out = await res.json();
+      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+      oneWayDelete = !!out.settings.one_way_delete;
+      renderOneWay();
+      toast(oneWayDelete ? "🔒 单向删除已开启 (文件夹删除不删库)" : "🔄 双向同步已开启 (文件夹删除同步删库, 进 _trash)");
+    } catch (err) {
+      toast(`切换失败: ${err.message}`, true);
+    }
+  };
+  (async () => {
+    try {
+      const out = await (await fetch("/taglib/api/settings")).json();
+      oneWayDelete = out.settings?.one_way_delete !== false;
+    } catch {}
+    renderOneWay();
+  })();
+
   $("#btnSave").onclick = save;
   $("#btnCancel").onclick = async () => {
     if (dirty && !confirm("放弃当前全部未保存修改?")) return;
@@ -1342,4 +1414,5 @@ ${TPL_RULES}
   window.__taglib = { openImportPreview, openConflictsImport, getLib: () => lib };
 
   load().catch((err) => toast(`加载失败: ${err.message}`, true));
+  checkUpgradePrompt();
 })();

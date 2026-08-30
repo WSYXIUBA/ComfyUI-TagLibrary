@@ -95,7 +95,7 @@ def test_hot_sync_roundtrip():
         p1 = os.path.join(tmp, "质量与技术", "画质强化", "画质强化.md")
         with open(p1, "a", encoding="utf-8") as f:
             f.write("hot_sync_word(热同步词)\n")
-        action, changes = folder_sync_plan(tmp, (0, 0))
+        action, changes, missing = folder_sync_plan(tmp, (0, 0))
         check("决策 pull 且检出 1 个变更文件", action == "pull" and len(changes) == 1, str(changes))
         base = json.loads(json.dumps(lib2))
         stats3 = import_files_into(base, changes)
@@ -105,13 +105,13 @@ def test_hot_sync_roundtrip():
         # ③ 吸入后镜像 + 记账 → 决策 none; 库 mtime 变化 → 决策 mirror
         sync_to_folder(base, tmp)
         mark_synced(tmp, (0, 0))
-        action2, _ = folder_sync_plan(tmp, (0, 0))
+        action2, _, _ = folder_sync_plan(tmp, (0, 0))
         check("镜像+记账后决策 none", action2 == "none", action2)
-        action3, _ = folder_sync_plan(tmp, (9, 9))
+        action3, _, _ = folder_sync_plan(tmp, (9, 9))
         check("库 mtime 变化决策 mirror", action3 == "mirror", action3)
         # ④ 无清单 → baseline
         os.remove(os.path.join(tmp, "_sync_state.json"))
-        action4, _ = folder_sync_plan(tmp, (0, 0))
+        action4, _, _ = folder_sync_plan(tmp, (0, 0))
         check("无清单决策 baseline", action4 == "baseline", action4)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
