@@ -343,15 +343,15 @@ export function buildPanelWidget(node, container) {
       el.draggable = true;
       el.title = t.enabled === false
         ? "已停用 — 点击启用"
-        : "已启用 · 拖动排序 / 📌随机必含 / ✕移除";
-      const isFill = fillCats && filledSet.has(t.en.toLowerCase()) && !t.pinned;
+        : (t.pinned ? "📌 已钉选 (随机/填充不覆盖) · 拖动排序 / ✕移除"
+                    : "已启用 · 拖动排序 / 右键📌钉选 / ✕移除");
       el.innerHTML =
-        (isFill ? `<span class="tl-pin ghost" title="自动载入 — 右键钉选后不被覆盖">📌</span>`
-                : `<span class="tl-pin${t.pinned ? " pinned" : ""}" title="随机时必含">📌</span>`) +
+        (t.pinned ? `<span class="tl-pin pinned" title="随机时必含">📌</span>` : ``) +
         `<b>${chipLabel(t)}</b>` +
         (t.zh && getLang() === "en" ? `<i class="t-zh">${t.zh}</i>` : "") +
         `<span class="tl-x" title="移除">✕</span>`;
-      el.querySelector(".tl-pin").onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
+      const pinEl = el.querySelector(".tl-pin");
+      if (pinEl) pinEl.onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
       el.querySelector(".tl-x").onclick = (e) => { e.stopPropagation(); removeTagIdx(idx); };
       el.onclick = () => toggleEnabledIdx(idx);
       el.oncontextmenu = (e) => {
@@ -551,31 +551,87 @@ export function buildPanelWidget(node, container) {
     return subs;
   }
 
+  /* ---------- 🎲 填充: 子分类粒度抽取, 排除类目=0~0 ---------- */
+  function getFillRange(st, subId) {
+    if (st.fill_master ?? true) {
+      const lo = st.fill_master_min ?? 1, hi = st.fill_master_max ?? 1;
+      return [Math.min(lo, hi), Math.max(lo, hi)];
+    }
+    const r = (st.fill_sub_ranges || {})[subId] || { min: 1, max: 1 };
+    return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
+  }
+
+  /* 按库类目顺序稳定排序 (无类目/手动添加的排最前) — 钉选词不顶置, 随类目走 */
+  function catOrderIdx(catName) {
+    const cats = LIB_CACHE && Array.isArray(LIB_CACHE.categories) ? LIB_CACHE.categories : [];
+    const i = cats.findIndex((c) => c.name === catName);
+    return i === -1 ? 999 : i;
+  }
+  function tagCatOf(t) {
+    if (t._cat) return t._cat;
+    const p = LIB_PATH.get(String(t.en).toLowerCase());
+    return (p && p[0]) || "";
+  }
+  function sortByCat(tags) {
+    return tags
+      .map((t, i) => [t, i])
+      .sort((a, b) => {
+        const ca = tagCatOf(a[0]);
+        const cb = tagCatOf(b[0]);
+        const ia = ca ? catOrderIdx(ca) : -1;
+        const ib = cb ? catOrderIdx(cb) : -1;
+        return ia - ib || a[1] - b[1];
+      })
+      .map((x) => x[0]);
+  }
+  function attachCat(t) {
+    if (!t._cat) t._cat = tagCatOf(t);
+    return t;
+  }
+
   async function rollFill() {
     const st = getState(node);
     const nsfwOn = getNsfwEffective(node);
     const excluded = new Set(st.exclude_categories || []);
-    // ① 清空: 非"排除类目"的已有标签清掉; 📌钉选标签与排除类目标签保留
+    const keepPins = st.pinned_required !== false;
+    // ① 清空: 非"排除类目"的已有标签清掉; 📌钉选标签(必含开关开时)与排除类目标签保留
     const keptTags = st.tags.filter((t) => {
-      if (t.pinned) return true;
+      if (keepPins && t.pinned) return true;
       const p = LIB_PATH.get(String(t.en).toLowerCase());
       return p && excluded.has(p[0]);
-    });
-    // ② 按子分类抽取: 每个子分类读范围, 反冲突避让 (抽到一边另一边让位)
+    }).map(attachCat);
+    // 钉选占用所在子分类名额: (大类/子类) -> 已钉个数
+    const pinnedBySub = new Map();
+    if (keepPins) {
+      for (const t of keptTags) {
+        if (!t.pinned) continue;
+        const p = LIB_PATH.get(String(t.en).toLowerCase());
+        if (!p) continue;
+        const k = `${p[0]}/${p[1]}`;
+        pinnedBySub.set(k, (pinnedBySub.get(k) || 0) + 1);
+      }
+    }
+    // ② 按子分类抽取: 每个子分类读范围并扣除钉选占用, 反冲突避让
     const subPools = buildSubPools(nsfwOn);
     const usedEn = new Set(keptTags.map((t) => t.en.toLowerCase()));
     const conflictMap = st.avoid_conflicts !== false ? await fetchConflicts() : null;
     const picked = [];
     for (const sp of subPools) {
       const [mn, mx] = getFillRange(st, sp.subId);
-      if (mx <= 0) continue;
-      const n = mn + Math.floor(Math.random() * (mx - mn + 1));
+      const pk = pinnedBySub.get(`${sp.catName}/${sp.subName}`) || 0;
+      const lo = Math.max(0, mn - pk), hi = Math.max(0, mx - pk);
+      if (hi <= 0) continue; // 钉满/配额为 0 → 该子分类跳过
+      const n = lo + Math.floor(Math.random() * (hi - lo + 1));
       picked.push(...pickFrom(sp.tags, n, usedEn, conflictMap).map((t) => ({ ...t, _cat: sp.catName })));
     }
-    if (!picked.length) return;
-    // ③ 写回: 排除类目的保留标签 + 新填充
-    setState(node, { tags: [...keptTags, ...picked.map(({ _cat, ...rest }) => ({ ...rest, enabled: true }))] });
-    ui.fillGroups = groupByCat(picked);
+    if (!picked.length && !keptTags.some((t) => t.pinned)) return;
+    // ③ 写回: 全部按库类目顺序排列 (钉选不顶置, 随类目走); 分组标题含钉选保留词
+    const pinnedKept = keepPins ? keptTags.filter((t) => t.pinned && t._cat) : [];
+    ui.fillGroups = groupByCat([...pinnedKept, ...picked]);
+    setState(node, {
+      tags: sortByCat([...keptTags, ...picked])
+        .map(({ _cat, ...rest }) => ({ ...rest, enabled: rest.enabled !== false })),
+    });
     renderTags();
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
   }
@@ -1317,7 +1373,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       <div class="tp-set-h">节点参数 <span class="sub">· 存入当前节点, 随工作流保存</span></div>
       <div class="tp-set-card">
         ${row("📌 钉选标签必含", `<input type="checkbox" class="sv-pinned" ${st.pinned_required !== false ? "checked" : ""}/>`,
-          "开启后带 📌 的标签随机时一定出现")}
+          "开启后带 📌 的标签随机/填充时必含且不被覆盖, 并占掉其子类目的一个名额")}
         ${row("输出分隔符", `<select class="sv-sep">
             <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
             <option value="space" ${st.separator === "space" ? "selected" : ""}>空格</option>
@@ -2064,10 +2120,11 @@ app.registerExtension({
           const w = node.widgets?.find((x) => x.name === "selection_state");
           if (!w) return;
           const st = (() => { try { return JSON.parse(w.value || "{}"); } catch { return {}; } })();
-          // 只替换填充部分: 排除类目的保留标签 + 引擎抽到的标签
+          // 替换填充部分: 排除类目保留标签 + 📌钉选标签保留 (钉选语义不丢)
           const excluded = new Set(st.exclude_categories || []);
           const libPath = node._taglibGetLibPath?.() || new Map();
           const kept = (st.tags || []).filter((t) => {
+            if (t.pinned && st.pinned_required !== false) return true;
             const p = libPath.get(String(t.en).toLowerCase());
             return p && excluded.has(p[0]);
           });
@@ -2099,9 +2156,16 @@ app.registerExtension({
               enabled: true, _cat: cat,
             });
           }
-          // 分组标题数据: cat → fillGroups
+          // 分组标题数据: cat → fillGroups (钉选保留词也计入分组)
+          const keptWithCat = kept.map((t) => {
+            if (!t._cat) {
+              const p = libPath.get(String(t.en).toLowerCase());
+              t._cat = t._cat || (p && p[0]) || "";
+            }
+            return t;
+          });
           const groups = new Map();
-          for (const t of fresh) {
+          for (const t of [...keptWithCat.filter((x) => x.pinned), ...fresh]) {
             const k = t._cat || "其他";
             if (!groups.has(k)) groups.set(k, []);
             groups.get(k).push(t);
@@ -2115,7 +2179,17 @@ app.registerExtension({
           }
           node._mutexDropped = new Set((Array.isArray(dropped) ? dropped : [])
             .map((x) => String(x).toLowerCase()));
-          w.value = JSON.stringify({ ...st, tags: [...kept, ...fresh] });
+          // 按库类目顺序合并 (钉选不顶置, 随类目走)
+          const catIdx = (t) => {
+            const c = t._cat || "";
+            const arr = LIB_CACHE && Array.isArray(LIB_CACHE.categories) ? LIB_CACHE.categories : [];
+            const i = arr.findIndex((x) => x.name === c);
+            return c ? (i === -1 ? 999 : i) : -1;
+          };
+          const merged = [...keptWithCat, ...fresh].map((t, i) => [t, i])
+            .sort((a, b) => catIdx(a[0]) - catIdx(b[0]) || a[1] - b[1])
+            .map((x) => x[0]);
+          w.value = JSON.stringify({ ...st, tags: merged });
           node._taglibPanelApi?.refresh?.();
           node.setDirtyCanvas?.(true, true);
         } catch {}

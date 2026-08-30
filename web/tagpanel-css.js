@@ -393,8 +393,7 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 }
 .tl-chip-menu button:hover { background: rgba(255,255,255,.08); }
 .tl-chip-menu button.danger { color: #ff8a8a; }
-/* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) */
-.tl-pin.ghost { opacity: .28; cursor: default; }
+/* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) — 已废弃: 只在真钉选时显示 */
 `;
 
 export function injectPanelStyle() {
