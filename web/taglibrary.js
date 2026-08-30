@@ -143,6 +143,7 @@ export function buildPanelWidget(node, container) {
       <span class="tl-title">标签库</span>
       <span class="tl-head-spacer"></span>
       <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
+      <button class="tl-btn tl-gender-btn" data-act="gender" title="性别过滤: ⚧双性=不剔除 / ♀女性=剔除男性专属 / ♂男性=剔除女性专属">⚥</button>
       <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
       <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
@@ -173,6 +174,7 @@ export function buildPanelWidget(node, container) {
   const previewEl = $(".tl-preview");
   const modeSeg = $(".tl-mode-seg");
   const nsfwBtn = $(".tl-nsfw-btn");
+  const genderBtn = $(".tl-gender-btn");
 
   /* ---------- mode (二态: 手动 / 自动) — 两模式界面相同, 自动=queue 时引擎填充 ---------- */
   function syncModeWidgets() {
@@ -246,6 +248,37 @@ export function buildPanelWidget(node, container) {
   }
   nsfwBtn.addEventListener("click", toggleNsfw);
 
+  /* ---------- 性别三态 (关闭 ⚥ / 女性 ♀ 剔除男性专属 / 男性 ♂ 剔除女性专属) ---------- */
+  const GENDER_SEQ = ["off", "female", "male"];
+  const GENDER_LABEL = { off: "⚥", female: "♀", male: "♂" };
+  const GENDER_TITLE = {
+    off: "性别过滤: 关闭 (男女性专属标签都保留)",
+    female: "性别过滤: 女性 (剔除男性专属标签, 如 1boy/multiple boys)",
+    male: "性别过滤: 男性 (剔除女性专属标签, 如 1girl/milf)",
+  };
+  function getGender(node) {
+    const g = String(getState(node).gender || "off");
+    return GENDER_SEQ.includes(g) ? g : "off";
+  }
+  function renderGender() {
+    const g = getGender(node);
+    genderBtn.textContent = GENDER_LABEL[g];
+    genderBtn.title = GENDER_TITLE[g];
+    genderBtn.classList.toggle("on", g !== "off");
+    genderBtn.classList.toggle("g-female", g === "female");
+    genderBtn.classList.toggle("g-male", g === "male");
+    container.dataset.gender = g;
+  }
+  function cycleGender() {
+    const cur = getGender(node);
+    const next = GENDER_SEQ[(GENDER_SEQ.indexOf(cur) + 1) % GENDER_SEQ.length];
+    setState(node, { gender: next });
+    renderGender();
+    renderAll();
+    toast(GENDER_TITLE[next]);
+  }
+  genderBtn.addEventListener("click", cycleGender);
+
   /* ----------Added-tags view ----------
      chipzone 现在只渲染 state.tags —— 用户从 ➕窗口 添加进来的标签。
      enabled=false -> 灰色停用 (不参与输出/随机); 点击变绿色启用。
@@ -304,7 +337,7 @@ export function buildPanelWidget(node, container) {
       const el = document.createElement("span");
       const dropped = ui.mode === "auto" && node._mutexDropped?.has(String(t.en).toLowerCase());
       el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "")
-        + (dropped ? " tl-dropped" : "");
+        + (t.gender ? " gender" : "") + (dropped ? " tl-dropped" : "");
       el.draggable = true;
       el.title = t.enabled === false
         ? "已停用 — 点击启用"
@@ -551,9 +584,11 @@ export function buildPanelWidget(node, container) {
 
   function chipLabel(t) {
     const lang = getLang();
-    if (lang === "en") return t.en;
-    if (lang === "zh") return (t.zh || t.en);
-    return `${t.en}${t.zh ? `<span style="opacity:.55;font-size:10px">${t.zh}</span>` : ""}`;
+    const gsym = t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
+               : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
+    if (lang === "en") return gsym + t.en;
+    if (lang === "zh") return gsym + (t.zh || t.en);
+    return gsym + `${t.en}${t.zh ? `<span style="opacity:.55;font-size:10px">${t.zh}</span>` : ""}`;
   }
 
   function renderConflictBtn() {
@@ -566,7 +601,7 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderConflictBtn(); syncEngSeg();
+    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); syncEngSeg();
   }
 
   // 全局偏好变更 -> 本节点面板实时跟随。
@@ -711,7 +746,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-tag:hover { background:color-mix(in srgb, var(--c) 20%, transparent); transform:translateY(-1px); }
       .tp-tag.picked { background:var(--c); color:#fff; box-shadow:0 0 8px -2px var(--c); }
       .tp-tag.picked::before { content:"✓ "; }
-      .tp-tag.nsfw { --c:#e5484d; }   /* NSFW = 红色 (与管理页一致) */
+      .tp-tag.nsfw { --c:#e5484d; }
+      .tp-tag.gender { border-style: dashed; }
+      .tp-tag .tl-gsym { font-weight: 700; margin-right: 2px; }
+      .tp-tag .tl-gsym.g-f { color: #ff6b9d; }
+      .tp-tag .tl-gsym.g-m { color: #54a0ff; }   /* NSFW = 红色 (与管理页一致) */
       .tp-foot { display:flex; align-items:center; gap:10px; padding:11px 16px; border-top:1px solid rgba(255,255,255,.09); }
       .tp-count { font-size:13px; font-weight:600; color:#54a0ff; }
       .tp-btn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:inherit;
@@ -959,6 +998,10 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   function matches(t) {
     // NSFW 关 = 挑选器直接隐藏 nsfw 标签 (与填充/输出同规则)
     if (t.nsfw && !getNsfwEffective(node)) return false;
+    // 性别过滤同规则: 女性=隐藏男性专属, 男性=隐藏女性专属
+    const g = getGender(node);
+    if (g === "female" && t.gender === "male") return false;
+    if (g === "male" && t.gender === "female") return false;
     const q = ui.filter.trim().toLowerCase();
     if (!q) return true;
     return t.en.toLowerCase().includes(q) ||
@@ -1013,19 +1056,23 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
       const isExisting = existing.has(t.en.toLowerCase());
       const el = document.createElement("span");
-          el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
+          el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (t.gender ? " gender" : "") + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
           if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
           else {
-            el.title = t.nsfw ? "🔞 NSFW 标签" : "";
+            el.title = t.nsfw ? "🔞 NSFW 标签"
+              : t.gender === "female" ? "♀ 女性专属标签"
+              : t.gender === "male" ? "♂ 男性专属标签" : "";
             el.onclick = () => {
               const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
               if (i >= 0) ui.picked.splice(i, 1);
-              else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw });
+              else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw, gender: t.gender || "" });
               countEl.textContent = ui.picked.length;
               el.classList.toggle("picked", i < 0);
             };
           }
-          el.innerHTML = `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
+          el.innerHTML = (t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
+            : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "")
+            + `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
           grid.appendChild(el);
         }
         chipsBox.appendChild(grid);
@@ -2004,9 +2051,13 @@ app.registerExtension({
           const have = new Set(kept.map((t) => t.en.toLowerCase()));
           // NSFW 反查集: 回显数据没带 nsfw 时从库补 (旧后端兼容)
           const nsfwSet = new Set();
+          const genderSet = new Map();
           for (const c of (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || []) {
             for (const s of c.subcategories || []) {
-              for (const t of s.tags || []) if (t.nsfw) nsfwSet.add(String(t.en).toLowerCase());
+              for (const t of s.tags || []) {
+                if (t.nsfw) nsfwSet.add(String(t.en).toLowerCase());
+                if (t.gender) genderSet.set(String(t.en).toLowerCase(), t.gender);
+              }
             }
           }
           const fresh = [];
@@ -2017,9 +2068,11 @@ app.registerExtension({
             const p = libPath.get(t.en.toLowerCase());
             if (!cat && p) cat = p[0];
             have.add(t.en.toLowerCase());
+            const gSym = t.gender || genderSet.get(String(t.en).toLowerCase()) || "";
             fresh.push({
               en: t.en, zh: t.zh || "",
               nsfw: !!t.nsfw || nsfwSet.has(String(t.en).toLowerCase()),
+              gender: gSym,
               enabled: true, _cat: cat,
             });
           }

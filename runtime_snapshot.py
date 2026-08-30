@@ -73,11 +73,12 @@ class RuntimeSnapshot:
         "n_tags",
         "tag_ids", "tag_text", "base_weights", "spawn_rate", "priority_factor",
         "type_id", "type_names",
-        "nsfw_flag", "enabled_flag",
+        "nsfw_flag", "enabled_flag", "gender_flag",
         "sub_of", "cat_of_sub", "sub_names", "sub_keys", "cat_names",
         "sub_ids_str",
         "tag_zh", "tag_lower", "tag_aliases",
         "pools", "pools_nonsfw",
+        "pools_nofemale", "pools_nomale",
         "cat_tag_ids", "sub_tag_ids", "cat_subs", "sub_key_to_index", "sub_owner_cat",
         "en_to_id", "orig_id_to_int",
         "conflict_map", "require_closure", "boost_map", "cond_effects",
@@ -96,6 +97,7 @@ class RuntimeSnapshot:
         self.type_names: list[str] = []
         self.nsfw_flag = bytearray()
         self.enabled_flag = bytearray()
+        self.gender_flag = bytearray()      # 0=双性 1=female专属 2=male专属
         self.sub_of: list[int] = []           # tag → 子分类序号
         self.cat_of_sub: list[int] = []       # 子分类序号 → 大类序号
         self.sub_ids_str: list[str] = []      # 子分类原始 id 字符串 (selection_state 引用)
@@ -153,6 +155,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
 
     pools: dict[int, list[int]] = {}
     pools_nonsfw: dict[int, list[int]] = {}
+    pools_nofemale: dict[int, list[int]] = {}
+    pools_nomale: dict[int, list[int]] = {}
 
     tid = 0
     for cat in lib.get("categories", []) or []:
@@ -205,6 +209,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
                 snap.nsfw_flag.append(1 if nsfw else 0)
                 enabled = t.get("enabled", True) is not False
                 snap.enabled_flag.append(1 if enabled else 0)
+                g = str(t.get("gender") or "").strip().lower()
+                snap.gender_flag.append(1 if g == "female" else (2 if g == "male" else 0))
 
                 snap.sub_of.append(si)
                 _low = en.lower()
@@ -223,6 +229,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
 
             pools[si] = list(stags)
             pools_nonsfw[si] = list(snonsfw)
+            pools_nofemale[si] = [i for i in stags if snap.gender_flag[i] != 1]  # 剔女性专属
+            pools_nomale[si] = [i for i in stags if snap.gender_flag[i] != 2]    # 剔男性专属
 
     snap.n_tags = tid
     snap.sub_ids_str = sub_ids_str
@@ -241,6 +249,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
     snap.type_names = type_names
     snap.pools = pools
     snap.pools_nonsfw = pools_nonsfw
+    snap.pools_nofemale = pools_nofemale
+    snap.pools_nomale = pools_nomale
 
     # 规则编译 (mutex / requires / suppress / boost)
     raw_rules = raw_rules if raw_rules is not None else tagconflicts.load_rules()

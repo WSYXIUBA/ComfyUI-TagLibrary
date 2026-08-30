@@ -74,7 +74,7 @@ def find_sub(cat, sid):
     return next((s for s in cat.get("subcategories", []) if s["id"] == sid), None)
 
 
-def make_tag(sid, en, zh, weight=1.0, nsfw=False):
+def make_tag(sid, en, zh, weight=1.0, nsfw=False, gender=""):
     t = {
         "en": en, "zh": zh, "id": f"{sid}.{_slug(en)}",
         "weight": float(weight), "aliases": [],
@@ -84,6 +84,8 @@ def make_tag(sid, en, zh, weight=1.0, nsfw=False):
     }
     if nsfw:
         t["nsfw"] = True
+    if gender in ("female", "male"):
+        t["gender"] = gender
     return t
 
 
@@ -176,7 +178,9 @@ def apply_batch(lib_default, lib_user, batch):
         for item in adds:
             en, zh = item[0], item[1]
             weight = item[2] if len(item) > 2 and isinstance(item[2], (int, float)) else 1.0
-            nsfw = bool(item[3]) if len(item) > 3 else False
+            nsfw = bool(item[3]) if len(item) > 3 and item[3] is True else False
+            gender = item[2] if len(item) > 2 and item[2] in ("female", "male") else \
+                     (item[3] if len(item) > 3 and item[3] in ("female", "male") else "")
             lo = _norm(en)
             if lo in en_idx:
                 hit_lib, hit_cat, hit_sub, hit_tag = en_idx[lo][0]
@@ -193,7 +197,7 @@ def apply_batch(lib_default, lib_user, batch):
                 else:
                     skipped.append(f"add {en}: 已存在于 {[x[2]['id'] for x in en_idx[lo]]}")
                 continue
-            tag = make_tag(sid, en, zh, weight, nsfw)
+            tag = make_tag(sid, en, zh, weight, nsfw, gender)
             sub_d["tags"].append(tag)
             en_idx[lo] = [(lib_default, cat_d, sub_d, tag)]
             added += 1
