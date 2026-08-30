@@ -111,6 +111,29 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
   color: #7dffb0;
 }
 .tl-nsfw-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.55); }
+
+/* ---------- 性别三态按钮 (⚥关 / ♀女 / ♂男) ---------- */
+.tl-gender-btn { padding: 3px 8px; font-weight: 600; }
+.tl-gender-btn.g-female {
+  background: linear-gradient(135deg, rgba(255,107,157,.35), rgba(255,107,157,.18));
+  border-color: rgba(255,107,157,.65);
+  color: #ffb3d1;
+}
+.tl-gender-btn.g-female:hover { box-shadow: 0 0 10px -2px rgba(255,107,157,.55); }
+.tl-gender-btn.g-male {
+  background: linear-gradient(135deg, rgba(84,160,255,.35), rgba(84,160,255,.18));
+  border-color: rgba(84,160,255,.65);
+  color: #a8d1ff;
+}
+.tl-gender-btn.g-male:hover { box-shadow: 0 0 10px -2px rgba(84,160,255,.55); }
+
+/* 标签 chip 前缀性别符号: ♀粉 / ♂蓝; 通用(无符号)=绿, NSFW=红(已有) */
+.tl-gsym { font-weight: 700; margin-right: 3px; }
+.tl-gsym.g-f { color: #ff6b9d; }
+.tl-gsym.g-m { color: #54a0ff; }
+.tl-ttag.gender { border-color: color-mix(in srgb, #54a0ff 25%, rgba(255,255,255,.13)); }
+.tl-ttag.gender:has(.g-f) { border-color: rgba(255,107,157,.35); }
+.tl-ttag.gender.on { background: color-mix(in srgb, #2ecc71 14%, transparent); }
 /* 🎲填充标签的分组标题 */
 .tl-fill-group {
   flex-basis: 100%;

@@ -129,10 +129,12 @@ class TagLibraryNode:
         cat_of_sub, sub_of = snap.cat_of_sub, snap.sub_of
         for i in ordered:
             d = {"en": snap.tag_text[i], "weight": snap.base_weights[i],
-                 "zh": snap.tag_zh[i], "nsfw": bool(snap.nsfw_flag[i])}
+                 "zh": snap.tag_zh[i], "nsfw": bool(snap.nsfw_flag[i]),
+                 "gender": ("female" if snap.gender_flag[i] == 1 else
+                            "male" if snap.gender_flag[i] == 2 else "")}
             d["_cat"] = seen_cat[cat_of_sub[sub_of[i]]]
             echo_items.append({"en": d["en"], "zh": d["zh"], "cat": d["_cat"],
-                               "nsfw": d["nsfw"], "enabled": True})
+                               "nsfw": d["nsfw"], "gender": d["gender"], "enabled": True})
             tags.append(self._format_tag(d, use_weights_syntax))
 
         if dedupe:
@@ -194,13 +196,22 @@ class TagLibraryNode:
         return text
 
     @staticmethod
-    def _apply_nsfw(lib: dict, nsfw_on: bool) -> dict:
-        """nsfw_on=False 剔除 nsfw 标签; True 全量。"""
-        if nsfw_on:
+    def _apply_nsfw(lib: dict, nsfw_on: bool, gender: str = "off") -> dict:
+        """nsfw_on=False 剔除 nsfw 标签; True 全量。
+        gender: "off" 全量 / "female" 剔除男性专属 / "male" 剔除女性专属。"""
+        g = str(gender or "off").strip().lower()
+        if nsfw_on and g == "off":
             return lib
 
         def keep_tag(t: dict) -> bool:
-            return not bool(t.get("nsfw", False))
+            if not nsfw_on and bool(t.get("nsfw", False)):
+                return False
+            tg = str(t.get("gender") or "").strip().lower()
+            if g == "female" and tg == "male":
+                return False
+            if g == "male" and tg == "female":
+                return False
+            return True
 
         out_cats = []
         for cat in lib.get("categories", []):
@@ -282,7 +293,11 @@ class TagLibraryNode:
         lib = library.get_merged()
         # NSFW 二态开关: 面板 nsfw=true → 显示/输出 NSFW 标签; false(默认) → 剔除
         nsfw_on = bool(state.get("nsfw", False))
-        lib = self._apply_nsfw(lib, nsfw_on)
+        # 性别三态: "off"(全量) / "female"(剔除男性专属) / "male"(剔除女性专属)
+        gender = str(state.get("gender") or "off").strip().lower()
+        if gender not in ("off", "female", "male"):
+            gender = "off"
+        lib = self._apply_nsfw(lib, nsfw_on, gender)
 
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
@@ -395,6 +410,11 @@ class TagLibraryNode:
                 chosen = [by_id[i] for i in selected_ids if i in by_id]
             if not nsfw_on:
                 chosen = [t for t in chosen if not t.get("nsfw", False)]
+            # 手动输出也受性别过滤 (lib 已被 _apply_nsfw 过滤, 但 en 查不到时走 full_by_en 补底 → 再拦一道)
+            if gender == "female":
+                chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "male"]
+            elif gender == "male":
+                chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "female"]
             tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
         if dedupe:
@@ -417,6 +437,7 @@ class TagLibraryNode:
                                "zh": t.get("zh") or "",
                                "cat": t.get("_cat", ""),
                                "nsfw": bool(t.get("nsfw")),
+                               "gender": str(t.get("gender") or ""),
                                "enabled": True} for t in _auto_chosen]
             else:
                 echo_items = [{"en": p.strip(), "zh": "", "cat": "", "nsfw": False,

@@ -88,6 +88,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         else:
             excl_cats.add(e)
 
+    # 性别三态 (提前定义: 钉选过滤在 pools 选择之前用到)
+    gmode = str(state.get("gender") or "off").strip().lower()
+
     conflict_map = snap.conflict_map if avoid_conflicts else None
     cond_effects = snap.cond_effects if smart else []
     require_closure = snap.require_closure if smart else {}
@@ -122,6 +125,12 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             continue
         if t.get("pinned"):
             if lo in ctx.used:
+                continue
+            # 钉选也受性别过滤 (与 NSFW 同语义: 排除类目钉选丢弃, 性别钉选丢弃)
+            g = str(t.get("gender") or "").strip().lower()
+            if gmode == "female" and g == "male":
+                continue
+            if gmode == "male" and g == "female":
                 continue
             fixed_ids.append(tid)
             ctx.used.add(lo)
@@ -160,6 +169,13 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     sub_ids_str = snap.sub_ids_str
 
     pools = snap.pools if nsfw_on else snap.pools_nonsfw
+    # 性别三态: gender "off"(双性全量) / "female"(剔除男性专属) / "male"(剔除女性专属)
+    if gmode == "female" and snap.pools_nomale:
+        pools = snap.pools_nomale if nsfw_on else {
+            si: [i for i in lst if not snap.nsfw_flag[i]] for si, lst in snap.pools_nomale.items()}
+    elif gmode == "male" and snap.pools_nofemale:
+        pools = snap.pools_nofemale if nsfw_on else {
+            si: [i for i in lst if not snap.nsfw_flag[i]] for si, lst in snap.pools_nofemale.items()}
 
     def tag_match(lo: str, tid: int) -> bool:
         if not search_l:
@@ -261,7 +277,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             grow([tid])
             picked_here += 1
 
-    # ---------- Smart: requires 闭包并入 (受 mutex/NSFW/排除约束) ----------
+    # ---------- Smart: requires 闭包并入 (受 mutex/NSFW/性别/排除约束) ----------
     if smart and require_closure:
         for tid in list(rest_ids) + list(fixed_ids):
             for req in require_closure.get(tid, ()):
@@ -272,6 +288,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 if names[ci] in excl_cats:
                     continue
                 if not nsfw_on and snap.nsfw_flag[req]:
+                    continue
+                if gmode == "female" and snap.gender_flag[req] == 2:
+                    continue
+                if gmode == "male" and snap.gender_flag[req] == 1:
                     continue
                 if conflict_map and req in ctx.banned:
                     continue

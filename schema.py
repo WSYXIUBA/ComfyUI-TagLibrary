@@ -95,6 +95,10 @@ def migrate_tag(tag: dict, cat_name: str, sub_name: str) -> dict:
         tag["meta"] = {}
     tag.setdefault("weight", 1.0)
     tag.setdefault("enabled", True)
+    # 性别专属: ""=双性可用 / "female"=女性专属 / "male"=男性专属
+    # 只标绝对性别词 (1boy/milf/pregnant...), 比基尼/女仆装等双性可穿不打
+    g = str(tag.get("gender") or "").strip().lower()
+    tag["gender"] = g if g in ("female", "male") else ""
     return tag
 
 
