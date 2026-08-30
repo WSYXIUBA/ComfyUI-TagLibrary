@@ -194,8 +194,13 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         ctx.used.add(lo)
     grow(fixed_ids)
 
-    pool_order = range(len(snap.sub_names)) if not cfg.get("stage_order") else _stage_order(
+    pool_order = list(range(len(snap.sub_names))) if not cfg.get("stage_order") else _stage_order(
         cfg.get("stage_order"), snap)
+    # 随机打乱子分类顺序: 防互斥域结构性偏向 (如 上装先抽 → 套装75词永远让位)。
+    # 同 seed 确定性不受影响 — rng 是本调用的独立 Random(seed)。质量类子分类仍保持在前
+    # (质量词只与内容词互补, 顺序无冲突), 只打乱非质量域。
+    if cfg.get("shuffle_pools", True):
+        rng.shuffle(pool_order)
 
     for si in pool_order:
         cname = names[cat_of_sub[si]]
