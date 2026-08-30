@@ -119,6 +119,19 @@ function getNsfwEffective(node) {
   return !!getSetting(SET_DEFAULT_NSFW, false);
 }
 
+function getGender(node) {
+  const g = String(getState(node).gender || "off");
+  return GENDER_SEQ.includes(g) ? g : "off";
+}
+
+const GENDER_SEQ = ["off", "female", "male"];
+const GENDER_LABEL = { off: "⚥", female: "♀", male: "♂" };
+const GENDER_TITLE = {
+  off: "性别过滤: 关闭 (男女性专属标签都保留)",
+  female: "性别过滤: 女性 (剔除男性专属标签, 如 1boy/multiple boys)",
+  male: "性别过滤: 男性 (剔除女性专属标签, 如 1girl/milf)",
+};
+
 function setState(node, patch) {
   const w = node.widgets?.find((x) => x.name === "selection_state");
   if (!w) return;
@@ -249,17 +262,6 @@ export function buildPanelWidget(node, container) {
   nsfwBtn.addEventListener("click", toggleNsfw);
 
   /* ---------- 性别三态 (关闭 ⚥ / 女性 ♀ 剔除男性专属 / 男性 ♂ 剔除女性专属) ---------- */
-  const GENDER_SEQ = ["off", "female", "male"];
-  const GENDER_LABEL = { off: "⚥", female: "♀", male: "♂" };
-  const GENDER_TITLE = {
-    off: "性别过滤: 关闭 (男女性专属标签都保留)",
-    female: "性别过滤: 女性 (剔除男性专属标签, 如 1boy/multiple boys)",
-    male: "性别过滤: 男性 (剔除女性专属标签, 如 1girl/milf)",
-  };
-  function getGender(node) {
-    const g = String(getState(node).gender || "off");
-    return GENDER_SEQ.includes(g) ? g : "off";
-  }
   function renderGender() {
     const g = getGender(node);
     genderBtn.textContent = GENDER_LABEL[g];
