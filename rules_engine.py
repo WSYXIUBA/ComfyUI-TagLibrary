@@ -20,7 +20,10 @@
 
 from __future__ import annotations
 
-import schema
+try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
+    from . import schema
+except ImportError:  # pragma: no cover
+    import schema
 
 
 def _resolve_ref(ref: dict, index) -> tuple[set, bool]:
