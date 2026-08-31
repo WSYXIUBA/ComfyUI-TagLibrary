@@ -96,6 +96,8 @@ def parse_tagfile(text: str) -> dict[str, Any]:
         line = _clean(raw)
         if not line or line.startswith("---") or line.startswith(">"):
             continue
+        # md 列表行 "- xxx" / "* xxx": 吞掉行首列表符, 避免混进 en 字段
+        line = re.sub(r"^[-*•]\s+", "", line).strip()
         m_cat = _LINE_SUB.match(line)
         if m_cat and cur_cat is not None:
             ensure_sub(cur_cat, m_cat.group(1))
