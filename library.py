@@ -31,8 +31,53 @@ except ImportError:  # pragma: no cover
 
 _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(_PKG_DIR, "data")
-DEFAULT_PATH = os.path.join(DATA_DIR, "tag_library.json")
-USER_PATH = os.path.join(DATA_DIR, "tag_library.user.json")
+DEFAULT_DATA_DIR = os.path.join(DATA_DIR, "default")   # v1.1.1: 默认数据分级 data/default/
+DEFAULT_PATH = os.path.join(DEFAULT_DATA_DIR, "tag_library.json")
+USER_PATH = os.path.join(DEFAULT_DATA_DIR, "tag_library.user.json")
+
+
+def _migrate_legacy_layout() -> None:
+    """v1.1.0 及更早: 数据直接放 data/ 下。升级到 v1.1.1 后自动搬进 data/default/。
+
+    触发条件: data/default 不存在 且 旧结构特征存在 (user.json 或 tag_library.json)。
+    只搬一次; 迁移失败不阻塞加载 (文件仍在原地, 但代码只读 default/ — 需手动处理)。
+    """
+    new_dir = DEFAULT_DATA_DIR
+    if os.path.isdir(new_dir):
+        return
+    legacy_files = [
+        ("tag_library.json", "tag_library.json"),
+        ("tag_library.user.json", "tag_library.user.json"),
+        ("conflicts.json", "conflicts.json"),
+    ]
+    legacy_dirs = ["taglib", "备份库"]
+    has_any = any(os.path.isfile(os.path.join(DATA_DIR, src)) for src, _ in legacy_files) \
+        or any(os.path.isdir(os.path.join(DATA_DIR, d)) for d in legacy_dirs)
+    if not has_any:
+        return
+    try:
+        os.makedirs(new_dir, exist_ok=True)
+        for src, dst in legacy_files:
+            p = os.path.join(DATA_DIR, src)
+            if os.path.isfile(p):
+                os.replace(p, os.path.join(new_dir, dst))
+        for d in legacy_dirs:
+            src = os.path.join(DATA_DIR, d)
+            if os.path.isdir(src):
+                dst = os.path.join(new_dir, d)
+                if os.path.isdir(dst):
+                    continue
+                try:
+                    os.rename(src, dst)
+                except OSError:
+                    import shutil
+                    shutil.copytree(src, dst)
+        print(f"[TagLibrary] 📦 旧数据目录已迁移: data/ -> data/default/")
+    except OSError as exc:
+        print(f"[TagLibrary] ⚠ 旧数据目录迁移失败 ({exc}); 请手动将 data/ 下的库文件移入 data/default/")
+
+
+_migrate_legacy_layout()
 
 _ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,79}$")
 
@@ -386,7 +431,7 @@ def _apply_folder_deletions(base: dict, missing_rels: list[str]) -> int:
     返回删除的分类数 (整分类删才计 1; 子分类删除随文件处理)。
     """
     import shutil
-    trash = os.path.join(os.path.dirname(DEFAULT_PATH), "备份库", "_trash")
+    trash = os.path.join(os.path.dirname(DEFAULT_PATH), "backups", "_trash")
     n_cat = 0
     touched_cats = set()
     for rel in missing_rels:

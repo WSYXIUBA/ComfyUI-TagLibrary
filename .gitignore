@@ -7,13 +7,18 @@ node.zip
 tests/*.png
 ComfyUI-TagLibrary-*.zip
 
-# 备份库: 只排除用户个人数据和脚本 (出厂备份进包, 随升级覆盖)
+# 备份: 只排除用户个人数据和脚本 (出厂备份进包, 随升级覆盖)
+# v1.1.1: 数据分级 data/default/, 备份英文命名
+data/default/backups/user_backup.json
+data/default/backups/_trash/
+data/default/backups/*.bat
+data/default/backups/*.ps1
+data/default/backups/*.sh
+data/default/backups/*.cmd
+data/default/backups/.upgrade-pending
+
+# 旧布局 (v1.1.0 及更早, 升级自动迁移后遗留)
+data/备份库/
 data/备份库/tag_library.用户.backup.json
 data/备份库/_trash/
-data/备份库/*.bat
-data/备份库/*.ps1
-data/备份库/*.sh
-data/备份库/*.cmd
-
-# 升级弹窗标记 (运行时生成, 但出厂状态进包由打包工具带上)
 data/备份库/.升级待确认

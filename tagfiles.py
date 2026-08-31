@@ -31,8 +31,8 @@ import unicodedata
 from typing import Any
 
 # 预编译
-BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "tagfiles")
-LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "taglib")
+BUILTIN_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "default", "tagfiles")
+LIBRARY_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "default", "taglib")
 
 _LINE_CAT = re.compile(r"^#\s+(.+)$")
 _LINE_SUB = re.compile(r"^##\s+(.+)$")
