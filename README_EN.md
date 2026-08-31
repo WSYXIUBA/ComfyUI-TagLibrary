@@ -10,9 +10,9 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 
 ## UI Preview
 
-| Node panel (pick / grouped fill / NSFW toggle) | Add-Tags picker (5 tabs / grouped chips / master control) |
+| Node panel (pick / grouped fill / NSFW toggle) | Library manager (CRUD / import-export / backups) |
 |---|---|
-| ![Node panel](docs/screenshot_node_panel.png) | ![Add-Tags picker](docs/screenshot_tag_picker.png) |
+| ![Node panel](docs/screenshot_node_panel.png) | ![Library manager](docs/screenshot_manager.png) |
 
 ## Features
 
@@ -32,6 +32,9 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 - **AI collaboration loop**: export templates (basic/full) + conflicts file, send to your AI to extend or restructure,
   import the result with auto-placement, dedupe and a confirm preview
 - **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting a full template first)
+- **Pin semantics v1.1**: 📌 pinned tags are always included in random/fill, never overwritten, and occupy one slot of their subcategory; pins beat excluded categories
+- **Gender filter**: ⚧/♀/♂ toggle to drop male-only or female-only tags by their gender flag
+- **Data layout**: all plugin data nested under `data/default/` with English backup names (backups/factory_backup.json etc.), auto-migrated on upgrade
 - **Performance**: 1-4ms per node execution; library reads cached, hot-sync scans throttled
 - **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
 
