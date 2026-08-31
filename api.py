@@ -22,16 +22,57 @@ except ModuleNotFoundError:  # 独立导入时不炸
     PromptServer = None
 
 _WEB_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "web")
-BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "备份库")
+BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "default", "backups")
 # 双备份体系 (2026-08-30 用户设计):
 #   出厂备份  = 插件包内自带, 随升级覆盖, 代表"当前版本官方库"
 #   用户备份  = 用户点「存为默认库」生成, 插件包不带, 升级后存活, 代表"用户自己的基准"
-FACTORY_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.出厂.backup.json")
-USER_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.用户.backup.json")
+# v1.1.1: 目录 data/备份库 -> data/default/backups, 文件名中文 -> 英文 (旧名启动时自动迁移)
+FACTORY_BACKUP_PATH = os.path.join(BACKUP_DIR, "factory_backup.json")
+USER_BACKUP_PATH = os.path.join(BACKUP_DIR, "user_backup.json")
 # 升级弹窗标记: 插件包内自带; 恢复/取消后销毁; 下次升级随包重新出现
-UPGRADE_PROMPT_PATH = os.path.join(BACKUP_DIR, ".升级待确认")
-# 兼容旧名 (v1.x 的单备份文件 → 首次迁移为出厂备份)
-LEGACY_BACKUP_PATH = os.path.join(BACKUP_DIR, "tag_library.backup.json")
+UPGRADE_PROMPT_PATH = os.path.join(BACKUP_DIR, ".upgrade-pending")
+# 兼容旧名 (v1.1.0 中文目录/文件名 -> 启动时自动迁移为新英文名)
+LEGACY_BACKUP_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "备份库")
+LEGACY_BACKUP_PATH = os.path.join(LEGACY_BACKUP_DIR, "tag_library.backup.json")
+LEGACY_FACTORY_PATH = os.path.join(LEGACY_BACKUP_DIR, "tag_library.出厂.backup.json")
+LEGACY_USER_PATH = os.path.join(LEGACY_BACKUP_DIR, "tag_library.用户.backup.json")
+LEGACY_UPGRADE_PROMPT = os.path.join(LEGACY_BACKUP_DIR, ".升级待确认")
+
+
+def _migrate_legacy_backup_layout() -> None:
+    """v1.1.0 中文备份布局 (data/备份库/*.中文.backup.json) -> v1.1.1 (data/default/backups/*.json)。
+
+    data/default/backups 已存在时跳过 (library.py 的目录迁移会把整个 备份库 挪进 default/,
+    那时目录名还是中文 — 这里负责把中文目录内容并入 backups/ 并改名)。
+    """
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    pairs = [
+        (LEGACY_FACTORY_PATH, FACTORY_BACKUP_PATH),
+        (LEGACY_USER_PATH, USER_BACKUP_PATH),
+        (LEGACY_UPGRADE_PROMPT, UPGRADE_PROMPT_PATH),
+    ]
+    # library.py 目录迁移后, 中文目录在 data/default/备份库
+    legacy_dir_moved = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                    "data", "default", "备份库")
+    if os.path.isdir(legacy_dir_moved):
+        pairs.extend([
+            (os.path.join(legacy_dir_moved, "tag_library.出厂.backup.json"), FACTORY_BACKUP_PATH),
+            (os.path.join(legacy_dir_moved, "tag_library.用户.backup.json"), USER_BACKUP_PATH),
+            (os.path.join(legacy_dir_moved, ".升级待确认"), UPGRADE_PROMPT_PATH),
+        ])
+    migrated = False
+    for src, dst in pairs:
+        if os.path.isfile(src) and not os.path.isfile(dst):
+            try:
+                os.replace(src, dst)
+                migrated = True
+            except OSError:
+                pass
+    if migrated:
+        print("[TagLibrary] 📦 备份文件已迁移为英文命名: data/default/backups/")
+
+
+_migrate_legacy_backup_layout()
 
 
 def _json_response(data, status: int = 200) -> web.Response:
@@ -188,7 +229,7 @@ async def reset_library(_request: web.Request) -> web.Response:
     下次导入模板/管理页保存会自动退出空库状态。
     """
     try:
-        os.makedirs(library.DATA_DIR, exist_ok=True)
+        os.makedirs(library.DEFAULT_DATA_DIR, exist_ok=True)
         cleared = {"version": 1, "categories": [], "_cleared": True, "_tombstones": []}
         tmp = library.USER_PATH + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:

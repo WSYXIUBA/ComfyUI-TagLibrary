@@ -1249,7 +1249,7 @@ ${TPL_RULES}
       const res = await fetch("/taglib/api/library/backup", { method: "POST" });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      toast(`✅ 已存为默认库 (备份于 data/备份库/, ${new Date(out.mtime * 1000).toLocaleString()})`);
+      toast(`✅ 已存为默认库 (备份于 data/default/backups/, ${new Date(out.mtime * 1000).toLocaleString()})`);
     } catch (err) {
       toast(`备份失败: ${err.message}`, true);
     }
