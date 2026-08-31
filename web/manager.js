@@ -85,7 +85,10 @@
       .then((data) => {
         if (data.ok) {
           sub.tags = data.tags || [];
-          sub.groups = data.groups || [];
+          // groups 仅在真有三级结构时挂载: 空数组不能挂, 否则服务端 validate 走
+          // 三级汇总分支把 tags 覆盖成 [] (清空重导后保存丢词 bug 的前端一半)
+          if (data.groups && data.groups.length) sub.groups = data.groups;
+          else delete sub.groups;
           sub._loaded = true;
         }
       });
