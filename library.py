@@ -211,7 +211,9 @@ def validate(library_data: dict) -> dict:
             sid = _require_id(sub, f"{cid} 的子分类")
             _uniq(sid, sub_seen, "子分类")
             # 三级: 子分类可再含孙分类 (groups) 或直接挂 tags
-            if "groups" in sub:
+            # 注意: groups=[] (空数组) 视为"无三级结构", 不得用空汇总覆盖 tags!
+            # (管理页懒加载会给所有子分类挂 groups=[], 覆盖后 tags 全灭 — 2026-08-31 清空重导 bug)
+            if sub.get("groups"):  # 非空数组才走三级汇总
                 groups = sub.get("groups")
                 if not isinstance(groups, list):
                     raise LibraryError(f"子分类 {sid} 的 groups 必须是数组")
