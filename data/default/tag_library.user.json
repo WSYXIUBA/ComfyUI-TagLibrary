@@ -42757,6 +42757,13 @@
        "desc": "",
        "meta": {},
        "gender": ""
+      },
+      {
+       "en": "lap pillow(膝枕(被枕))",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "id": "reorg.s26.lap-pillow-2"
       }
      ],
      "random_quota": null,
@@ -68259,6 +68266,20 @@
        "desc": "",
        "meta": {},
        "gender": ""
+      },
+      {
+       "en": "oil painting (medium)(油画(媒介))",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "id": "imported.c8.sub-2-3.oil-painting-medium-2"
+      },
+      {
+       "en": "watercolor (medium)(水彩(媒介))",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "id": "imported.c8.sub-2-3.watercolor-medium-2"
       }
      ],
      "random_quota": null,
@@ -74778,7 +74799,6 @@
   }
  ],
  "settings": {},
- "schema_version": 2,
  "_tombstones": [
   "camerawork",
   "camerawork.composition",
