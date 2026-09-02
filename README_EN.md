@@ -148,6 +148,17 @@ data/default/taglib/
 
 ## Changelog
 
+### v1.2.2
+- **Anti-conflict stress-test optimization**: 300-generation stress test (no filter / ♂ / ♀ × 100,
+  12–30 tag draws) drove the rules from 55 to 81 with zero invalid refs: outfit-count mutex
+  (dresses/uniforms/traditional/specialty single-select + pairwise), base-pose single-select,
+  shoes/bottoms/socks/panties/bras single-select, ahegao ↔ smile-family clashes, child-safety rules
+  (children ↔ adult body/makeup/nudity/NSFW states), no-humans ↔ person dimensions, rain ↔ snow,
+  clear sky ↔ precipitation; existing mutex groups absorb all supplement-pack tags
+- **Synonym dedupe**: judo uniform merged into judo gi
+- **Data sync**: user library (4356 tags) synced to default library and factory/user backups,
+  byte-identical restore roundtrip
+
 ### v1.2.0
 - **Tag library v2 taxonomy rework**: 9 categories / 63 subcategories / 1615 tags. Expressions / mouth /
   emotions, weapons / food / props / instruments, hosiery & underwear, dresses / uniforms / traditional /

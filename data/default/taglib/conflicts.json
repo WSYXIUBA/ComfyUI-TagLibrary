@@ -122,7 +122,23 @@
      "shushing",
      "singing",
      "smirk",
-     "yelling"
+     "yelling",
+     "open mouth smile",
+     "closed mouth smile",
+     "showing teeth",
+     "clenched teeth",
+     "fangs out",
+     "whistling",
+     "blowing kiss",
+     "shouting",
+     "panting",
+     "humming",
+     "smoking",
+     "cigarette in mouth",
+     "straw in mouth",
+     "bubblegum",
+     "sticking tongue slightly",
+     "biting tongue"
     ]
    },
    "right": [
@@ -177,6 +193,70 @@
     {
      "kind": "tag",
      "value": "yelling"
+    },
+    {
+     "kind": "tag",
+     "value": "open mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "closed mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "showing teeth"
+    },
+    {
+     "kind": "tag",
+     "value": "clenched teeth"
+    },
+    {
+     "kind": "tag",
+     "value": "fangs out"
+    },
+    {
+     "kind": "tag",
+     "value": "whistling"
+    },
+    {
+     "kind": "tag",
+     "value": "blowing kiss"
+    },
+    {
+     "kind": "tag",
+     "value": "shouting"
+    },
+    {
+     "kind": "tag",
+     "value": "panting"
+    },
+    {
+     "kind": "tag",
+     "value": "humming"
+    },
+    {
+     "kind": "tag",
+     "value": "smoking"
+    },
+    {
+     "kind": "tag",
+     "value": "cigarette in mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "straw in mouth"
+    },
+    {
+     "kind": "tag",
+     "value": "bubblegum"
+    },
+    {
+     "kind": "tag",
+     "value": "sticking tongue slightly"
+    },
+    {
+     "kind": "tag",
+     "value": "biting tongue"
     }
    ]
   },
@@ -192,7 +272,26 @@
      "light smile",
      "smile",
      "smirk",
-     "wide grin"
+     "wide grin",
+     "seductive smile",
+     "innocent smile",
+     "knowing smile",
+     "shy smile",
+     "playful smile",
+     "radiant smile",
+     "bitter smile",
+     "forced smile",
+     "wry smile",
+     "lopsided smile",
+     "closed-mouth smile",
+     "toothy smile",
+     "polite smile",
+     "tired smile",
+     "bittersweet smile",
+     "smug grin",
+     "feral grin",
+     "manic smile",
+     "predatory smile"
     ]
    },
    "right": [
@@ -223,6 +322,82 @@
     {
      "kind": "tag",
      "value": "wide grin"
+    },
+    {
+     "kind": "tag",
+     "value": "seductive smile"
+    },
+    {
+     "kind": "tag",
+     "value": "innocent smile"
+    },
+    {
+     "kind": "tag",
+     "value": "knowing smile"
+    },
+    {
+     "kind": "tag",
+     "value": "shy smile"
+    },
+    {
+     "kind": "tag",
+     "value": "playful smile"
+    },
+    {
+     "kind": "tag",
+     "value": "radiant smile"
+    },
+    {
+     "kind": "tag",
+     "value": "bitter smile"
+    },
+    {
+     "kind": "tag",
+     "value": "forced smile"
+    },
+    {
+     "kind": "tag",
+     "value": "wry smile"
+    },
+    {
+     "kind": "tag",
+     "value": "lopsided smile"
+    },
+    {
+     "kind": "tag",
+     "value": "closed-mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "toothy smile"
+    },
+    {
+     "kind": "tag",
+     "value": "polite smile"
+    },
+    {
+     "kind": "tag",
+     "value": "tired smile"
+    },
+    {
+     "kind": "tag",
+     "value": "bittersweet smile"
+    },
+    {
+     "kind": "tag",
+     "value": "smug grin"
+    },
+    {
+     "kind": "tag",
+     "value": "feral grin"
+    },
+    {
+     "kind": "tag",
+     "value": "manic smile"
+    },
+    {
+     "kind": "tag",
+     "value": "predatory smile"
     }
    ]
   },
@@ -761,7 +936,32 @@
      "halo",
      "headphones on head",
      "straw hat",
-     "witch hat"
+     "witch hat",
+     "fedora",
+     "trilby",
+     "bucket hat",
+     "wide-brim hat",
+     "newsboy cap",
+     "trucker hat",
+     "bowler hat",
+     "cowboy hat",
+     "wizard hat",
+     "santa hat",
+     "party hat",
+     "fox mask",
+     "kitsune mask",
+     "oni mask",
+     "plague doctor mask",
+     "gas mask",
+     "venetian mask",
+     "half face mask",
+     "full face mask",
+     "bridal veil",
+     "veil with lace",
+     "circlet",
+     "diadem",
+     "crown",
+     "tiara"
     ]
    },
    "right": [
@@ -804,6 +1004,106 @@
     {
      "kind": "tag",
      "value": "witch hat"
+    },
+    {
+     "kind": "tag",
+     "value": "fedora"
+    },
+    {
+     "kind": "tag",
+     "value": "trilby"
+    },
+    {
+     "kind": "tag",
+     "value": "bucket hat"
+    },
+    {
+     "kind": "tag",
+     "value": "wide-brim hat"
+    },
+    {
+     "kind": "tag",
+     "value": "newsboy cap"
+    },
+    {
+     "kind": "tag",
+     "value": "trucker hat"
+    },
+    {
+     "kind": "tag",
+     "value": "bowler hat"
+    },
+    {
+     "kind": "tag",
+     "value": "cowboy hat"
+    },
+    {
+     "kind": "tag",
+     "value": "wizard hat"
+    },
+    {
+     "kind": "tag",
+     "value": "santa hat"
+    },
+    {
+     "kind": "tag",
+     "value": "party hat"
+    },
+    {
+     "kind": "tag",
+     "value": "fox mask"
+    },
+    {
+     "kind": "tag",
+     "value": "kitsune mask"
+    },
+    {
+     "kind": "tag",
+     "value": "oni mask"
+    },
+    {
+     "kind": "tag",
+     "value": "plague doctor mask"
+    },
+    {
+     "kind": "tag",
+     "value": "gas mask"
+    },
+    {
+     "kind": "tag",
+     "value": "venetian mask"
+    },
+    {
+     "kind": "tag",
+     "value": "half face mask"
+    },
+    {
+     "kind": "tag",
+     "value": "full face mask"
+    },
+    {
+     "kind": "tag",
+     "value": "bridal veil"
+    },
+    {
+     "kind": "tag",
+     "value": "veil with lace"
+    },
+    {
+     "kind": "tag",
+     "value": "circlet"
+    },
+    {
+     "kind": "tag",
+     "value": "diadem"
+    },
+    {
+     "kind": "tag",
+     "value": "crown"
+    },
+    {
+     "kind": "tag",
+     "value": "tiara"
     }
    ]
   },
@@ -818,7 +1118,19 @@
      "glasses",
      "mask over eyes",
      "reading glasses",
-     "sunglasses"
+     "sunglasses",
+     "round glasses",
+     "square glasses",
+     "rimless glasses",
+     "half-rim glasses",
+     "tinted glasses",
+     "aviator sunglasses",
+     "heart sunglasses",
+     "ski goggles",
+     "swimming goggles",
+     "monocle",
+     "lorgnette",
+     "medical eyepatch"
     ]
    },
    "right": [
@@ -845,6 +1157,54 @@
     {
      "kind": "tag",
      "value": "sunglasses"
+    },
+    {
+     "kind": "tag",
+     "value": "round glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "square glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "rimless glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "half-rim glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "tinted glasses"
+    },
+    {
+     "kind": "tag",
+     "value": "aviator sunglasses"
+    },
+    {
+     "kind": "tag",
+     "value": "heart sunglasses"
+    },
+    {
+     "kind": "tag",
+     "value": "ski goggles"
+    },
+    {
+     "kind": "tag",
+     "value": "swimming goggles"
+    },
+    {
+     "kind": "tag",
+     "value": "monocle"
+    },
+    {
+     "kind": "tag",
+     "value": "lorgnette"
+    },
+    {
+     "kind": "tag",
+     "value": "medical eyepatch"
     }
    ]
   },
@@ -1178,7 +1538,23 @@
      "axe",
      "bow (weapon)",
      "lightsaber",
-     "chainsaw"
+     "chainsaw",
+     "greatsword",
+     "war hammer",
+     "battle axe",
+     "crossbow",
+     "katana on back",
+     "sheathed sword",
+     "dual swords",
+     "energy sword",
+     "naginata",
+     "odachi",
+     "claymore",
+     "halberd",
+     "trident",
+     "mace",
+     "flail",
+     "magic wand"
     ]
    },
    "right": [
@@ -1217,6 +1593,70 @@
     {
      "kind": "tag",
      "value": "chainsaw"
+    },
+    {
+     "kind": "tag",
+     "value": "greatsword"
+    },
+    {
+     "kind": "tag",
+     "value": "war hammer"
+    },
+    {
+     "kind": "tag",
+     "value": "battle axe"
+    },
+    {
+     "kind": "tag",
+     "value": "crossbow"
+    },
+    {
+     "kind": "tag",
+     "value": "katana on back"
+    },
+    {
+     "kind": "tag",
+     "value": "sheathed sword"
+    },
+    {
+     "kind": "tag",
+     "value": "dual swords"
+    },
+    {
+     "kind": "tag",
+     "value": "energy sword"
+    },
+    {
+     "kind": "tag",
+     "value": "naginata"
+    },
+    {
+     "kind": "tag",
+     "value": "odachi"
+    },
+    {
+     "kind": "tag",
+     "value": "claymore"
+    },
+    {
+     "kind": "tag",
+     "value": "halberd"
+    },
+    {
+     "kind": "tag",
+     "value": "trident"
+    },
+    {
+     "kind": "tag",
+     "value": "mace"
+    },
+    {
+     "kind": "tag",
+     "value": "flail"
+    },
+    {
+     "kind": "tag",
+     "value": "magic wand"
     }
    ]
   },
@@ -1229,7 +1669,19 @@
     "value": [
      "gun",
      "pistol",
-     "sniper rifle"
+     "sniper rifle",
+     "rifle",
+     "shotgun",
+     "submachine gun",
+     "assault rifle",
+     "rocket launcher",
+     "plasma rifle",
+     "laser pistol",
+     "energy gun",
+     "compound bow",
+     "throwing knives",
+     "sniper scope",
+     "bow (weapon)"
     ]
    },
    "right": [
@@ -1244,6 +1696,54 @@
     {
      "kind": "tag",
      "value": "sniper rifle"
+    },
+    {
+     "kind": "tag",
+     "value": "rifle"
+    },
+    {
+     "kind": "tag",
+     "value": "shotgun"
+    },
+    {
+     "kind": "tag",
+     "value": "submachine gun"
+    },
+    {
+     "kind": "tag",
+     "value": "assault rifle"
+    },
+    {
+     "kind": "tag",
+     "value": "rocket launcher"
+    },
+    {
+     "kind": "tag",
+     "value": "plasma rifle"
+    },
+    {
+     "kind": "tag",
+     "value": "laser pistol"
+    },
+    {
+     "kind": "tag",
+     "value": "energy gun"
+    },
+    {
+     "kind": "tag",
+     "value": "compound bow"
+    },
+    {
+     "kind": "tag",
+     "value": "throwing knives"
+    },
+    {
+     "kind": "tag",
+     "value": "sniper scope"
+    },
+    {
+     "kind": "tag",
+     "value": "bow (weapon)"
     }
    ]
   },
@@ -2748,6 +3248,3767 @@
     {
      "kind": "sub",
      "value": "服装系统/特色与运动装"
+    }
+   ]
+  },
+  {
+   "id": "outfit-裙装与礼服",
+   "note": "裙装与礼服 单选 (一穿一)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "dress",
+     "sundress",
+     "summer dress",
+     "floral print dress",
+     "gown",
+     "evening gown",
+     "wedding dress",
+     "gothic dress",
+     "princess dress",
+     "mermaid dress",
+     "frilled dress",
+     "halter dress",
+     "knit dress",
+     "sweater dress",
+     "bride outfit",
+     "groom outfit",
+     "ball gown",
+     "cocktail dress",
+     "little black dress",
+     "slip dress",
+     "empire waist dress",
+     "tea length dress",
+     "ballerina dress",
+     "gothic lolita dress",
+     "sweet lolita",
+     "classic lolita",
+     "punk lolita",
+     "elegant dress",
+     "backless dress",
+     "high slit dress",
+     "empress dress",
+     "court dress",
+     "victorian dress",
+     "edwardian dress",
+     "roaring twenties dress",
+     "50s swing dress"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "dress"
+    },
+    {
+     "kind": "tag",
+     "value": "sundress"
+    },
+    {
+     "kind": "tag",
+     "value": "summer dress"
+    },
+    {
+     "kind": "tag",
+     "value": "floral print dress"
+    },
+    {
+     "kind": "tag",
+     "value": "gown"
+    },
+    {
+     "kind": "tag",
+     "value": "evening gown"
+    },
+    {
+     "kind": "tag",
+     "value": "wedding dress"
+    },
+    {
+     "kind": "tag",
+     "value": "gothic dress"
+    },
+    {
+     "kind": "tag",
+     "value": "princess dress"
+    },
+    {
+     "kind": "tag",
+     "value": "mermaid dress"
+    },
+    {
+     "kind": "tag",
+     "value": "frilled dress"
+    },
+    {
+     "kind": "tag",
+     "value": "halter dress"
+    },
+    {
+     "kind": "tag",
+     "value": "knit dress"
+    },
+    {
+     "kind": "tag",
+     "value": "sweater dress"
+    },
+    {
+     "kind": "tag",
+     "value": "bride outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "groom outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "ball gown"
+    },
+    {
+     "kind": "tag",
+     "value": "cocktail dress"
+    },
+    {
+     "kind": "tag",
+     "value": "little black dress"
+    },
+    {
+     "kind": "tag",
+     "value": "slip dress"
+    },
+    {
+     "kind": "tag",
+     "value": "empire waist dress"
+    },
+    {
+     "kind": "tag",
+     "value": "tea length dress"
+    },
+    {
+     "kind": "tag",
+     "value": "ballerina dress"
+    },
+    {
+     "kind": "tag",
+     "value": "gothic lolita dress"
+    },
+    {
+     "kind": "tag",
+     "value": "sweet lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "classic lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "punk lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "elegant dress"
+    },
+    {
+     "kind": "tag",
+     "value": "backless dress"
+    },
+    {
+     "kind": "tag",
+     "value": "high slit dress"
+    },
+    {
+     "kind": "tag",
+     "value": "empress dress"
+    },
+    {
+     "kind": "tag",
+     "value": "court dress"
+    },
+    {
+     "kind": "tag",
+     "value": "victorian dress"
+    },
+    {
+     "kind": "tag",
+     "value": "edwardian dress"
+    },
+    {
+     "kind": "tag",
+     "value": "roaring twenties dress"
+    },
+    {
+     "kind": "tag",
+     "value": "50s swing dress"
+    }
+   ]
+  },
+  {
+   "id": "outfit-职业与制服",
+   "note": "职业与制服 单选 (一穿一)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "school uniform",
+     "maid outfit",
+     "suit",
+     "serafuku",
+     "gakuran",
+     "nurse",
+     "police uniform",
+     "military uniform",
+     "chef uniform",
+     "office lady",
+     "business suit",
+     "racing uniform",
+     "pilot suit",
+     "nurse outfit",
+     "police officer uniform",
+     "flight attendant uniform",
+     "train conductor uniform",
+     "waitress uniform",
+     "cafe waitress",
+     "barista uniform",
+     "band uniform",
+     "choir robe",
+     "prince outfit",
+     "butler outfit",
+     "businesswoman attire",
+     "flight attendant",
+     "pilot uniform",
+     "chef coat",
+     "bartender uniform",
+     "waitress apron",
+     "security guard uniform",
+     "construction worker",
+     "firefighter uniform",
+     "paramedic uniform",
+     "lab technician",
+     "research coat",
+     "military officer uniform",
+     "surgeon scrubs",
+     "lab coat and goggles",
+     "hazmat suit"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "school uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "maid outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "suit"
+    },
+    {
+     "kind": "tag",
+     "value": "serafuku"
+    },
+    {
+     "kind": "tag",
+     "value": "gakuran"
+    },
+    {
+     "kind": "tag",
+     "value": "nurse"
+    },
+    {
+     "kind": "tag",
+     "value": "police uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "military uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "chef uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "office lady"
+    },
+    {
+     "kind": "tag",
+     "value": "business suit"
+    },
+    {
+     "kind": "tag",
+     "value": "racing uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "pilot suit"
+    },
+    {
+     "kind": "tag",
+     "value": "nurse outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "police officer uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "flight attendant uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "train conductor uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "waitress uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "cafe waitress"
+    },
+    {
+     "kind": "tag",
+     "value": "barista uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "band uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "choir robe"
+    },
+    {
+     "kind": "tag",
+     "value": "prince outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "butler outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "businesswoman attire"
+    },
+    {
+     "kind": "tag",
+     "value": "flight attendant"
+    },
+    {
+     "kind": "tag",
+     "value": "pilot uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "chef coat"
+    },
+    {
+     "kind": "tag",
+     "value": "bartender uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "waitress apron"
+    },
+    {
+     "kind": "tag",
+     "value": "security guard uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "construction worker"
+    },
+    {
+     "kind": "tag",
+     "value": "firefighter uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "paramedic uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "lab technician"
+    },
+    {
+     "kind": "tag",
+     "value": "research coat"
+    },
+    {
+     "kind": "tag",
+     "value": "military officer uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "surgeon scrubs"
+    },
+    {
+     "kind": "tag",
+     "value": "lab coat and goggles"
+    },
+    {
+     "kind": "tag",
+     "value": "hazmat suit"
+    }
+   ]
+  },
+  {
+   "id": "outfit-传统与民族",
+   "note": "传统与民族 单选 (一穿一)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "qipao",
+     "witch costume",
+     "miko",
+     "nun",
+     "furisode",
+     "yukata",
+     "hanfu",
+     "cheongsam",
+     "sari",
+     "elf outfit",
+     "mage robe",
+     "nun habit",
+     "vampire cloak",
+     "shrine maiden outfit",
+     "kimono dress",
+     "china dress",
+     "cheongsam dress",
+     "hanbok",
+     "kimono with obi",
+     "yukata with geta",
+     "sari with bindi",
+     "cheongsam with high slits",
+     "viking attire",
+     "samurai armor",
+     "ninja outfit",
+     "geisha attire",
+     "shrine maiden full",
+     "traditional chinese wedding dress",
+     "japanese wedding kimono",
+     "ao dai",
+     "kimono furisode",
+     "kimono houmongi",
+     "jinbei",
+     "samue",
+     "miko attire",
+     "priest vestments",
+     "yukata after bath",
+     "onsen yukata",
+     "festival happi"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "qipao"
+    },
+    {
+     "kind": "tag",
+     "value": "witch costume"
+    },
+    {
+     "kind": "tag",
+     "value": "miko"
+    },
+    {
+     "kind": "tag",
+     "value": "nun"
+    },
+    {
+     "kind": "tag",
+     "value": "furisode"
+    },
+    {
+     "kind": "tag",
+     "value": "yukata"
+    },
+    {
+     "kind": "tag",
+     "value": "hanfu"
+    },
+    {
+     "kind": "tag",
+     "value": "cheongsam"
+    },
+    {
+     "kind": "tag",
+     "value": "sari"
+    },
+    {
+     "kind": "tag",
+     "value": "elf outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "mage robe"
+    },
+    {
+     "kind": "tag",
+     "value": "nun habit"
+    },
+    {
+     "kind": "tag",
+     "value": "vampire cloak"
+    },
+    {
+     "kind": "tag",
+     "value": "shrine maiden outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "kimono dress"
+    },
+    {
+     "kind": "tag",
+     "value": "china dress"
+    },
+    {
+     "kind": "tag",
+     "value": "cheongsam dress"
+    },
+    {
+     "kind": "tag",
+     "value": "hanbok"
+    },
+    {
+     "kind": "tag",
+     "value": "kimono with obi"
+    },
+    {
+     "kind": "tag",
+     "value": "yukata with geta"
+    },
+    {
+     "kind": "tag",
+     "value": "sari with bindi"
+    },
+    {
+     "kind": "tag",
+     "value": "cheongsam with high slits"
+    },
+    {
+     "kind": "tag",
+     "value": "viking attire"
+    },
+    {
+     "kind": "tag",
+     "value": "samurai armor"
+    },
+    {
+     "kind": "tag",
+     "value": "ninja outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "geisha attire"
+    },
+    {
+     "kind": "tag",
+     "value": "shrine maiden full"
+    },
+    {
+     "kind": "tag",
+     "value": "traditional chinese wedding dress"
+    },
+    {
+     "kind": "tag",
+     "value": "japanese wedding kimono"
+    },
+    {
+     "kind": "tag",
+     "value": "ao dai"
+    },
+    {
+     "kind": "tag",
+     "value": "kimono furisode"
+    },
+    {
+     "kind": "tag",
+     "value": "kimono houmongi"
+    },
+    {
+     "kind": "tag",
+     "value": "jinbei"
+    },
+    {
+     "kind": "tag",
+     "value": "samue"
+    },
+    {
+     "kind": "tag",
+     "value": "miko attire"
+    },
+    {
+     "kind": "tag",
+     "value": "priest vestments"
+    },
+    {
+     "kind": "tag",
+     "value": "yukata after bath"
+    },
+    {
+     "kind": "tag",
+     "value": "onsen yukata"
+    },
+    {
+     "kind": "tag",
+     "value": "festival happi"
+    }
+   ]
+  },
+  {
+   "id": "outfit-特色与运动装",
+   "note": "特色与运动装 单选 (一穿一)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "swimsuit",
+     "bunny girl",
+     "competition swimsuit",
+     "lolita fashion",
+     "tracksuit",
+     "cheerleader",
+     "idol costume",
+     "astronaut suit",
+     "knight armor",
+     "fairy dress",
+     "ballet outfit",
+     "leotard",
+     "wetsuit",
+     "fencing uniform",
+     "karate gi",
+     "soccer uniform",
+     "cheer uniform",
+     "tennis outfit",
+     "golf outfit",
+     "gyaru fashion",
+     "idol outfit",
+     "racing suit",
+     "motorcycle suit",
+     "diving suit",
+     "ski suit",
+     "snowboard gear",
+     "gymnast leotard",
+     "figure skating dress",
+     "cheerleader uniform",
+     "idol stage outfit",
+     "dance leotard",
+     "aerobic outfit",
+     "yoga outfit",
+     "steampunk outfit",
+     "stage costume",
+     "cheerleader outfit",
+     "rhythmic gymnastics outfit",
+     "kendo uniform",
+     "judo gi",
+     "taekwondo uniform",
+     "fencing outfit",
+     "riding habit",
+     "jockey silks",
+     "dry suit",
+     "spacesuit",
+     "mecha plug suit",
+     "plugsuit",
+     "superhero costume",
+     "villain costume",
+     "magical girl costume",
+     "sentai suit",
+     "tokusatsu suit",
+     "clown costume",
+     "jester outfit",
+     "harlequin outfit",
+     "santa costume",
+     "reindeer costume",
+     "halloween costume",
+     "ghost costume",
+     "vampire costume",
+     "wizard robe",
+     "necromancer robe",
+     "cultist robe",
+     "royal regalia",
+     "emperor's robes",
+     "noble attire",
+     "60s mod outfit",
+     "70s disco outfit",
+     "80s fashion",
+     "90s fashion",
+     "y2k fashion",
+     "streetwear",
+     "techwear",
+     "gorpcore",
+     "dark academia outfit",
+     "light academia outfit",
+     "cottagecore outfit",
+     "fairycore outfit",
+     "royalcore outfit",
+     "old money outfit",
+     "preppy outfit",
+     "grunge outfit",
+     "punk outfit",
+     "goth lolita",
+     "wa lolita",
+     "qi lolita",
+     "military lolita",
+     "casual clothes",
+     "loungewear",
+     "pajamas",
+     "nightgown",
+     "sleep shirt",
+     "bathrobe",
+     "spa towel wrap",
+     "matsuri outfit"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "swimsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "bunny girl"
+    },
+    {
+     "kind": "tag",
+     "value": "competition swimsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "lolita fashion"
+    },
+    {
+     "kind": "tag",
+     "value": "tracksuit"
+    },
+    {
+     "kind": "tag",
+     "value": "cheerleader"
+    },
+    {
+     "kind": "tag",
+     "value": "idol costume"
+    },
+    {
+     "kind": "tag",
+     "value": "astronaut suit"
+    },
+    {
+     "kind": "tag",
+     "value": "knight armor"
+    },
+    {
+     "kind": "tag",
+     "value": "fairy dress"
+    },
+    {
+     "kind": "tag",
+     "value": "ballet outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "leotard"
+    },
+    {
+     "kind": "tag",
+     "value": "wetsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "fencing uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "karate gi"
+    },
+    {
+     "kind": "tag",
+     "value": "soccer uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "cheer uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "tennis outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "golf outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "gyaru fashion"
+    },
+    {
+     "kind": "tag",
+     "value": "idol outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "racing suit"
+    },
+    {
+     "kind": "tag",
+     "value": "motorcycle suit"
+    },
+    {
+     "kind": "tag",
+     "value": "diving suit"
+    },
+    {
+     "kind": "tag",
+     "value": "ski suit"
+    },
+    {
+     "kind": "tag",
+     "value": "snowboard gear"
+    },
+    {
+     "kind": "tag",
+     "value": "gymnast leotard"
+    },
+    {
+     "kind": "tag",
+     "value": "figure skating dress"
+    },
+    {
+     "kind": "tag",
+     "value": "cheerleader uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "idol stage outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "dance leotard"
+    },
+    {
+     "kind": "tag",
+     "value": "aerobic outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "yoga outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "steampunk outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "stage costume"
+    },
+    {
+     "kind": "tag",
+     "value": "cheerleader outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "rhythmic gymnastics outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "kendo uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "judo gi"
+    },
+    {
+     "kind": "tag",
+     "value": "taekwondo uniform"
+    },
+    {
+     "kind": "tag",
+     "value": "fencing outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "riding habit"
+    },
+    {
+     "kind": "tag",
+     "value": "jockey silks"
+    },
+    {
+     "kind": "tag",
+     "value": "dry suit"
+    },
+    {
+     "kind": "tag",
+     "value": "spacesuit"
+    },
+    {
+     "kind": "tag",
+     "value": "mecha plug suit"
+    },
+    {
+     "kind": "tag",
+     "value": "plugsuit"
+    },
+    {
+     "kind": "tag",
+     "value": "superhero costume"
+    },
+    {
+     "kind": "tag",
+     "value": "villain costume"
+    },
+    {
+     "kind": "tag",
+     "value": "magical girl costume"
+    },
+    {
+     "kind": "tag",
+     "value": "sentai suit"
+    },
+    {
+     "kind": "tag",
+     "value": "tokusatsu suit"
+    },
+    {
+     "kind": "tag",
+     "value": "clown costume"
+    },
+    {
+     "kind": "tag",
+     "value": "jester outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "harlequin outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "santa costume"
+    },
+    {
+     "kind": "tag",
+     "value": "reindeer costume"
+    },
+    {
+     "kind": "tag",
+     "value": "halloween costume"
+    },
+    {
+     "kind": "tag",
+     "value": "ghost costume"
+    },
+    {
+     "kind": "tag",
+     "value": "vampire costume"
+    },
+    {
+     "kind": "tag",
+     "value": "wizard robe"
+    },
+    {
+     "kind": "tag",
+     "value": "necromancer robe"
+    },
+    {
+     "kind": "tag",
+     "value": "cultist robe"
+    },
+    {
+     "kind": "tag",
+     "value": "royal regalia"
+    },
+    {
+     "kind": "tag",
+     "value": "emperor's robes"
+    },
+    {
+     "kind": "tag",
+     "value": "noble attire"
+    },
+    {
+     "kind": "tag",
+     "value": "60s mod outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "70s disco outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "80s fashion"
+    },
+    {
+     "kind": "tag",
+     "value": "90s fashion"
+    },
+    {
+     "kind": "tag",
+     "value": "y2k fashion"
+    },
+    {
+     "kind": "tag",
+     "value": "streetwear"
+    },
+    {
+     "kind": "tag",
+     "value": "techwear"
+    },
+    {
+     "kind": "tag",
+     "value": "gorpcore"
+    },
+    {
+     "kind": "tag",
+     "value": "dark academia outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "light academia outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "cottagecore outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "fairycore outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "royalcore outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "old money outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "preppy outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "grunge outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "punk outfit"
+    },
+    {
+     "kind": "tag",
+     "value": "goth lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "wa lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "qi lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "military lolita"
+    },
+    {
+     "kind": "tag",
+     "value": "casual clothes"
+    },
+    {
+     "kind": "tag",
+     "value": "loungewear"
+    },
+    {
+     "kind": "tag",
+     "value": "pajamas"
+    },
+    {
+     "kind": "tag",
+     "value": "nightgown"
+    },
+    {
+     "kind": "tag",
+     "value": "sleep shirt"
+    },
+    {
+     "kind": "tag",
+     "value": "bathrobe"
+    },
+    {
+     "kind": "tag",
+     "value": "spa towel wrap"
+    },
+    {
+     "kind": "tag",
+     "value": "matsuri outfit"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-裙装与礼服-职业与制服",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/裙装与礼服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/职业与制服"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-裙装与礼服-传统与民族",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/裙装与礼服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/传统与民族"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-裙装与礼服-特色与运动装",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/裙装与礼服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-职业与制服-传统与民族",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/职业与制服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/传统与民族"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-职业与制服-特色与运动装",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/职业与制服"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
+    }
+   ]
+  },
+  {
+   "id": "outfit-x-传统与民族-特色与运动装",
+   "note": "连体装互斥",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/传统与民族"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
+    }
+   ]
+  },
+  {
+   "id": "bottoms-single",
+   "note": "下装单选 (一穿一)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "skirt",
+     "pants",
+     "shorts",
+     "jeans",
+     "denim shorts",
+     "pleated skirt",
+     "miniskirt",
+     "long skirt",
+     "overalls",
+     "suspender skirt",
+     "sweatpants",
+     "cargo pants",
+     "leggings",
+     "capri pants",
+     "hakama",
+     "bike shorts",
+     "spats",
+     "tulle skirt",
+     "layered skirt",
+     "high-waist skirt",
+     "plaid skirt",
+     "torn pants",
+     "hot pants",
+     "cargo shorts",
+     "pencil skirt",
+     "A-line skirt",
+     "circle skirt",
+     "wrap skirt",
+     "cargo skirt",
+     "leather pants",
+     "skinny jeans",
+     "wide-leg pants",
+     "culottes",
+     "harem pants",
+     "yoga pants",
+     "flared jeans",
+     "ripped jeans",
+     "high-waisted jeans",
+     "leather skirt",
+     "denim skirt",
+     "sarong",
+     "tutu",
+     "ballet skirt",
+     "tennis skirt",
+     "cheer skirt",
+     "kilt",
+     "hakama skirt",
+     "palazzo pants",
+     "drop-crotch pants",
+     "bootcut jeans",
+     "mom jeans",
+     "latex pants",
+     "compression shorts",
+     "board shorts",
+     "swim trunks",
+     "bloomers",
+     "dolphin shorts",
+     "micro shorts",
+     "high-waist shorts",
+     "low-rise pants",
+     "high-rise pants",
+     "belted pants",
+     "suspenders pants",
+     "jumpsuit pants"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "pants"
+    },
+    {
+     "kind": "tag",
+     "value": "shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "denim shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "pleated skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "miniskirt"
+    },
+    {
+     "kind": "tag",
+     "value": "long skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "overalls"
+    },
+    {
+     "kind": "tag",
+     "value": "suspender skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "sweatpants"
+    },
+    {
+     "kind": "tag",
+     "value": "cargo pants"
+    },
+    {
+     "kind": "tag",
+     "value": "leggings"
+    },
+    {
+     "kind": "tag",
+     "value": "capri pants"
+    },
+    {
+     "kind": "tag",
+     "value": "hakama"
+    },
+    {
+     "kind": "tag",
+     "value": "bike shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "spats"
+    },
+    {
+     "kind": "tag",
+     "value": "tulle skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "layered skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "high-waist skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "plaid skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "torn pants"
+    },
+    {
+     "kind": "tag",
+     "value": "hot pants"
+    },
+    {
+     "kind": "tag",
+     "value": "cargo shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "pencil skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "A-line skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "circle skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "wrap skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "cargo skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "leather pants"
+    },
+    {
+     "kind": "tag",
+     "value": "skinny jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "wide-leg pants"
+    },
+    {
+     "kind": "tag",
+     "value": "culottes"
+    },
+    {
+     "kind": "tag",
+     "value": "harem pants"
+    },
+    {
+     "kind": "tag",
+     "value": "yoga pants"
+    },
+    {
+     "kind": "tag",
+     "value": "flared jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "ripped jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "high-waisted jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "leather skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "denim skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "sarong"
+    },
+    {
+     "kind": "tag",
+     "value": "tutu"
+    },
+    {
+     "kind": "tag",
+     "value": "ballet skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "tennis skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "cheer skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "kilt"
+    },
+    {
+     "kind": "tag",
+     "value": "hakama skirt"
+    },
+    {
+     "kind": "tag",
+     "value": "palazzo pants"
+    },
+    {
+     "kind": "tag",
+     "value": "drop-crotch pants"
+    },
+    {
+     "kind": "tag",
+     "value": "bootcut jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "mom jeans"
+    },
+    {
+     "kind": "tag",
+     "value": "latex pants"
+    },
+    {
+     "kind": "tag",
+     "value": "compression shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "board shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "swim trunks"
+    },
+    {
+     "kind": "tag",
+     "value": "bloomers"
+    },
+    {
+     "kind": "tag",
+     "value": "dolphin shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "micro shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "high-waist shorts"
+    },
+    {
+     "kind": "tag",
+     "value": "low-rise pants"
+    },
+    {
+     "kind": "tag",
+     "value": "high-rise pants"
+    },
+    {
+     "kind": "tag",
+     "value": "belted pants"
+    },
+    {
+     "kind": "tag",
+     "value": "suspenders pants"
+    },
+    {
+     "kind": "tag",
+     "value": "jumpsuit pants"
+    }
+   ]
+  },
+  {
+   "id": "shoes-single",
+   "note": "鞋子单选 (一双)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "ankle boots",
+     "ankle strap heels",
+     "ballet flats",
+     "ballet heels",
+     "barefoot sandals",
+     "block heels",
+     "brogues",
+     "canvas shoes",
+     "chelsea boots",
+     "chukka boots",
+     "chunky boots",
+     "clogs",
+     "combat boots",
+     "combat boots with stockings",
+     "cowboy boots",
+     "dance shoes",
+     "derby shoes",
+     "desert boots",
+     "geta",
+     "gladiator sandals",
+     "high heels",
+     "hiking boots",
+     "house slippers",
+     "ice skate boots",
+     "ice skates",
+     "jazz shoes",
+     "kitten heels",
+     "knee boots",
+     "lace-up boots",
+     "loafers",
+     "loafers with socks",
+     "monk strap shoes",
+     "mules",
+     "okobo",
+     "oxfords",
+     "peep-toe heels",
+     "platform boots",
+     "platform footwear",
+     "platform heels",
+     "pointe shoes",
+     "pumps",
+     "rain boots",
+     "rain boots with socks",
+     "roller skates",
+     "running shoes",
+     "sandals",
+     "slingback",
+     "slingback heels",
+     "slippers",
+     "steel-toe boots",
+     "stiletto heels",
+     "tabi boots",
+     "tabi sandals",
+     "tap shoes",
+     "thigh boots",
+     "thigh high boots with stockings",
+     "uwabaki slippers",
+     "waraji",
+     "wedge sandals",
+     "wedges",
+     "work boots",
+     "zip boots",
+     "zori"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "ankle boots"
+    },
+    {
+     "kind": "tag",
+     "value": "ankle strap heels"
+    },
+    {
+     "kind": "tag",
+     "value": "ballet flats"
+    },
+    {
+     "kind": "tag",
+     "value": "ballet heels"
+    },
+    {
+     "kind": "tag",
+     "value": "barefoot sandals"
+    },
+    {
+     "kind": "tag",
+     "value": "block heels"
+    },
+    {
+     "kind": "tag",
+     "value": "brogues"
+    },
+    {
+     "kind": "tag",
+     "value": "canvas shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "chelsea boots"
+    },
+    {
+     "kind": "tag",
+     "value": "chukka boots"
+    },
+    {
+     "kind": "tag",
+     "value": "chunky boots"
+    },
+    {
+     "kind": "tag",
+     "value": "clogs"
+    },
+    {
+     "kind": "tag",
+     "value": "combat boots"
+    },
+    {
+     "kind": "tag",
+     "value": "combat boots with stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "cowboy boots"
+    },
+    {
+     "kind": "tag",
+     "value": "dance shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "derby shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "desert boots"
+    },
+    {
+     "kind": "tag",
+     "value": "geta"
+    },
+    {
+     "kind": "tag",
+     "value": "gladiator sandals"
+    },
+    {
+     "kind": "tag",
+     "value": "high heels"
+    },
+    {
+     "kind": "tag",
+     "value": "hiking boots"
+    },
+    {
+     "kind": "tag",
+     "value": "house slippers"
+    },
+    {
+     "kind": "tag",
+     "value": "ice skate boots"
+    },
+    {
+     "kind": "tag",
+     "value": "ice skates"
+    },
+    {
+     "kind": "tag",
+     "value": "jazz shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "kitten heels"
+    },
+    {
+     "kind": "tag",
+     "value": "knee boots"
+    },
+    {
+     "kind": "tag",
+     "value": "lace-up boots"
+    },
+    {
+     "kind": "tag",
+     "value": "loafers"
+    },
+    {
+     "kind": "tag",
+     "value": "loafers with socks"
+    },
+    {
+     "kind": "tag",
+     "value": "monk strap shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "mules"
+    },
+    {
+     "kind": "tag",
+     "value": "okobo"
+    },
+    {
+     "kind": "tag",
+     "value": "oxfords"
+    },
+    {
+     "kind": "tag",
+     "value": "peep-toe heels"
+    },
+    {
+     "kind": "tag",
+     "value": "platform boots"
+    },
+    {
+     "kind": "tag",
+     "value": "platform footwear"
+    },
+    {
+     "kind": "tag",
+     "value": "platform heels"
+    },
+    {
+     "kind": "tag",
+     "value": "pointe shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "pumps"
+    },
+    {
+     "kind": "tag",
+     "value": "rain boots"
+    },
+    {
+     "kind": "tag",
+     "value": "rain boots with socks"
+    },
+    {
+     "kind": "tag",
+     "value": "roller skates"
+    },
+    {
+     "kind": "tag",
+     "value": "running shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "sandals"
+    },
+    {
+     "kind": "tag",
+     "value": "slingback"
+    },
+    {
+     "kind": "tag",
+     "value": "slingback heels"
+    },
+    {
+     "kind": "tag",
+     "value": "slippers"
+    },
+    {
+     "kind": "tag",
+     "value": "steel-toe boots"
+    },
+    {
+     "kind": "tag",
+     "value": "stiletto heels"
+    },
+    {
+     "kind": "tag",
+     "value": "tabi boots"
+    },
+    {
+     "kind": "tag",
+     "value": "tabi sandals"
+    },
+    {
+     "kind": "tag",
+     "value": "tap shoes"
+    },
+    {
+     "kind": "tag",
+     "value": "thigh boots"
+    },
+    {
+     "kind": "tag",
+     "value": "thigh high boots with stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "uwabaki slippers"
+    },
+    {
+     "kind": "tag",
+     "value": "waraji"
+    },
+    {
+     "kind": "tag",
+     "value": "wedge sandals"
+    },
+    {
+     "kind": "tag",
+     "value": "wedges"
+    },
+    {
+     "kind": "tag",
+     "value": "work boots"
+    },
+    {
+     "kind": "tag",
+     "value": "zip boots"
+    },
+    {
+     "kind": "tag",
+     "value": "zori"
+    }
+   ]
+  },
+  {
+   "id": "socks-single",
+   "note": "袜类单选 (一双)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "ankle socks",
+     "argyle socks",
+     "bobby socks",
+     "bubble socks",
+     "compression socks",
+     "crew socks",
+     "fishnet stockings",
+     "gaiters",
+     "garter stockings",
+     "invisible socks",
+     "lace stockings",
+     "lace-trimmed socks",
+     "leg warmers",
+     "loose socks",
+     "no-show socks",
+     "over-the-knee socks",
+     "pantyhose",
+     "pantyhose (black)",
+     "pantyhose (striped)",
+     "pantyhose (white)",
+     "polka dot socks",
+     "puttee",
+     "sock sliders",
+     "stockings",
+     "stockings with garter",
+     "striped socks",
+     "toe socks",
+     "uneven legwear",
+     "zettai ryouiki"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "ankle socks"
+    },
+    {
+     "kind": "tag",
+     "value": "argyle socks"
+    },
+    {
+     "kind": "tag",
+     "value": "bobby socks"
+    },
+    {
+     "kind": "tag",
+     "value": "bubble socks"
+    },
+    {
+     "kind": "tag",
+     "value": "compression socks"
+    },
+    {
+     "kind": "tag",
+     "value": "crew socks"
+    },
+    {
+     "kind": "tag",
+     "value": "fishnet stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "gaiters"
+    },
+    {
+     "kind": "tag",
+     "value": "garter stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "invisible socks"
+    },
+    {
+     "kind": "tag",
+     "value": "lace stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "lace-trimmed socks"
+    },
+    {
+     "kind": "tag",
+     "value": "leg warmers"
+    },
+    {
+     "kind": "tag",
+     "value": "loose socks"
+    },
+    {
+     "kind": "tag",
+     "value": "no-show socks"
+    },
+    {
+     "kind": "tag",
+     "value": "over-the-knee socks"
+    },
+    {
+     "kind": "tag",
+     "value": "pantyhose"
+    },
+    {
+     "kind": "tag",
+     "value": "pantyhose (black)"
+    },
+    {
+     "kind": "tag",
+     "value": "pantyhose (striped)"
+    },
+    {
+     "kind": "tag",
+     "value": "pantyhose (white)"
+    },
+    {
+     "kind": "tag",
+     "value": "polka dot socks"
+    },
+    {
+     "kind": "tag",
+     "value": "puttee"
+    },
+    {
+     "kind": "tag",
+     "value": "sock sliders"
+    },
+    {
+     "kind": "tag",
+     "value": "stockings"
+    },
+    {
+     "kind": "tag",
+     "value": "stockings with garter"
+    },
+    {
+     "kind": "tag",
+     "value": "striped socks"
+    },
+    {
+     "kind": "tag",
+     "value": "toe socks"
+    },
+    {
+     "kind": "tag",
+     "value": "uneven legwear"
+    },
+    {
+     "kind": "tag",
+     "value": "zettai ryouiki"
+    }
+   ]
+  },
+  {
+   "id": "panties-single",
+   "note": "内裤单选",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "thong",
+     "boyshorts",
+     "frilled panties",
+     "side-tie panties",
+     "boxers",
+     "crotchless panties",
+     "sheer panties",
+     "boyshorts panties",
+     "high-waisted panties",
+     "thong with garter",
+     "seamless panties"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "thong"
+    },
+    {
+     "kind": "tag",
+     "value": "boyshorts"
+    },
+    {
+     "kind": "tag",
+     "value": "frilled panties"
+    },
+    {
+     "kind": "tag",
+     "value": "side-tie panties"
+    },
+    {
+     "kind": "tag",
+     "value": "boxers"
+    },
+    {
+     "kind": "tag",
+     "value": "crotchless panties"
+    },
+    {
+     "kind": "tag",
+     "value": "sheer panties"
+    },
+    {
+     "kind": "tag",
+     "value": "boyshorts panties"
+    },
+    {
+     "kind": "tag",
+     "value": "high-waisted panties"
+    },
+    {
+     "kind": "tag",
+     "value": "thong with garter"
+    },
+    {
+     "kind": "tag",
+     "value": "seamless panties"
+    }
+   ]
+  },
+  {
+   "id": "bras-single",
+   "note": "文胸单选",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "sports bra",
+     "push-up bra",
+     "lace bra",
+     "strapless bra",
+     "balconette bra"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "sports bra"
+    },
+    {
+     "kind": "tag",
+     "value": "push-up bra"
+    },
+    {
+     "kind": "tag",
+     "value": "lace bra"
+    },
+    {
+     "kind": "tag",
+     "value": "strapless bra"
+    },
+    {
+     "kind": "tag",
+     "value": "balconette bra"
+    }
+   ]
+  },
+  {
+   "id": "pose-base",
+   "note": "姿势基态单选 (同时只有一种基础体位)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "standing",
+     "leaning",
+     "walking",
+     "running",
+     "jumping",
+     "dancing",
+     "reaching out",
+     "falling",
+     "floating",
+     "standing on one leg",
+     "stretching",
+     "swimming",
+     "flying",
+     "spinning",
+     "tiptoes",
+     "playing instrument",
+     "selfie pose",
+     "arms behind head",
+     "arm up",
+     "arm outstretched",
+     "reaching towards viewer",
+     "hand up",
+     "v pose",
+     "contrapposto",
+     "mid-stride",
+     "turning around",
+     "dodging",
+     "landing pose",
+     "hero pose",
+     "crossed legs (standing)",
+     "power stance",
+     "model pose",
+     "catwalk pose",
+     "mid-air jump",
+     "mid-kick",
+     "spinning kick",
+     "backflip",
+     "handstand",
+     "cartwheel",
+     "floating in air",
+     "dynamic running pose",
+     "leaping pose",
+     "landing from jump",
+     "wide stance",
+     "narrow stance",
+     "weight on one leg",
+     "hip cocked",
+     "leaning on railing",
+     "t-pose",
+     "a-pose",
+     "mid-dance",
+     "ballet pose",
+     "arabesque",
+     "pirouette",
+     "leap",
+     "split jump",
+     "split",
+     "front split",
+     "side split",
+     "yoga pose",
+     "tree pose",
+     "warrior pose",
+     "downward dog",
+     "martial arts stance",
+     "kung fu pose",
+     "kendo stance",
+     "sheathing sword",
+     "aiming gun",
+     "sitting",
+     "on lap",
+     "crossed legs",
+     "sitting on object",
+     "seiza",
+     "wariza",
+     "yokozuwari",
+     "indian style",
+     "hugging own legs",
+     "sitting on lap",
+     "straddling",
+     "side sit",
+     "w-sitting",
+     "crossed ankles",
+     "one knee up",
+     "sitting on floor",
+     "sleeping upright",
+     "lotus position",
+     "butterfly sit",
+     "side-saddle",
+     "sitting cross-legged on floor",
+     "sitting on edge of bed",
+     "sitting on windowsill",
+     "sitting on stairs",
+     "sitting with one leg up",
+     "reclining sit",
+     "sitting on railing",
+     "sitting seiza",
+     "sitting yokozuwari",
+     "sitting indian style",
+     "hugging knees",
+     "chin on knees",
+     "head on knees",
+     "meditation pose",
+     "lying",
+     "kneeling",
+     "bent over",
+     "all fours",
+     "legs up",
+     "knees up",
+     "lying on bed",
+     "lying on stomach",
+     "lying on side",
+     "squatting",
+     "crouching",
+     "crawling",
+     "kneeling on one knee",
+     "lying on back",
+     "curled up",
+     "crouch",
+     "cat pose",
+     "fetal position",
+     "starfish position",
+     "prone position",
+     "supine position",
+     "on all fours looking back",
+     "kneeling with hands on floor",
+     "sitting on heels",
+     "arched back lying",
+     "side lying with hand under head",
+     "lying fetal position",
+     "lying starfish",
+     "on all fours",
+     "genuflecting",
+     "prostrating"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "standing"
+    },
+    {
+     "kind": "tag",
+     "value": "leaning"
+    },
+    {
+     "kind": "tag",
+     "value": "walking"
+    },
+    {
+     "kind": "tag",
+     "value": "running"
+    },
+    {
+     "kind": "tag",
+     "value": "jumping"
+    },
+    {
+     "kind": "tag",
+     "value": "dancing"
+    },
+    {
+     "kind": "tag",
+     "value": "reaching out"
+    },
+    {
+     "kind": "tag",
+     "value": "falling"
+    },
+    {
+     "kind": "tag",
+     "value": "floating"
+    },
+    {
+     "kind": "tag",
+     "value": "standing on one leg"
+    },
+    {
+     "kind": "tag",
+     "value": "stretching"
+    },
+    {
+     "kind": "tag",
+     "value": "swimming"
+    },
+    {
+     "kind": "tag",
+     "value": "flying"
+    },
+    {
+     "kind": "tag",
+     "value": "spinning"
+    },
+    {
+     "kind": "tag",
+     "value": "tiptoes"
+    },
+    {
+     "kind": "tag",
+     "value": "playing instrument"
+    },
+    {
+     "kind": "tag",
+     "value": "selfie pose"
+    },
+    {
+     "kind": "tag",
+     "value": "arms behind head"
+    },
+    {
+     "kind": "tag",
+     "value": "arm up"
+    },
+    {
+     "kind": "tag",
+     "value": "arm outstretched"
+    },
+    {
+     "kind": "tag",
+     "value": "reaching towards viewer"
+    },
+    {
+     "kind": "tag",
+     "value": "hand up"
+    },
+    {
+     "kind": "tag",
+     "value": "v pose"
+    },
+    {
+     "kind": "tag",
+     "value": "contrapposto"
+    },
+    {
+     "kind": "tag",
+     "value": "mid-stride"
+    },
+    {
+     "kind": "tag",
+     "value": "turning around"
+    },
+    {
+     "kind": "tag",
+     "value": "dodging"
+    },
+    {
+     "kind": "tag",
+     "value": "landing pose"
+    },
+    {
+     "kind": "tag",
+     "value": "hero pose"
+    },
+    {
+     "kind": "tag",
+     "value": "crossed legs (standing)"
+    },
+    {
+     "kind": "tag",
+     "value": "power stance"
+    },
+    {
+     "kind": "tag",
+     "value": "model pose"
+    },
+    {
+     "kind": "tag",
+     "value": "catwalk pose"
+    },
+    {
+     "kind": "tag",
+     "value": "mid-air jump"
+    },
+    {
+     "kind": "tag",
+     "value": "mid-kick"
+    },
+    {
+     "kind": "tag",
+     "value": "spinning kick"
+    },
+    {
+     "kind": "tag",
+     "value": "backflip"
+    },
+    {
+     "kind": "tag",
+     "value": "handstand"
+    },
+    {
+     "kind": "tag",
+     "value": "cartwheel"
+    },
+    {
+     "kind": "tag",
+     "value": "floating in air"
+    },
+    {
+     "kind": "tag",
+     "value": "dynamic running pose"
+    },
+    {
+     "kind": "tag",
+     "value": "leaping pose"
+    },
+    {
+     "kind": "tag",
+     "value": "landing from jump"
+    },
+    {
+     "kind": "tag",
+     "value": "wide stance"
+    },
+    {
+     "kind": "tag",
+     "value": "narrow stance"
+    },
+    {
+     "kind": "tag",
+     "value": "weight on one leg"
+    },
+    {
+     "kind": "tag",
+     "value": "hip cocked"
+    },
+    {
+     "kind": "tag",
+     "value": "leaning on railing"
+    },
+    {
+     "kind": "tag",
+     "value": "t-pose"
+    },
+    {
+     "kind": "tag",
+     "value": "a-pose"
+    },
+    {
+     "kind": "tag",
+     "value": "mid-dance"
+    },
+    {
+     "kind": "tag",
+     "value": "ballet pose"
+    },
+    {
+     "kind": "tag",
+     "value": "arabesque"
+    },
+    {
+     "kind": "tag",
+     "value": "pirouette"
+    },
+    {
+     "kind": "tag",
+     "value": "leap"
+    },
+    {
+     "kind": "tag",
+     "value": "split jump"
+    },
+    {
+     "kind": "tag",
+     "value": "split"
+    },
+    {
+     "kind": "tag",
+     "value": "front split"
+    },
+    {
+     "kind": "tag",
+     "value": "side split"
+    },
+    {
+     "kind": "tag",
+     "value": "yoga pose"
+    },
+    {
+     "kind": "tag",
+     "value": "tree pose"
+    },
+    {
+     "kind": "tag",
+     "value": "warrior pose"
+    },
+    {
+     "kind": "tag",
+     "value": "downward dog"
+    },
+    {
+     "kind": "tag",
+     "value": "martial arts stance"
+    },
+    {
+     "kind": "tag",
+     "value": "kung fu pose"
+    },
+    {
+     "kind": "tag",
+     "value": "kendo stance"
+    },
+    {
+     "kind": "tag",
+     "value": "sheathing sword"
+    },
+    {
+     "kind": "tag",
+     "value": "aiming gun"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting"
+    },
+    {
+     "kind": "tag",
+     "value": "on lap"
+    },
+    {
+     "kind": "tag",
+     "value": "crossed legs"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on object"
+    },
+    {
+     "kind": "tag",
+     "value": "seiza"
+    },
+    {
+     "kind": "tag",
+     "value": "wariza"
+    },
+    {
+     "kind": "tag",
+     "value": "yokozuwari"
+    },
+    {
+     "kind": "tag",
+     "value": "indian style"
+    },
+    {
+     "kind": "tag",
+     "value": "hugging own legs"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on lap"
+    },
+    {
+     "kind": "tag",
+     "value": "straddling"
+    },
+    {
+     "kind": "tag",
+     "value": "side sit"
+    },
+    {
+     "kind": "tag",
+     "value": "w-sitting"
+    },
+    {
+     "kind": "tag",
+     "value": "crossed ankles"
+    },
+    {
+     "kind": "tag",
+     "value": "one knee up"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on floor"
+    },
+    {
+     "kind": "tag",
+     "value": "sleeping upright"
+    },
+    {
+     "kind": "tag",
+     "value": "lotus position"
+    },
+    {
+     "kind": "tag",
+     "value": "butterfly sit"
+    },
+    {
+     "kind": "tag",
+     "value": "side-saddle"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting cross-legged on floor"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on edge of bed"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on windowsill"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on stairs"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting with one leg up"
+    },
+    {
+     "kind": "tag",
+     "value": "reclining sit"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on railing"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting seiza"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting yokozuwari"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting indian style"
+    },
+    {
+     "kind": "tag",
+     "value": "hugging knees"
+    },
+    {
+     "kind": "tag",
+     "value": "chin on knees"
+    },
+    {
+     "kind": "tag",
+     "value": "head on knees"
+    },
+    {
+     "kind": "tag",
+     "value": "meditation pose"
+    },
+    {
+     "kind": "tag",
+     "value": "lying"
+    },
+    {
+     "kind": "tag",
+     "value": "kneeling"
+    },
+    {
+     "kind": "tag",
+     "value": "bent over"
+    },
+    {
+     "kind": "tag",
+     "value": "all fours"
+    },
+    {
+     "kind": "tag",
+     "value": "legs up"
+    },
+    {
+     "kind": "tag",
+     "value": "knees up"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on bed"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on stomach"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on side"
+    },
+    {
+     "kind": "tag",
+     "value": "squatting"
+    },
+    {
+     "kind": "tag",
+     "value": "crouching"
+    },
+    {
+     "kind": "tag",
+     "value": "crawling"
+    },
+    {
+     "kind": "tag",
+     "value": "kneeling on one knee"
+    },
+    {
+     "kind": "tag",
+     "value": "lying on back"
+    },
+    {
+     "kind": "tag",
+     "value": "curled up"
+    },
+    {
+     "kind": "tag",
+     "value": "crouch"
+    },
+    {
+     "kind": "tag",
+     "value": "cat pose"
+    },
+    {
+     "kind": "tag",
+     "value": "fetal position"
+    },
+    {
+     "kind": "tag",
+     "value": "starfish position"
+    },
+    {
+     "kind": "tag",
+     "value": "prone position"
+    },
+    {
+     "kind": "tag",
+     "value": "supine position"
+    },
+    {
+     "kind": "tag",
+     "value": "on all fours looking back"
+    },
+    {
+     "kind": "tag",
+     "value": "kneeling with hands on floor"
+    },
+    {
+     "kind": "tag",
+     "value": "sitting on heels"
+    },
+    {
+     "kind": "tag",
+     "value": "arched back lying"
+    },
+    {
+     "kind": "tag",
+     "value": "side lying with hand under head"
+    },
+    {
+     "kind": "tag",
+     "value": "lying fetal position"
+    },
+    {
+     "kind": "tag",
+     "value": "lying starfish"
+    },
+    {
+     "kind": "tag",
+     "value": "on all fours"
+    },
+    {
+     "kind": "tag",
+     "value": "genuflecting"
+    },
+    {
+     "kind": "tag",
+     "value": "prostrating"
+    }
+   ]
+  },
+  {
+   "id": "sleep-vs-pose",
+   "note": "睡眠/昏迷 ↔ 姿势动作",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "sleeping",
+     "unconscious"
+    ]
+   },
+   "right": [
+    {
+     "kind": "cat",
+     "value": "姿势动作"
+    }
+   ]
+  },
+  {
+   "id": "ahegao-vs-smile",
+   "note": "阿黑颜 ↔ 微笑/平静系表情",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "ahegao"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "bitter smile"
+    },
+    {
+     "kind": "tag",
+     "value": "bittersweet smile"
+    },
+    {
+     "kind": "tag",
+     "value": "blank expression"
+    },
+    {
+     "kind": "tag",
+     "value": "blank expression soft"
+    },
+    {
+     "kind": "tag",
+     "value": "blank smile"
+    },
+    {
+     "kind": "tag",
+     "value": "calm"
+    },
+    {
+     "kind": "tag",
+     "value": "cat smile"
+    },
+    {
+     "kind": "tag",
+     "value": "closed mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "closed-mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "contemplative"
+    },
+    {
+     "kind": "tag",
+     "value": "content smile"
+    },
+    {
+     "kind": "tag",
+     "value": "covering mouth while smiling"
+    },
+    {
+     "kind": "tag",
+     "value": "crazy smile"
+    },
+    {
+     "kind": "tag",
+     "value": "crying with smile"
+    },
+    {
+     "kind": "tag",
+     "value": "evil grin"
+    },
+    {
+     "kind": "tag",
+     "value": "evil smile"
+    },
+    {
+     "kind": "tag",
+     "value": "fake smile"
+    },
+    {
+     "kind": "tag",
+     "value": "feral grin"
+    },
+    {
+     "kind": "tag",
+     "value": "forced smile"
+    },
+    {
+     "kind": "tag",
+     "value": "gentle smile"
+    },
+    {
+     "kind": "tag",
+     "value": "grin"
+    },
+    {
+     "kind": "tag",
+     "value": "innocent smile"
+    },
+    {
+     "kind": "tag",
+     "value": "knowing smile"
+    },
+    {
+     "kind": "tag",
+     "value": "light smile"
+    },
+    {
+     "kind": "tag",
+     "value": "lopsided smile"
+    },
+    {
+     "kind": "tag",
+     "value": "manic smile"
+    },
+    {
+     "kind": "tag",
+     "value": "nervous smile"
+    },
+    {
+     "kind": "tag",
+     "value": "open mouth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "peace sign smile"
+    },
+    {
+     "kind": "tag",
+     "value": "playful smile"
+    },
+    {
+     "kind": "tag",
+     "value": "polite smile"
+    },
+    {
+     "kind": "tag",
+     "value": "predatory smile"
+    },
+    {
+     "kind": "tag",
+     "value": "radiant smile"
+    },
+    {
+     "kind": "tag",
+     "value": "sadistic smile"
+    },
+    {
+     "kind": "tag",
+     "value": "seductive smile"
+    },
+    {
+     "kind": "tag",
+     "value": "serene expression"
+    },
+    {
+     "kind": "tag",
+     "value": "sharp teeth smile"
+    },
+    {
+     "kind": "tag",
+     "value": "shy smile"
+    },
+    {
+     "kind": "tag",
+     "value": "side glance smile"
+    },
+    {
+     "kind": "tag",
+     "value": "sly smile"
+    },
+    {
+     "kind": "tag",
+     "value": "small smile"
+    },
+    {
+     "kind": "tag",
+     "value": "smile"
+    },
+    {
+     "kind": "tag",
+     "value": "smile with fangs"
+    },
+    {
+     "kind": "tag",
+     "value": "smiling"
+    },
+    {
+     "kind": "tag",
+     "value": "smirk"
+    },
+    {
+     "kind": "tag",
+     "value": "smug grin"
+    },
+    {
+     "kind": "tag",
+     "value": "sparkle eyes smile"
+    },
+    {
+     "kind": "tag",
+     "value": "tired smile"
+    },
+    {
+     "kind": "tag",
+     "value": "toothy smile"
+    },
+    {
+     "kind": "tag",
+     "value": "wide grin"
+    },
+    {
+     "kind": "tag",
+     "value": "wide smile"
+    },
+    {
+     "kind": "tag",
+     "value": "wry smile"
+    }
+   ]
+  },
+  {
+   "id": "child-vs-body",
+   "note": "幼儿 ↔ 成人体型",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "toddler",
+     "infant",
+     "newborn",
+     "loli",
+     "shota",
+     "child",
+     "young boy"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "人物主体/体型"
+    }
+   ]
+  },
+  {
+   "id": "child-vs-makeup",
+   "note": "幼儿 ↔ 成人妆容",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "toddler",
+     "infant",
+     "newborn",
+     "loli",
+     "shota",
+     "child",
+     "young boy"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "人物主体/妆容与胡须"
+    }
+   ]
+  },
+  {
+   "id": "child-vs-nude",
+   "note": "幼儿 ↔ 裸露与暴露",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "toddler",
+     "infant",
+     "newborn",
+     "loli",
+     "shota",
+     "child",
+     "young boy"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "人物主体/裸露与暴露"
+    }
+   ]
+  },
+  {
+   "id": "child-vs-nsfw-state",
+   "note": "幼儿 ↔ NSFW状态词",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "toddler",
+     "infant",
+     "newborn",
+     "loli",
+     "shota",
+     "child",
+     "young boy"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "ahegao"
+    },
+    {
+     "kind": "tag",
+     "value": "aroused"
+    },
+    {
+     "kind": "tag",
+     "value": "post-orgasm"
+    },
+    {
+     "kind": "tag",
+     "value": "afterglow"
+    }
+   ]
+  },
+  {
+   "id": "no-humans-person",
+   "note": "完全无人 ↔ 人物描述维度",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "no humans"
+    ]
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "人物主体/人数"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/年龄阶段"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/发型"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/发色"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/眼部"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/妆容与胡须"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/体型"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/表情"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/嘴部动作"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/情绪与状态"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/皮肤与印记"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/非人特征"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/裸露与暴露"
+    },
+    {
+     "kind": "sub",
+     "value": "人物主体/种族与幻想身份"
+    },
+    {
+     "kind": "cat",
+     "value": "姿势动作"
+    },
+    {
+     "kind": "cat",
+     "value": "服装系统"
+    }
+   ]
+  },
+  {
+   "id": "rain-vs-snow",
+   "note": "降雨 ↔ 降雪 (不同时存在)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "rain",
+     "heavy rain",
+     "drizzle",
+     "thunderstorm",
+     "light rain",
+     "light drizzle",
+     "sudden shower",
+     "sun shower",
+     "freezing rain",
+     "monsoon rain",
+     "drizzle on neon"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "snowing"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard"
+    },
+    {
+     "kind": "tag",
+     "value": "snowflakes falling"
+    },
+    {
+     "kind": "tag",
+     "value": "heavy snowfall"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard conditions"
+    },
+    {
+     "kind": "tag",
+     "value": "snow flurry"
+    },
+    {
+     "kind": "tag",
+     "value": "light snow"
+    },
+    {
+     "kind": "tag",
+     "value": "wet snow"
+    },
+    {
+     "kind": "tag",
+     "value": "powder snow"
+    },
+    {
+     "kind": "tag",
+     "value": "sleet"
+    }
+   ]
+  },
+  {
+   "id": "clear-vs-precip",
+   "note": "晴空 ↔ 阴雨/降雪",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "clear sky"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "rain"
+    },
+    {
+     "kind": "tag",
+     "value": "heavy rain"
+    },
+    {
+     "kind": "tag",
+     "value": "drizzle"
+    },
+    {
+     "kind": "tag",
+     "value": "thunderstorm"
+    },
+    {
+     "kind": "tag",
+     "value": "light rain"
+    },
+    {
+     "kind": "tag",
+     "value": "light drizzle"
+    },
+    {
+     "kind": "tag",
+     "value": "sudden shower"
+    },
+    {
+     "kind": "tag",
+     "value": "sun shower"
+    },
+    {
+     "kind": "tag",
+     "value": "freezing rain"
+    },
+    {
+     "kind": "tag",
+     "value": "monsoon rain"
+    },
+    {
+     "kind": "tag",
+     "value": "drizzle on neon"
+    },
+    {
+     "kind": "tag",
+     "value": "snowing"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard"
+    },
+    {
+     "kind": "tag",
+     "value": "snowflakes falling"
+    },
+    {
+     "kind": "tag",
+     "value": "heavy snowfall"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard conditions"
+    },
+    {
+     "kind": "tag",
+     "value": "snow flurry"
+    },
+    {
+     "kind": "tag",
+     "value": "light snow"
+    },
+    {
+     "kind": "tag",
+     "value": "wet snow"
+    },
+    {
+     "kind": "tag",
+     "value": "powder snow"
+    },
+    {
+     "kind": "tag",
+     "value": "sleet"
+    }
+   ]
+  },
+  {
+   "id": "headwear-single",
+   "note": "头戴物单选 (帽/面具/头饰)",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "santa hat",
+     "ribbon",
+     "gas mask",
+     "round eyewear",
+     "wide-brim hat",
+     "veil",
+     "hair ornament",
+     "bucket hat",
+     "oni mask",
+     "halo",
+     "trilby",
+     "hat",
+     "wizard hat",
+     "kanzashi",
+     "blindfold",
+     "animal ear headwear",
+     "bunny ears headwear",
+     "cat ear headwear",
+     "sun hat",
+     "party hat",
+     "diadem",
+     "venetian mask",
+     "mask on head",
+     "veil with lace",
+     "flower hairpin",
+     "half face mask",
+     "hachimaki",
+     "ushanka",
+     "hairband",
+     "turban",
+     "domino mask",
+     "bunny ear headband",
+     "headphones on head",
+     "beanie",
+     "mask",
+     "fox mask",
+     "bandana",
+     "sweatband",
+     "bowler hat",
+     "bridal veil",
+     "trucker hat",
+     "hairclip",
+     "surgical mask",
+     "cat ear headphones",
+     "hijab",
+     "flower crown",
+     "hair bow",
+     "tiara",
+     "headband (wide)",
+     "headband",
+     "crown",
+     "full face mask",
+     "cloth mask",
+     "half mask",
+     "baseball cap",
+     "hair flower",
+     "kitsune mask",
+     "eye mask",
+     "fur hat",
+     "fedora",
+     "keffiyeh",
+     "witch hat",
+     "mask over eyes",
+     "top hat",
+     "ear muffs",
+     "hair ribbon",
+     "niqab",
+     "cowboy hat",
+     "headphones",
+     "maid headdress",
+     "earmuffs",
+     "beret",
+     "straw hat",
+     "visor cap",
+     "flat cap",
+     "fox ears headwear",
+     "newsboy cap",
+     "beret with pin",
+     "circlet",
+     "fox ear headband",
+     "hair stick",
+     "plague doctor mask"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "santa hat"
+    },
+    {
+     "kind": "tag",
+     "value": "ribbon"
+    },
+    {
+     "kind": "tag",
+     "value": "gas mask"
+    },
+    {
+     "kind": "tag",
+     "value": "round eyewear"
+    },
+    {
+     "kind": "tag",
+     "value": "wide-brim hat"
+    },
+    {
+     "kind": "tag",
+     "value": "veil"
+    },
+    {
+     "kind": "tag",
+     "value": "hair ornament"
+    },
+    {
+     "kind": "tag",
+     "value": "bucket hat"
+    },
+    {
+     "kind": "tag",
+     "value": "oni mask"
+    },
+    {
+     "kind": "tag",
+     "value": "halo"
+    },
+    {
+     "kind": "tag",
+     "value": "trilby"
+    },
+    {
+     "kind": "tag",
+     "value": "hat"
+    },
+    {
+     "kind": "tag",
+     "value": "wizard hat"
+    },
+    {
+     "kind": "tag",
+     "value": "kanzashi"
+    },
+    {
+     "kind": "tag",
+     "value": "blindfold"
+    },
+    {
+     "kind": "tag",
+     "value": "animal ear headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "bunny ears headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "cat ear headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "sun hat"
+    },
+    {
+     "kind": "tag",
+     "value": "party hat"
+    },
+    {
+     "kind": "tag",
+     "value": "diadem"
+    },
+    {
+     "kind": "tag",
+     "value": "venetian mask"
+    },
+    {
+     "kind": "tag",
+     "value": "mask on head"
+    },
+    {
+     "kind": "tag",
+     "value": "veil with lace"
+    },
+    {
+     "kind": "tag",
+     "value": "flower hairpin"
+    },
+    {
+     "kind": "tag",
+     "value": "half face mask"
+    },
+    {
+     "kind": "tag",
+     "value": "hachimaki"
+    },
+    {
+     "kind": "tag",
+     "value": "ushanka"
+    },
+    {
+     "kind": "tag",
+     "value": "hairband"
+    },
+    {
+     "kind": "tag",
+     "value": "turban"
+    },
+    {
+     "kind": "tag",
+     "value": "domino mask"
+    },
+    {
+     "kind": "tag",
+     "value": "bunny ear headband"
+    },
+    {
+     "kind": "tag",
+     "value": "headphones on head"
+    },
+    {
+     "kind": "tag",
+     "value": "beanie"
+    },
+    {
+     "kind": "tag",
+     "value": "mask"
+    },
+    {
+     "kind": "tag",
+     "value": "fox mask"
+    },
+    {
+     "kind": "tag",
+     "value": "bandana"
+    },
+    {
+     "kind": "tag",
+     "value": "sweatband"
+    },
+    {
+     "kind": "tag",
+     "value": "bowler hat"
+    },
+    {
+     "kind": "tag",
+     "value": "bridal veil"
+    },
+    {
+     "kind": "tag",
+     "value": "trucker hat"
+    },
+    {
+     "kind": "tag",
+     "value": "hairclip"
+    },
+    {
+     "kind": "tag",
+     "value": "surgical mask"
+    },
+    {
+     "kind": "tag",
+     "value": "cat ear headphones"
+    },
+    {
+     "kind": "tag",
+     "value": "hijab"
+    },
+    {
+     "kind": "tag",
+     "value": "flower crown"
+    },
+    {
+     "kind": "tag",
+     "value": "hair bow"
+    },
+    {
+     "kind": "tag",
+     "value": "tiara"
+    },
+    {
+     "kind": "tag",
+     "value": "headband (wide)"
+    },
+    {
+     "kind": "tag",
+     "value": "headband"
+    },
+    {
+     "kind": "tag",
+     "value": "crown"
+    },
+    {
+     "kind": "tag",
+     "value": "full face mask"
+    },
+    {
+     "kind": "tag",
+     "value": "cloth mask"
+    },
+    {
+     "kind": "tag",
+     "value": "half mask"
+    },
+    {
+     "kind": "tag",
+     "value": "baseball cap"
+    },
+    {
+     "kind": "tag",
+     "value": "hair flower"
+    },
+    {
+     "kind": "tag",
+     "value": "kitsune mask"
+    },
+    {
+     "kind": "tag",
+     "value": "eye mask"
+    },
+    {
+     "kind": "tag",
+     "value": "fur hat"
+    },
+    {
+     "kind": "tag",
+     "value": "fedora"
+    },
+    {
+     "kind": "tag",
+     "value": "keffiyeh"
+    },
+    {
+     "kind": "tag",
+     "value": "witch hat"
+    },
+    {
+     "kind": "tag",
+     "value": "mask over eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "top hat"
+    },
+    {
+     "kind": "tag",
+     "value": "ear muffs"
+    },
+    {
+     "kind": "tag",
+     "value": "hair ribbon"
+    },
+    {
+     "kind": "tag",
+     "value": "niqab"
+    },
+    {
+     "kind": "tag",
+     "value": "cowboy hat"
+    },
+    {
+     "kind": "tag",
+     "value": "headphones"
+    },
+    {
+     "kind": "tag",
+     "value": "maid headdress"
+    },
+    {
+     "kind": "tag",
+     "value": "earmuffs"
+    },
+    {
+     "kind": "tag",
+     "value": "beret"
+    },
+    {
+     "kind": "tag",
+     "value": "straw hat"
+    },
+    {
+     "kind": "tag",
+     "value": "visor cap"
+    },
+    {
+     "kind": "tag",
+     "value": "flat cap"
+    },
+    {
+     "kind": "tag",
+     "value": "fox ears headwear"
+    },
+    {
+     "kind": "tag",
+     "value": "newsboy cap"
+    },
+    {
+     "kind": "tag",
+     "value": "beret with pin"
+    },
+    {
+     "kind": "tag",
+     "value": "circlet"
+    },
+    {
+     "kind": "tag",
+     "value": "fox ear headband"
+    },
+    {
+     "kind": "tag",
+     "value": "hair stick"
+    },
+    {
+     "kind": "tag",
+     "value": "plague doctor mask"
     }
    ]
   }

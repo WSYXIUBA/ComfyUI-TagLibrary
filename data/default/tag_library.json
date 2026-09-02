@@ -2099,7 +2099,16 @@
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
-       "id": "imported.c2.sub.1other-2"
+       "id": "imported.c2.sub.1other-2",
+       "type": "content",
+       "priority": 50,
+       "rarity": "common",
+       "groups": [],
+       "requires": [],
+       "mutex_with": [],
+       "desc": "",
+       "meta": {},
+       "gender": ""
       }
      ],
      "random_quota": null,
@@ -32839,23 +32848,6 @@
        "gender": ""
       },
       {
-       "en": "judo uniform",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "柔道服",
-       "id": "reorg.s18.judo-uniform",
-       "type": "descriptor",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": ""
-      },
-      {
        "en": "soccer uniform",
        "aliases": [],
        "weight": 1.0,
@@ -42763,7 +42755,16 @@
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
-       "id": "reorg.s26.lap-pillow-2"
+       "id": "reorg.s26.lap-pillow-2",
+       "type": "pose",
+       "priority": 50,
+       "rarity": "common",
+       "groups": [],
+       "requires": [],
+       "mutex_with": [],
+       "desc": "",
+       "meta": {},
+       "gender": ""
       }
      ],
      "random_quota": null,
@@ -68272,14 +68273,32 @@
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
-       "id": "imported.c8.sub-2-3.oil-painting-medium-2"
+       "id": "imported.c8.sub-2-3.oil-painting-medium-2",
+       "type": "style",
+       "priority": 50,
+       "rarity": "common",
+       "groups": [],
+       "requires": [],
+       "mutex_with": [],
+       "desc": "",
+       "meta": {},
+       "gender": ""
       },
       {
        "en": "watercolor (medium)(水彩(媒介))",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
-       "id": "imported.c8.sub-2-3.watercolor-medium-2"
+       "id": "imported.c8.sub-2-3.watercolor-medium-2",
+       "type": "style",
+       "priority": 50,
+       "rarity": "common",
+       "groups": [],
+       "requires": [],
+       "mutex_with": [],
+       "desc": "",
+       "meta": {},
+       "gender": ""
       }
      ],
      "random_quota": null,
@@ -74798,7 +74817,6 @@
    ]
   }
  ],
- "settings": {},
  "_tombstones": [
   "camerawork",
   "camerawork.composition",
@@ -75615,6 +75633,7 @@
   "quality.s3.crisp-details",
   "quality.s3.intricate-details",
   "quality.s3.sharp-focus",
+  "reorg.s18.judo-uniform",
   "scene",
   "scene.particles",
   "scene.particles.ash",
@@ -76472,5 +76491,6 @@
   "subject.s3.worried",
   "subject.s3.yawning",
   "subject.s3.yelling"
- ]
+ ],
+ "settings": {}
 }
