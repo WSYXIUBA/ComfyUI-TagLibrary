@@ -50,7 +50,8 @@ class TagLibraryNode:
         "▸ 输出 positive → 连 CLIPTextEncode 的 text\n"
         "▸ 输出 tags_preview → 接 Preview Text 可查看实际输出\n"
         "▸ 输入 prefix/suffix (可选) → 上游文本拼接在标签前后\n"
-        "▸ 面板 ➕ 添加标签 | 🎲 换随机种子 | NSFW 开关控制 🔞 标签"
+        "▸ 面板 ➕ 添加标签 | 🎲 换随机种子 | NSFW 开关控制 🔞 标签\n"
+        "▸ 出图元数据: PNG 信息自动写入 TagLibrary 键 (实际出词/模式/种子), 读取工具可见"
     )
 
     @classmethod
@@ -79,19 +80,23 @@ class TagLibraryNode:
                 "suffix": ("STRING", {"forceInput": True,
                                       "tooltip": "⬅️ 可选: 上游文本拼在标签后面"}),
             },
+            # 执行期把实际出词写进 extra_pnginfo (字典引用直写) → SaveImage 落图时随
+            # 元数据一起嵌入 PNG, 解决"prompt 元数据里 text 只存链接引用、看不到最终提示词"
+            "hidden": {"extra_pnginfo": "EXTRA_PNGINFO", "unique_id": "UNIQUE_ID"},
         }
 
     # 旧版参数 → 新 selection_state 字段的映射 (兼容旧工作流, 值并入 state 不丢)
+    # (pinned_required 已移除: 钉选必含现在常开, 旧工作流残留值直接忽略)
     LEGACY_OPT_KEYS = (
         "min_tags", "max_tags", "category_weights", "search_text",
-        "separator", "use_weights_syntax", "dedupe", "pinned_required",
+        "separator", "use_weights_syntax", "dedupe",
     )
 
     # ------------------------------------------------------ v2 auto (引擎)
 
     def _build_auto(self, lib, state: dict, seed: int, mode: str, *, nsfw_on: bool,
                     avoid_conflicts: bool, search_text: str, category_weights,
-                    pinned_required: bool, use_weights_syntax: bool, dedupe: bool,
+                    use_weights_syntax: bool, dedupe: bool,
                     separator: str, prefix: str | None, suffix: str | None,
                     exclude_keys: set):
         """v2 自动模式: RandomEngine 在 RuntimeSnapshot 上出词 (Fast/Smart)。
@@ -120,8 +125,8 @@ class TagLibraryNode:
                 break
         random_engine.note_combination(recent, res.fixed_ids + res.rest_ids, cfg)
 
-        ordered = (res.fixed_ids + res.rest_ids if pinned_required
-                   else res.rest_ids + res.fixed_ids[:len(res.fixed_ids)])
+        # 钉选必含常开: 引擎层 📌 已入 fixed_ids 并占子类目名额, 固定排在结果前段
+        ordered = res.fixed_ids + res.rest_ids
 
         echo_items = []
         tags = []
@@ -228,6 +233,27 @@ class TagLibraryNode:
             out_cats.append(cat)
         return {**lib, "categories": out_cats}
 
+    def _record_pnginfo(self, extra_pnginfo, unique_id, text: str, mode: str, seed) -> None:
+        """本节点实际输出的提示词 → PNG 元数据 (extra_pnginfo["TagLibrary"])。
+
+        ComfyUI 存图的 prompt 元数据里 CLIPTextEncode.text 只存 ["节点ID",0] 链接引用,
+        且 auto 模式出词是执行期才确定; EXTRA_PNGINFO 是 extra_data 里那个 dict 的原
+        引用 (execution.py 不拷贝), SaveImage 落图时 metadata_dict.update(整体写入),
+        因此执行期在这里塞键即可随图落盘。同一 prompt 内多节点按 unique_id 去重。
+        兼容两种派发形态: v2 路径给 [dict] 列表 (pyssyss ShowText 同款下标取法), 取出 dict。
+        """
+        if isinstance(extra_pnginfo, list):
+            extra_pnginfo = next((x for x in extra_pnginfo if isinstance(x, dict)), None)
+        if not isinstance(extra_pnginfo, dict) or not text:
+            return
+        try:
+            lst = extra_pnginfo.setdefault("TagLibrary", [])
+            entry = {"node": str(unique_id), "mode": mode, "seed": seed, "prompt": text}
+            lst[:] = [e for e in lst if e.get("node") != entry["node"]]
+            lst.append(entry)
+        except Exception:  # noqa: BLE001 — 元数据写入失败绝不影响出图
+            pass
+
     def build(self, *args, **kwargs):
         import time as _t
         _t0 = _t.perf_counter()
@@ -236,6 +262,24 @@ class TagLibraryNode:
         if _ms > 50:  # 正常应在个位数 ms; 超标才打日志便于排查
             mode = kwargs.get("mode") or (args[1] if len(args) > 1 else "?")
             print(f"[TagLibrary] ⏱ build 耗时 {_ms:.0f}ms (mode={mode})")
+        # ---- PNG 元数据: manual/auto 两路在此汇合, 从返回值取最终文本单点写入 ----
+        try:
+            text = (result.get("result", (None,))[0]
+                    if isinstance(result, dict) else
+                    result[0] if isinstance(result, tuple) else None)
+            mode = kwargs.get("mode")
+            if mode == "random_mix":
+                mode = "auto"  # 旧值归一, 与 _build_impl 同规则
+            elif mode == "random_by_category":
+                mode = "manual"
+            try:
+                seed = int(kwargs.get("seed", 0))
+            except (TypeError, ValueError):
+                seed = 0
+            self._record_pnginfo(kwargs.get("extra_pnginfo"), kwargs.get("unique_id"),
+                                 text or "", str(mode), seed)
+        except Exception:  # noqa: BLE001
+            pass
         return result
 
     def _build_impl(self, selection_state: str, mode: str, seed: int,
@@ -280,7 +324,6 @@ class TagLibraryNode:
             min_tags, max_tags = max_tags, min_tags
         use_weights_syntax = bool(state.get("use_weights_syntax", False))
         dedupe = bool(state.get("dedupe", True))
-        pinned_required = bool(state.get("pinned_required", True))
         category_weights = state.get("category_weights", "{}")
         if not isinstance(category_weights, str):
             category_weights = "{}"
@@ -290,8 +333,6 @@ class TagLibraryNode:
             use_weights_syntax = bool(use_weights_syntax)
         if not isinstance(dedupe, bool):
             dedupe = True
-        if not isinstance(pinned_required, bool):
-            pinned_required = True
 
         lib = library.get_merged()
         # NSFW 二态开关: 面板 nsfw=true → 显示/输出 NSFW 标签; false(默认) → 剔除
@@ -316,7 +357,6 @@ class TagLibraryNode:
                                     avoid_conflicts=avoid_conflicts,
                                     search_text=str(state.get("search_text", "") or ""),
                                     category_weights=category_weights,
-                                    pinned_required=pinned_required,
                                     use_weights_syntax=use_weights_syntax,
                                     dedupe=dedupe,
                                     separator=separator,

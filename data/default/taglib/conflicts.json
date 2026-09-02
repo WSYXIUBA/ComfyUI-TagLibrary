@@ -4,7 +4,7 @@
  "rules": [
   {
    "id": "nude-vs-clothes",
-   "note": "裸露类 ↔ 上装/下装/套装 (配饰不冲突, 项链等可保留)",
+   "note": "裸露类 ↔ 上装/下装/连体裙装 (配饰不冲突, 项链等可保留)",
    "left": {
     "kind": "tags",
     "value": [
@@ -31,7 +31,19 @@
     },
     {
      "kind": "sub",
-     "value": "服装系统/套装与制服"
+     "value": "服装系统/裙装与礼服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/职业与制服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/传统与民族"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
     }
    ]
   },
@@ -1047,29 +1059,11 @@
    ]
   },
   {
-   "id": "suit-vs-tops",
-   "note": "连体套装(连衣裙/旗袍/制服) ↔ 分体上下装",
-   "left": {
-    "kind": "sub",
-    "value": "服装系统/套装与制服"
-   },
-   "right": [
-    {
-     "kind": "sub",
-     "value": "服装系统/上装"
-    },
-    {
-     "kind": "sub",
-     "value": "服装系统/下装"
-    }
-   ]
-  },
-  {
    "id": "realism-vs-anime",
-   "note": "写实向 ↔ 二次元向",
+   "note": "写实摄影 ↔ 二次元向",
    "left": {
     "kind": "sub",
-    "value": "风格媒介/写实向"
+    "value": "风格媒介/写实摄影"
    },
    "right": [
     {
@@ -1461,7 +1455,12 @@
      "sunrise",
      "dawn",
      "dusk",
-     "golden hour"
+     "golden hour",
+     "twilight",
+     "pre-dawn",
+     "predawn",
+     "false dawn",
+     "golden hour light"
     ]
    },
    "right": [
@@ -1484,6 +1483,26 @@
     {
      "kind": "tag",
      "value": "golden hour"
+    },
+    {
+     "kind": "tag",
+     "value": "twilight"
+    },
+    {
+     "kind": "tag",
+     "value": "pre-dawn"
+    },
+    {
+     "kind": "tag",
+     "value": "predawn"
+    },
+    {
+     "kind": "tag",
+     "value": "false dawn"
+    },
+    {
+     "kind": "tag",
+     "value": "golden hour light"
     }
    ]
   },
@@ -1497,7 +1516,10 @@
      "night",
      "midnight",
      "evening",
-     "blue hour"
+     "blue hour",
+     "late night",
+     "early night",
+     "witching hour"
     ]
    },
    "right": [
@@ -1516,6 +1538,18 @@
     {
      "kind": "tag",
      "value": "blue hour"
+    },
+    {
+     "kind": "tag",
+     "value": "late night"
+    },
+    {
+     "kind": "tag",
+     "value": "early night"
+    },
+    {
+     "kind": "tag",
+     "value": "witching hour"
     }
    ]
   },
@@ -1737,7 +1771,25 @@
      "evening",
      "night",
      "midnight",
-     "blue hour"
+     "blue hour",
+     "late night",
+     "early morning",
+     "twilight",
+     "pre-dawn",
+     "predawn",
+     "post-sunset",
+     "first light",
+     "golden morning",
+     "late morning",
+     "high noon",
+     "siesta hour",
+     "golden afternoon",
+     "late afternoon",
+     "magic hour evening",
+     "just after sunset",
+     "early night",
+     "witching hour",
+     "false dawn"
     ]
    },
    "right": [
@@ -1784,6 +1836,78 @@
     {
      "kind": "tag",
      "value": "blue hour"
+    },
+    {
+     "kind": "tag",
+     "value": "late night"
+    },
+    {
+     "kind": "tag",
+     "value": "early morning"
+    },
+    {
+     "kind": "tag",
+     "value": "twilight"
+    },
+    {
+     "kind": "tag",
+     "value": "pre-dawn"
+    },
+    {
+     "kind": "tag",
+     "value": "predawn"
+    },
+    {
+     "kind": "tag",
+     "value": "post-sunset"
+    },
+    {
+     "kind": "tag",
+     "value": "first light"
+    },
+    {
+     "kind": "tag",
+     "value": "golden morning"
+    },
+    {
+     "kind": "tag",
+     "value": "late morning"
+    },
+    {
+     "kind": "tag",
+     "value": "high noon"
+    },
+    {
+     "kind": "tag",
+     "value": "siesta hour"
+    },
+    {
+     "kind": "tag",
+     "value": "golden afternoon"
+    },
+    {
+     "kind": "tag",
+     "value": "late afternoon"
+    },
+    {
+     "kind": "tag",
+     "value": "magic hour evening"
+    },
+    {
+     "kind": "tag",
+     "value": "just after sunset"
+    },
+    {
+     "kind": "tag",
+     "value": "early night"
+    },
+    {
+     "kind": "tag",
+     "value": "witching hour"
+    },
+    {
+     "kind": "tag",
+     "value": "false dawn"
     }
    ]
   },
@@ -1805,7 +1929,21 @@
      "hail",
      "typhoon",
      "tornado",
-     "sandstorm"
+     "sandstorm",
+     "light rain",
+     "light drizzle",
+     "sudden shower",
+     "heavy snowfall",
+     "light snow",
+     "wet snow",
+     "powder snow",
+     "sleet",
+     "freezing rain",
+     "blizzard conditions",
+     "thick fog",
+     "sun shower",
+     "monsoon rain",
+     "tropical downpour"
     ]
    },
    "right": [
@@ -1856,6 +1994,62 @@
     {
      "kind": "tag",
      "value": "sandstorm"
+    },
+    {
+     "kind": "tag",
+     "value": "light rain"
+    },
+    {
+     "kind": "tag",
+     "value": "light drizzle"
+    },
+    {
+     "kind": "tag",
+     "value": "sudden shower"
+    },
+    {
+     "kind": "tag",
+     "value": "heavy snowfall"
+    },
+    {
+     "kind": "tag",
+     "value": "light snow"
+    },
+    {
+     "kind": "tag",
+     "value": "wet snow"
+    },
+    {
+     "kind": "tag",
+     "value": "powder snow"
+    },
+    {
+     "kind": "tag",
+     "value": "sleet"
+    },
+    {
+     "kind": "tag",
+     "value": "freezing rain"
+    },
+    {
+     "kind": "tag",
+     "value": "blizzard conditions"
+    },
+    {
+     "kind": "tag",
+     "value": "thick fog"
+    },
+    {
+     "kind": "tag",
+     "value": "sun shower"
+    },
+    {
+     "kind": "tag",
+     "value": "monsoon rain"
+    },
+    {
+     "kind": "tag",
+     "value": "tropical downpour"
     }
    ]
   },
@@ -1908,7 +2102,32 @@
      "mature",
      "elderly",
      "old woman",
-     "ageless"
+     "ageless",
+     "loli",
+     "shota",
+     "teenage boy",
+     "teenage girl",
+     "young boy",
+     "infant",
+     "newborn",
+     "preteen",
+     "early teens",
+     "late teens",
+     "mid twenties",
+     "early thirties",
+     "twenties",
+     "thirties",
+     "forties",
+     "fifties",
+     "sixties",
+     "college age",
+     "mature male",
+     "aged woman",
+     "young woman",
+     "grown man",
+     "grown woman",
+     "silver fox",
+     "cougar"
     ]
    },
    "right": [
@@ -1947,6 +2166,106 @@
     {
      "kind": "tag",
      "value": "ageless"
+    },
+    {
+     "kind": "tag",
+     "value": "loli"
+    },
+    {
+     "kind": "tag",
+     "value": "shota"
+    },
+    {
+     "kind": "tag",
+     "value": "teenage boy"
+    },
+    {
+     "kind": "tag",
+     "value": "teenage girl"
+    },
+    {
+     "kind": "tag",
+     "value": "young boy"
+    },
+    {
+     "kind": "tag",
+     "value": "infant"
+    },
+    {
+     "kind": "tag",
+     "value": "newborn"
+    },
+    {
+     "kind": "tag",
+     "value": "preteen"
+    },
+    {
+     "kind": "tag",
+     "value": "early teens"
+    },
+    {
+     "kind": "tag",
+     "value": "late teens"
+    },
+    {
+     "kind": "tag",
+     "value": "mid twenties"
+    },
+    {
+     "kind": "tag",
+     "value": "early thirties"
+    },
+    {
+     "kind": "tag",
+     "value": "twenties"
+    },
+    {
+     "kind": "tag",
+     "value": "thirties"
+    },
+    {
+     "kind": "tag",
+     "value": "forties"
+    },
+    {
+     "kind": "tag",
+     "value": "fifties"
+    },
+    {
+     "kind": "tag",
+     "value": "sixties"
+    },
+    {
+     "kind": "tag",
+     "value": "college age"
+    },
+    {
+     "kind": "tag",
+     "value": "mature male"
+    },
+    {
+     "kind": "tag",
+     "value": "aged woman"
+    },
+    {
+     "kind": "tag",
+     "value": "young woman"
+    },
+    {
+     "kind": "tag",
+     "value": "grown man"
+    },
+    {
+     "kind": "tag",
+     "value": "grown woman"
+    },
+    {
+     "kind": "tag",
+     "value": "silver fox"
+    },
+    {
+     "kind": "tag",
+     "value": "cougar"
     }
    ]
   },
@@ -1965,7 +2284,25 @@
      "multiple girls",
      "multiple boys",
      "crowd",
-     "1other"
+     "1other",
+     "1girl and 1boy",
+     "group of girls",
+     "group of boys",
+     "trio",
+     "quartet",
+     "ensemble",
+     "couple",
+     "pair",
+     "large group",
+     "small group",
+     "group",
+     "ot3",
+     "everyone",
+     "4girls",
+     "5girls",
+     "6+girls",
+     "3boys",
+     "no humans"
     ]
    },
    "right": [
@@ -2004,6 +2341,78 @@
     {
      "kind": "tag",
      "value": "1other"
+    },
+    {
+     "kind": "tag",
+     "value": "1girl and 1boy"
+    },
+    {
+     "kind": "tag",
+     "value": "group of girls"
+    },
+    {
+     "kind": "tag",
+     "value": "group of boys"
+    },
+    {
+     "kind": "tag",
+     "value": "trio"
+    },
+    {
+     "kind": "tag",
+     "value": "quartet"
+    },
+    {
+     "kind": "tag",
+     "value": "ensemble"
+    },
+    {
+     "kind": "tag",
+     "value": "couple"
+    },
+    {
+     "kind": "tag",
+     "value": "pair"
+    },
+    {
+     "kind": "tag",
+     "value": "large group"
+    },
+    {
+     "kind": "tag",
+     "value": "small group"
+    },
+    {
+     "kind": "tag",
+     "value": "group"
+    },
+    {
+     "kind": "tag",
+     "value": "ot3"
+    },
+    {
+     "kind": "tag",
+     "value": "everyone"
+    },
+    {
+     "kind": "tag",
+     "value": "4girls"
+    },
+    {
+     "kind": "tag",
+     "value": "5girls"
+    },
+    {
+     "kind": "tag",
+     "value": "6+girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3boys"
+    },
+    {
+     "kind": "tag",
+     "value": "no humans"
     }
    ]
   },
@@ -2015,7 +2424,25 @@
     "kind": "tags",
     "value": [
      "solo",
-     "solo focus"
+     "solo focus",
+     "group of girls",
+     "group of boys",
+     "trio",
+     "quartet",
+     "ensemble",
+     "couple",
+     "pair",
+     "large group",
+     "small group",
+     "group",
+     "ot3",
+     "everyone",
+     "4girls",
+     "5girls",
+     "6+girls",
+     "3boys",
+     "1girl and 1boy",
+     "no humans"
     ]
    },
    "right": [
@@ -2042,6 +2469,78 @@
     {
      "kind": "tag",
      "value": "crowd"
+    },
+    {
+     "kind": "tag",
+     "value": "group of girls"
+    },
+    {
+     "kind": "tag",
+     "value": "group of boys"
+    },
+    {
+     "kind": "tag",
+     "value": "trio"
+    },
+    {
+     "kind": "tag",
+     "value": "quartet"
+    },
+    {
+     "kind": "tag",
+     "value": "ensemble"
+    },
+    {
+     "kind": "tag",
+     "value": "couple"
+    },
+    {
+     "kind": "tag",
+     "value": "pair"
+    },
+    {
+     "kind": "tag",
+     "value": "large group"
+    },
+    {
+     "kind": "tag",
+     "value": "small group"
+    },
+    {
+     "kind": "tag",
+     "value": "group"
+    },
+    {
+     "kind": "tag",
+     "value": "ot3"
+    },
+    {
+     "kind": "tag",
+     "value": "everyone"
+    },
+    {
+     "kind": "tag",
+     "value": "4girls"
+    },
+    {
+     "kind": "tag",
+     "value": "5girls"
+    },
+    {
+     "kind": "tag",
+     "value": "6+girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3boys"
+    },
+    {
+     "kind": "tag",
+     "value": "1girl and 1boy"
+    },
+    {
+     "kind": "tag",
+     "value": "no humans"
     }
    ]
   },
@@ -2197,6 +2696,58 @@
     {
      "kind": "tag",
      "value": "morning mist"
+    }
+   ]
+  },
+  {
+   "id": "suit-vs-tops-tops",
+   "note": "分体上装 ↔ 连体套装(裙装/旗袍/制服等)",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/上装"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/裙装与礼服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/职业与制服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/传统与民族"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
+    }
+   ]
+  },
+  {
+   "id": "suit-vs-tops-bottoms",
+   "note": "分体下装 ↔ 连体套装(裙装/旗袍/制服等)",
+   "left": {
+    "kind": "sub",
+    "value": "服装系统/下装"
+   },
+   "right": [
+    {
+     "kind": "sub",
+     "value": "服装系统/裙装与礼服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/职业与制服"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/传统与民族"
+    },
+    {
+     "kind": "sub",
+     "value": "服装系统/特色与运动装"
     }
    ]
   }

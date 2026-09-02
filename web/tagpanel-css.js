@@ -22,6 +22,14 @@ const CSS = `
   height: 100%;
   display: flex;
   flex-direction: column;
+  /* 面板挂了 .p-inputtext 以对翻译扩展免疫, 这里中和 PrimeVue 输入框样式泄漏 */
+  appearance: none;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
   border: 1px solid var(--tl-border);
   border-radius: 10px;
   background: linear-gradient(180deg, rgba(30,34,44,0.94), var(--tl-bg));
@@ -131,9 +139,11 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 .tl-gsym { font-weight: 700; margin-right: 3px; }
 .tl-gsym.g-f { color: #ff6b9d; }
 .tl-gsym.g-m { color: #54a0ff; }
-.tl-ttag.gender { border-color: color-mix(in srgb, #54a0ff 25%, rgba(255,255,255,.13)); }
-.tl-ttag.gender:has(.g-f) { border-color: rgba(255,107,157,.35); }
-.tl-ttag.gender.on { background: color-mix(in srgb, #2ecc71 14%, transparent); }
+/* 性别词 chip 边框提亮 (旧值 .25/.35 观感发灰发浅) */
+.tl-ttag.gender { border-color: color-mix(in srgb, #54a0ff 45%, rgba(255,255,255,.16)); }
+.tl-ttag.gender:has(.g-f) { border-color: rgba(255,107,157,.6); }
+.tl-ttag.gender:has(.g-m) { border-color: rgba(84,160,255,.6); }
+.tl-ttag.gender.on { background: color-mix(in srgb, #2ecc71 20%, transparent); }
 /* 🎲填充标签的分组标题 */
 .tl-fill-group {
   flex-basis: 100%;
@@ -330,6 +340,9 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 /* mutex 让位 (auto 回显): 灰显 + 删除线 */
 .tl-ttag.tl-dropped { opacity: .42; text-decoration: line-through; }
 .tl-ttag.tl-dropped::before { content: "🚫 "; font-size: 9px; }
+/* 性别过滤剔除 (♀ 时男性专属 / ♂ 时女性专属): 虚线 + 灰显 + 删除线, chip 自带 ♂♀ 符号 */
+.tl-ttag.tl-gdrop { opacity: .45; border-style: dashed; text-decoration: line-through; }
+.tl-ttag.tl-gdrop.on { background: transparent; box-shadow: none; }
 /* 引擎切换段 (自动模式显示) */
 .tl-eng-seg { display: inline-flex; border: 1px solid var(--tl-border); border-radius: 7px; overflow: hidden; }
 .tl-eng-seg button {
@@ -339,8 +352,9 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 .tl-eng-seg button + button { border-left: 1px solid var(--tl-border); }
 .tl-eng-seg button.active { color: #cfe4ff; background: rgba(84,160,255,.18); }
 /* 锁定/预览小按钮 */
-.tl-lock-btn, .tl-pv-btn { opacity: .55; }
-.tl-lock-btn:hover, .tl-pv-btn:hover { opacity: 1; }
+/* 清空/预览小按钮 */
+.tl-clear-btn, .tl-pv-btn { opacity: .55; }
+.tl-clear-btn:hover, .tl-pv-btn:hover { opacity: 1; }
 .tl-ttag.nsfw.on {
   background: color-mix(in srgb, #ff4757 22%, transparent);
   border-color: rgba(255,71,87,.7);
