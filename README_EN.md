@@ -2,8 +2,9 @@
 
 [中文文档](README.md) | **English**
 
-Structured prompt tag library node for ComfyUI: in-node selection panel + standalone manager page +
-dual-mode random engine + anti-conflict system + folder-based storage with hot sync.
+Structured prompt tag library node for ComfyUI: 9 categories / 65 subcategories / 4300+ tags.
+In-node selection panel + standalone manager page + dual-mode random engine + anti-conflict system +
+folder-based storage with hot sync.
 Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEncode.text`. Runs in 1-4ms per generation.
 
 ![license](https://img.shields.io/badge/license-MIT-green) ![comfyui](https://img.shields.io/badge/ComfyUI-custom--node-blue) ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
@@ -16,15 +17,16 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 
 ## Features
 
-- **In-node panel**: category-grouped chips, drag-to-reorder selected tags, 📌 pinning (always included in random),
-  bilingual EN/中文 display, NSFW toggle
+- **In-node panel**: category-grouped chips, drag-to-reorder selected tags, 📌 pinning,
+  bilingual EN/中文 display, NSFW toggle, 🗑 one-click clear
 - **Two modes**
   - `Manual` — pick tags by hand, or 🎲 fill randomly with per-subcategory count ranges
   - `Auto` — every generation rolls a fresh combination by the rules; results echo back into the panel
-    (same feel as a randomized seed)
+    (the echo only replaces what the engine rolled — manually picked tags are never wiped)
 - **➕ Add Tags picker (5 tabs)**: Pick Tags / Exclusions / Library Manager / Conflicts / Settings
 - **Standalone manager page**: open `http://127.0.0.1:8188/taglib` directly, or use the 🏷 topbar button —
-  full CRUD for categories/subcategories/tags (right-click rename/delete/reorder), chip-flow layout, NSFW red badges
+  full CRUD for categories/subcategories/tags (right-click rename/delete/reorder), **custom category icons
+  (click an icon to set any emoji)**, chip-flow layout, NSFW red badges
 - **NSFW tiers**: nudity/explicit tags shown in red, gated by a toggle for display and output; everything else unaffected
 - **Anti-conflict system**: rule file with free import/export; mutual exclusion between any mix of
   tags / subcategories / categories — when random picks one side, the other side steps aside (manual picks unaffected)
@@ -32,8 +34,14 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 - **AI collaboration loop**: export templates (basic/full) + conflicts file, send to your AI to extend or restructure,
   import the result with auto-placement, dedupe and a confirm preview
 - **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting a full template first)
-- **Pin semantics v1.1**: 📌 pinned tags are always included in random/fill, never overwritten, and occupy one slot of their subcategory; pins beat excluded categories
-- **Gender filter**: ⚧/♀/♂ toggle to drop male-only or female-only tags by their gender flag
+- **Pin semantics**: 📌 pinned tags are always included in random/fill/generation echoes, never overwritten,
+  and occupy one slot of their subcategory; pins beat excluded categories (always on — no toggle)
+- **Gender filter**: ⚧/♀/♂ toggle to drop male-only or female-only tags by their gender flag;
+  panel marking (dimmed + strikethrough), preview, 🎲 fill and output all follow the same rule
+- **Generation metadata**: PNG info automatically carries a `TagLibrary` chunk (node / mode / seed / actual
+  prompt) — even auto-mode rolls are fully inspectable and reproducible per seed
+- **Translator immunity**: the panel, picker and manager page are immune to ComfyUI-DD-Translation and
+  similar translator extensions — tag English text is never rewritten
 - **Data layout**: all plugin data nested under `data/default/` with English backup names (backups/factory_backup.json etc.), auto-migrated on upgrade
 - **Performance**: 1-4ms per node execution; library reads cached, hot-sync scans throttled
 - **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
@@ -92,23 +100,22 @@ Restart ComfyUI. No pip dependencies.
 
 | File/Directory | Description |
 |---|---|
-| `data/tag_library.json` | Factory default library (ships with the plugin) |
-| `data/tag_library.user.json` | User library snapshot (manager saves, with deletion tombstones; survives plugin updates) |
-| `data/taglib/` | **Folder-based library** (bi-directional hot sync, see below); contains `conflicts.json` |
-| `data/tagfiles/` | Legacy tag-file directory (still scanned for imports) |
-| `data/备份库/` | Backup location for "💾 Save as Default" |
+| `data/default/tag_library.json` | Factory default library (ships with the plugin) |
+| `data/default/tag_library.user.json` | User library snapshot (manager saves, with deletion tombstones; survives plugin updates) |
+| `data/default/taglib/` | **Folder-based library** (bi-directional hot sync, see below); contains `conflicts.json` |
+| `data/default/backups/` | Backup location (`factory_backup.json` factory / `user_backup.json` user) |
 
 Deleting the user library resets to factory defaults (same as the Clear Library button).
 
 ## Folder-Based Library (Bi-directional Hot Sync)
 
 ```
-data/taglib/
+data/default/taglib/
 ├── conflicts.json        ← anti-conflict rules
-├── 质量与技术/            ← level-1 category = folder
-│   ├── 画质强化/          ← level-2 category = subfolder
-│   │   └── 画质强化.md    ← # category / ## subcategory heading + tag lines
-│   └── 真实感/
+├── 画质规格/              ← level-1 category = folder
+│   ├── 画质增强/          ← level-2 category = subfolder
+│   │   └── 画质增强.md    ← # category / ## subcategory heading + tag lines
+│   └── 细节强化/
 └── 人物主体/ ...
 ```
 
@@ -135,8 +142,28 @@ data/taglib/
   (checkbox tree, saves instantly) ② the Conflicts tab in the picker lists all rules with add/delete
   ③ export the file and let an AI generate a new one
 - **Invalid references auto-detected**: rules pointing at missing categories/tags are flagged in red
-- Ships with default rules: nudity/swimwear ↔ tops/bottoms/suits (accessories like necklaces are fine);
-  photorealistic ↔ anime style; legacy mutual-exclusion groups are migrated automatically
+- Ships with 55 default rules (aligned with the v2 taxonomy): nudity ↔ tops/bottoms/one-piece outfits;
+  photorealistic ↔ anime style; mutual-exclusion groups for mouths/eyes/sitting/orientation/key light/
+  headwear/seasons/time/weather/counts/age groups/weapons; legacy groups are migrated automatically
+
+## Changelog
+
+### v1.2.0
+- **Tag library v2 taxonomy rework**: 9 categories / 63 subcategories / 1615 tags. Expressions / mouth /
+  emotions, weapons / food / props / instruments, hosiery & underwear, dresses / uniforms / traditional /
+  specialty outfits, headwear / jewelry / bags, natural / artificial light & lighting techniques,
+  natural / urban scenes, time / weather / night sky / holidays — all split and re-homed; the counts
+  category is now count-only; stray Chinese in English fields fixed; 55 conflict rules realigned
+- **Supplement packs merged**: two incremental word packs imported (~2700 new tags; legacy category
+  names auto-routed into the v2 taxonomy, three-layer dedupe), adding a new "Race & Fantasy Identity"
+  subcategory; count/age/time/weather mutex groups extended (+101 exclusion pairs)
+- **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt)
+- **Translator immunity**: panel/picker/manager are no longer rewritten by ComfyUI-DD-Translation etc.
+- **Gender filter consistency**: panel marking, preview, 🎲 fill and output share one rule set
+- **Auto echo keeps manual picks**: each round only replaces the engine-rolled portion
+- **Misc**: mode toggle re-syncs with the panel after refresh; 🔒 lock button replaced by 🗑 clear-all;
+  pinning is always on (toggle removed); English display mode no longer mixes Chinese;
+  fill-group headers survive page refreshes
 
 ## AI Collaboration Loop
 

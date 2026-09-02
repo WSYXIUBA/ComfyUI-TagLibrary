@@ -27,22 +27,36 @@ const SET_LANG = SETTING_PREFIX + "display_lang";
 let LIB_CACHE = null;
 let LIB_FETCHING = null;
 let LIB_PATH = new Map();  // en_l -> [大类名, 子分类名, 孙分类名|null]
+let LIB_GENDER = new Map();  // en_l -> "female"|"male" (库里的性别标记)
 
 function buildLibPath(lib) {
   const m = new Map();
+  const gm = new Map();
   for (const c of lib.categories || []) {
     for (const s of c.subcategories || []) {
       if (s.groups && s.groups.length) {
         for (const g of s.groups) {
-          for (const t of g.tags || []) m.set(t.en.toLowerCase(), [c.name, s.name, g.name]);
+          for (const t of g.tags || []) {
+            m.set(t.en.toLowerCase(), [c.name, s.name, g.name]);
+            if (t.gender) gm.set(t.en.toLowerCase(), t.gender);
+          }
         }
       }
       for (const t of s.tags || []) {
         if (!m.has(t.en.toLowerCase())) m.set(t.en.toLowerCase(), [c.name, s.name, null]);
+        if (t.gender) gm.set(t.en.toLowerCase(), t.gender);
       }
     }
   }
+  LIB_GENDER = gm;
   return m;
+}
+
+// 标签有效性别: state 里带的 gender 优先; 旧选择数据缺字段时回查库
+function tagGender(t) {
+  const g = String(t.gender || "").toLowerCase();
+  if (g === "female" || g === "male") return g;
+  return LIB_GENDER.get(String(t.en).toLowerCase()) || "";
 }
 
 async function fetchLibrary() {
@@ -63,6 +77,7 @@ async function fetchLibrary() {
 function invalidateLibraryCache() {
   LIB_CACHE = null;
   LIB_PATH = new Map();
+  LIB_GENDER = new Map();
 }
 
 /* ---------------------------------------------------- settings helpers */
@@ -144,6 +159,11 @@ function setState(node, patch) {
 export function buildPanelWidget(node, container) {
   injectPanelStyle();
   container.classList.add("taglib-panel");
+  // 翻译扩展免疫: ComfyUI-DD-Translation 等会按字典把 chip 英文实时改写成中文
+  // (night→夜晚), 造成"雨靴雨靴"式重复与观感发灰。p-inputtext 在其 shouldSkipNode
+  // 的容器排除链里, 整个面板因此跳过翻译; translate=no/notranslate 约束守规矩的翻译器。
+  container.classList.add("p-inputtext");
+  container.setAttribute("translate", "no");
 
   const ui = { activeCat: null, filter: "", mode: "manual", chipsBoxHeight: null,
                previewMode: getState(node).preview_mode || "simple" };
@@ -175,7 +195,7 @@ export function buildPanelWidget(node, container) {
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
-      <button class="tl-btn icon tl-lock-btn" data-act="lock" title="锁定当前结果为手动选择">🔒</button>
+      <button class="tl-btn icon tl-clear-btn" data-act="clear" title="清空当前节点显示的标签">🗑</button>
       <button class="tl-btn icon tl-pv-btn" data-act="pv" title="预览模式: 简洁 → 带权重 → 调试">👁</button>
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
@@ -190,9 +210,14 @@ export function buildPanelWidget(node, container) {
   const genderBtn = $(".tl-gender-btn");
 
   /* ---------- mode (二态: 手动 / 自动) — 两模式界面相同, 自动=queue 时引擎填充 ---------- */
+  // modeSyncedVal: 上次同步过的 widget 原始值。工作流加载/粘贴/撤销会在面板构建之后
+  // 才写入 widget, 这里按值变化做幂等同步 (onDrawBackground 每帧调用, 值没变直接返回)。
+  let modeSyncedVal = null;
   function syncModeWidgets() {
     const modeW = node.widgets?.find((x) => x.name === "mode");
     if (modeW) {
+      if (modeW.value === modeSyncedVal) return;
+      modeSyncedVal = modeW.value;
       ui.mode = modeW.value === "random_mix" ? "auto"
         : modeW.value === "random_by_category" ? "manual" : modeW.value;
     }
@@ -227,12 +252,15 @@ export function buildPanelWidget(node, container) {
     };
   });
 
-  /* ---------- 锁定当前结果为手动 ---------- */
-  $(".tl-lock-btn").onclick = () => {
+  /* ---------- 清空: 一键清掉当前节点显示的全部标签 ---------- */
+  $(".tl-clear-btn").onclick = () => {
     const st = getState(node);
-    if (!(st.tags || []).length) return toast("当前没有标签可锁定");
-    setMode("manual");
-    toast("已锁定当前结果为手动选择 (不再随生成变化)");
+    if (!(st.tags || []).length) return toast("当前没有标签可清空");
+    setState(node, { tags: [] });
+    ui.fillGroups = null;
+    node._mutexDropped = null;
+    renderTags();
+    toast("已清空节点标签");
   };
 
   /* ---------- 预览模式: 简洁 / 带权重 / 调试 ---------- */
@@ -308,8 +336,19 @@ export function buildPanelWidget(node, container) {
     const st = getState(node);
     chipzoneEl.innerHTML = "";
     const q = ui.filter.trim().toLowerCase();
-    // 填充分组标题行: 最近一次 🎲填充 的标签按大类分组显示
-    const fillCats = ui.fillGroups instanceof Map ? ui.fillGroups : null;
+    // 填充分组标题行: 最近一次 🎲填充/自动回显 的标签按大类分组显示。
+    // ui.fillGroups 是内存态, 网页刷新后会丢 —— 从持久化在 state 里的 _cat 字段重建,
+    // 修复"刷新后标签没有分类"的问题。
+    let fillCats = ui.fillGroups instanceof Map && ui.fillGroups.size ? ui.fillGroups : null;
+    if (!fillCats) {
+      const m = new Map();
+      for (const t of st.tags) {
+        if (!t._cat) continue;
+        if (!m.has(t._cat)) m.set(t._cat, []);
+        m.get(t._cat).push(t);
+      }
+      if (m.size) fillCats = m;
+    }
     const filledSet = new Set();
     if (fillCats) for (const list of fillCats.values()) for (const t of list) filledSet.add(t.en.toLowerCase());
 
@@ -330,7 +369,8 @@ export function buildPanelWidget(node, container) {
           lastGroup = grp;
           const head = document.createElement("div");
           head.className = "tl-fill-group";
-          head.textContent = `── ${grp} ──`;
+          const catIcon = ((LIB_CACHE?.categories) || []).find((c) => c.name === grp)?.icon || "";
+          head.textContent = `── ${catIcon ? catIcon + " " : ""}${grp} ──`;
           chipzoneEl.appendChild(head);
         }
       } else {
@@ -338,17 +378,21 @@ export function buildPanelWidget(node, container) {
       }
       const el = document.createElement("span");
       const dropped = ui.mode === "auto" && node._mutexDropped?.has(String(t.en).toLowerCase());
+      // 性别过滤剔除标记: ♀ 开启时男性专属 chip 灰显+删除线 (与后端输出/随机同规则)
+      const gmode = getGender(node);
+      const tg = tagGender(t);
+      const gdrop = (gmode === "female" && tg === "male") || (gmode === "male" && tg === "female");
       el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "")
-        + (t.gender ? " gender" : "") + (dropped ? " tl-dropped" : "");
+        + (tg ? " gender" : "") + (dropped ? " tl-dropped" : "") + (gdrop ? " tl-gdrop" : "");
       el.draggable = true;
-      el.title = t.enabled === false
+      el.title = (t.enabled === false
         ? "已停用 — 点击启用"
         : (t.pinned ? "📌 已钉选 (随机/填充不覆盖) · 拖动排序 / ✕移除"
-                    : "已启用 · 拖动排序 / 右键📌钉选 / ✕移除");
+                    : "已启用 · 拖动排序 / 右键📌钉选 / ✕移除"))
+        + (gdrop ? `\n⚧ 性别过滤中: 此${tg === "male" ? "男性" : "女性"}专属标签不会参与输出/随机/填充` : "");
       el.innerHTML =
         (t.pinned ? `<span class="tl-pin pinned" title="随机时必含">📌</span>` : ``) +
         `<b>${chipLabel(t)}</b>` +
-        (t.zh && getLang() === "en" ? `<i class="t-zh">${t.zh}</i>` : "") +
         `<span class="tl-x" title="移除">✕</span>`;
       const pinEl = el.querySelector(".tl-pin");
       if (pinEl) pinEl.onclick = (e) => { e.stopPropagation(); togglePinIdx(idx); };
@@ -397,6 +441,21 @@ export function buildPanelWidget(node, container) {
     previewEl.textContent = outputPreview(st.tags, ui.previewMode);
   }
 
+  // 当前会真正参与输出的标签 (与后端 _build_impl 同规则):
+  // 启用 + NSFW 开 + 性别过滤后未被剔除。排除类目在 simple 预览里另行处理。
+  function activeOutputTags(tags) {
+    const g = getGender(node);
+    const nsfwOn = getNsfwEffective(node);
+    return (tags || []).filter((t) => {
+      if (t.enabled === false) return false;
+      if (t.nsfw && !nsfwOn) return false;
+      const tg = tagGender(t);
+      if (g === "female" && tg === "male") return false;
+      if (g === "male" && tg === "female") return false;
+      return true;
+    });
+  }
+
   function outputPreview(tags, mode) {
     mode = mode || getState(node).preview_mode || "simple";
     if (mode === "debug") {
@@ -404,14 +463,15 @@ export function buildPanelWidget(node, container) {
       return `(调试) 共 ${tags.length} · 启用 ${enabledN} · 模式 ${ui.mode} · 引擎 `
         + (getState(node).random_config_ref || "default_fast");
     }
+    const act = activeOutputTags(tags);
     const weighted = mode === "weighted";
-    const withW = tags.filter((t) => t.enabled !== false && t.weight && t.weight !== 1).length;
+    const withW = act.filter((t) => t.weight && t.weight !== 1).length;
     if (weighted && withW) {
-      const parts = tags.filter((t) => t.enabled !== false)
+      const parts = act
         .map((t) => t.weight && t.weight !== 1 ? `${t.en} (×${t.weight})` : t.en);
       return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
     }
-    return outputPreviewSimple(tags);
+    return outputPreviewSimple(act);
   }
 
   function outputPreviewSimple(tags) {
@@ -428,7 +488,6 @@ export function buildPanelWidget(node, container) {
       return false;
     }
     const parts = tags
-      .filter((t) => t.enabled !== false)
       .filter((t) => !isExcluded(t.en.toLowerCase()))
       .map((t) => t.en);
     return parts.length ? "→ " + parts.join(", ") : "(无启用标签)";
@@ -536,7 +595,9 @@ export function buildPanelWidget(node, container) {
 
   function buildSubPools(nsfwOn) {
     // [{catName, subId, subName, tags:[...]}]  排除类目跳过 (一级"大类" 或 二级"大类/子分类")
+    // 性别过滤与后端随机同规则: ♀ 剔除男性专属 / ♂ 剔除女性专属
     const excluded = new Set(getState(node).exclude_categories || []);
+    const g = getGender(node);
     const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
     const subs = [];
     for (const cat of cats) {
@@ -544,7 +605,9 @@ export function buildPanelWidget(node, container) {
       for (const sub of cat.subcategories || []) {
         if (excluded.has(`${cat.name}/${sub.name}`)) continue; // 二级排除同样不填充
         const tags = (sub.tags || []).filter((t) =>
-          t.enabled !== false && (nsfwOn || !t.nsfw));
+          t.enabled !== false && (nsfwOn || !t.nsfw)
+          && !(g === "female" && tagGender(t) === "male")
+          && !(g === "male" && tagGender(t) === "female"));
         if (tags.length) subs.push({ catName: cat.name, subId: sub.id, subName: sub.name, tags });
       }
     }
@@ -593,7 +656,7 @@ export function buildPanelWidget(node, container) {
     const st = getState(node);
     const nsfwOn = getNsfwEffective(node);
     const excluded = new Set(st.exclude_categories || []);
-    const keepPins = st.pinned_required !== false;
+    const keepPins = true;  // 钉选必含常开 (设置开关已移除): 📌 标签填充时必保留且占子类目名额
     // ① 清空: 非"排除类目"的已有标签清掉; 📌钉选标签(必含开关开时)与排除类目标签保留
     const keptTags = st.tags.filter((t) => {
       if (keepPins && t.pinned) return true;
@@ -630,7 +693,7 @@ export function buildPanelWidget(node, container) {
     ui.fillGroups = groupByCat([...pinnedKept, ...picked]);
     setState(node, {
       tags: sortByCat([...keptTags, ...picked])
-        .map(({ _cat, ...rest }) => ({ ...rest, enabled: rest.enabled !== false })),
+        .map((t) => ({ ...t, _auto: true, enabled: t.enabled !== false })),
     });
     renderTags();
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
@@ -663,11 +726,12 @@ export function buildPanelWidget(node, container) {
 
   function chipLabel(t) {
     const lang = getLang();
-    const gsym = t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
-               : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
+    const tg = tagGender(t);
+    const gsym = tg === "female" ? '<span class="tl-gsym g-f">♀</span>'
+               : tg === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
     if (lang === "en") return gsym + t.en;
     if (lang === "zh") return gsym + (t.zh || t.en);
-    return gsym + `${t.en}${t.zh ? `<span style="opacity:.55;font-size:10px">${t.zh}</span>` : ""}`;
+    return gsym + `${t.en}${t.zh ? `<span style="opacity:.8;font-size:10px">${t.zh}</span>` : ""}`;
   }
 
   function renderConflictBtn() {
@@ -711,6 +775,9 @@ export function buildPanelWidget(node, container) {
     dlg.style.cssText =
       "width:min(92vw,1200px);height:min(90vh,860px);border:none;border-radius:14px;" +
       "padding:0;background:#15171d;color:#e3e7ee;max-width:none;max-height:none;";
+    // 翻译免疫 (同面板): 防止挑选器里的标签英文被翻译扩展改写
+    dlg.classList.add("p-inputtext", "notranslate");
+    dlg.setAttribute("translate", "no");
     dlg.innerHTML = `<div id="taglib-picker-root" style="width:100%;height:100%;overflow:hidden"></div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
@@ -773,6 +840,7 @@ export function buildPanelWidget(node, container) {
     .catch((err) => { container.innerHTML = `<div class="tl-empty">标签库加载失败: ${err}</div>`; });
 
   return {
+    syncMode: syncModeWidgets,  // 工作流加载/外部改 mode 后, 面板按钮与 widget 重新对齐
     refresh: async (opts = {}) => {
       // reloadLib 仅在库真的变了时用 (管理页保存/热同步导入);
       // 每轮队列的自动回显刷新不重拉, 避免无谓的 200KB 请求
@@ -1372,8 +1440,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     setView.innerHTML = `
       <div class="tp-set-h">节点参数 <span class="sub">· 存入当前节点, 随工作流保存</span></div>
       <div class="tp-set-card">
-        ${row("📌 钉选标签必含", `<input type="checkbox" class="sv-pinned" ${st.pinned_required !== false ? "checked" : ""}/>`,
-          "开启后带 📌 的标签随机/填充时必含且不被覆盖, 并占掉其子类目的一个名额")}
         ${row("输出分隔符", `<select class="sv-sep">
             <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
             <option value="space" ${st.separator === "space" ? "selected" : ""}>空格</option>
@@ -1408,7 +1474,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     `;
     // 节点参数: 即改即存 + 让节点面板实时跟随
     const saveNode = (patch) => { setState(node, patch); onNodeState?.(); };
-    $(".sv-pinned").onchange = (e) => saveNode({ pinned_required: e.target.checked });
     $(".sv-sep").onchange = (e) => saveNode({ separator: e.target.value });
     $(".sv-w").onchange = (e) => saveNode({ use_weights_syntax: e.target.checked });
     $(".sv-dd").onchange = (e) => saveNode({ dedupe: e.target.checked });
@@ -1654,6 +1719,8 @@ function openManagerDialog() {
   dlg.style.cssText =
     "width:min(96vw,1400px);height:min(94vh,980px);border:none;border-radius:14px;" +
     "padding:0;background:#17191f;color:#dfe3ea;max-width:none;max-height:none;";
+  dlg.classList.add("p-inputtext", "notranslate");
+  dlg.setAttribute("translate", "no");
   // 不设 ✕ 按钮 —— 会与管理页顶栏「恢复默认库」重叠; 关闭 = 点遮罩 / Esc
   dlg.innerHTML =
     `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
@@ -1842,6 +1909,9 @@ app.registerExtension({
                 w.displayValue = m[w.value];
               }
             }
+            // 工作流加载/粘贴/撤销后 widget 值可能晚于面板构建到达: 每帧检测,
+            // 值有变化才真正重同步 (内部有守卫, 开销为一次字符串比较)
+            node._taglibPanelApi?.syncMode?.();
             return origDraw?.apply(this, arguments);
           };
         } catch {}
@@ -1917,7 +1987,7 @@ app.registerExtension({
               // 但需要把用户当时的设置抢救进 selection_state:
               // v2 顺序: [state, mode, seed, ctl, nsfw, min, max, cw, st, sep, uw, dd, pr]
               if (Array.isArray(this.widgets_values) && this.widgets_values.length > 5) {
-                const [, , , , , minV, maxV, cwV, stV, sepV, uwV, ddV, prV] = this.widgets_values;
+                const [, , , , , minV, maxV, cwV, stV, sepV, uwV, ddV] = this.widgets_values;
                 try {
                   const st2 = JSON.parse(sw.value || "{}");
                   let migrated = [];
@@ -1928,7 +1998,6 @@ app.registerExtension({
                   if (sepV === "comma" || sepV === "space") { st2.separator = sepV; migrated.push("sep"); }
                   if (typeof uwV === "boolean") { st2.use_weights_syntax = uwV; }
                   if (typeof ddV === "boolean") { st2.dedupe = ddV; }
-                  if (typeof prV === "boolean") { st2.pinned_required = prV; }
                   sw.value = JSON.stringify(st2);
                   if (migrated.length) repaired.push(`旧参数迁移(${migrated.join(",")})`);
                 } catch {}
@@ -1968,6 +2037,10 @@ app.registerExtension({
             try { w.hidden = true; } catch {}
           }
         }
+        // 工作流加载完成后面板与 widget 对齐一次: 模式按钮跟随 mode 值,
+        // 已选 chips 从加载回来的 selection_state 重渲染 (修复重启后面板显示手动、后端仍是自动)
+        node._taglibPanelApi?.syncMode?.();
+        node._taglibPanelApi?.refresh?.();
       }, 0);
 
       const holder = document.createElement("div");
@@ -2120,11 +2193,14 @@ app.registerExtension({
           const w = node.widgets?.find((x) => x.name === "selection_state");
           if (!w) return;
           const st = (() => { try { return JSON.parse(w.value || "{}"); } catch { return {}; } })();
-          // 替换填充部分: 排除类目保留标签 + 📌钉选标签保留 (钉选语义不丢)
+          // 替换填充部分: 排除类目保留标签 + 📌钉选标签保留 (钉选语义不丢);
+          // 手动挑选的标签 (无 _auto 标记) 也保留 —— 回显只替换引擎抽的那部分,
+          // 否则 auto 模式下用户从挑选器加的词会在下一次生成时被静默清空。
           const excluded = new Set(st.exclude_categories || []);
           const libPath = node._taglibGetLibPath?.() || new Map();
           const kept = (st.tags || []).filter((t) => {
-            if (t.pinned && st.pinned_required !== false) return true;
+            if (t.pinned) return true;  // 钉选必含常开: 生成回显不清掉 📌 标签
+            if (!t._auto) return true;
             const p = libPath.get(String(t.en).toLowerCase());
             return p && excluded.has(p[0]);
           });
@@ -2153,7 +2229,7 @@ app.registerExtension({
               en: t.en, zh: t.zh || "",
               nsfw: !!t.nsfw || nsfwSet.has(String(t.en).toLowerCase()),
               gender: gSym,
-              enabled: true, _cat: cat,
+              enabled: true, _cat: cat, _auto: true,  // _auto=引擎抽取, 下轮回显可被替换
             });
           }
           // 分组标题数据: cat → fillGroups (钉选保留词也计入分组)

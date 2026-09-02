@@ -180,9 +180,15 @@
       li.style.color = cat.color || "#999";
       li.draggable = true;
 
+      const iconEl = document.createElement("span");
+      iconEl.className = "ci-icon";
+      iconEl.textContent = cat.icon || "🗂";
+      iconEl.title = "点击更换图标 (支持任意表情)";
+      iconEl.onclick = (e) => { e.stopPropagation(); openIconPop(e.clientX, e.clientY, cat); };
+
       const name = document.createElement("span");
       name.className = "ci-name";
-      name.textContent = `${cat.icon || "🏷"} ${cat.name}`;
+      name.textContent = cat.name;
       name.style.color = cat.id === activeCatId ? "" : "var(--text)";
 
       const cnt = document.createElement("span");
@@ -195,7 +201,7 @@
       acts.querySelector("button:not(.del)").onclick = (e) => { e.stopPropagation(); renameCat(cat); };
       acts.querySelector(".del").onclick = (e) => { e.stopPropagation(); removeCat(cat); };
 
-      li.append(name, cnt, acts);
+      li.append(iconEl, name, cnt, acts);
       li.onclick = () => {
         activeCatId = cat.id;
         activeSubId = cat.subcategories?.[0]?.id || null;
@@ -324,6 +330,7 @@
     catMenuEl.innerHTML = `
       <div class="sm-title">${escapeHtml(cat.name)}</div>
       <button data-act="rename" class="sm-btn">✏ 重命名</button>
+      <button data-act="icon" class="sm-btn">😀 更改图标…</button>
       <button data-act="del" class="sm-btn danger">🗑 删除分类</button>
       <button data-act="conf" class="sm-btn">🧷 反冲突设置…</button>
       <div class="sm-hint">${countTags(cat)} 个标签将随分类一起删除</div>`;
@@ -333,6 +340,7 @@
     catMenuEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
     catMenuEl.addEventListener("click", (e) => e.stopPropagation());
     catMenuEl.querySelector('[data-act="rename"]').onclick = () => { closeCatMenu(); renameCat(cat); };
+    catMenuEl.querySelector('[data-act="icon"]').onclick = () => { closeCatMenu(); openIconPop(x, y, cat); };
     catMenuEl.querySelector('[data-act="del"]').onclick = () => { closeCatMenu(); removeCat(cat); };
     catMenuEl.querySelector('[data-act="conf"]').onclick = () => {
       closeCatMenu();
@@ -500,6 +508,51 @@
     markDirty(); renderAll();
   }
 
+  /* ---------- 一级分类图标编辑: 输入/粘贴任意表情, 或点预设 ---------- */
+  const ICON_PRESETS = [
+    "🗂","💎","🧑","👗","🤸","🎬","💡","🏞️",
+    "🎨","✨","🧩","😺","🌼","🍰","🎭","🌹",
+    "🍜","⚽","👠","🧵","🌙","🌊","🏙️","🎢",
+    "🕯️","🪄","🔮","🦋","🌸","📷","🀄","🎁",
+  ];
+  let iconPopEl = null;
+  function closeIconPop() {
+    if (iconPopEl) { iconPopEl.remove(); iconPopEl = null; }
+  }
+  function openIconPop(x, y, cat) {
+    closeCatMenu();
+    iconPopEl = document.createElement("div");
+    iconPopEl.className = "mtag-menu sub-menu icon-pop";
+    iconPopEl.innerHTML = `
+      <div class="sm-title">图标 — ${escapeHtml(cat.name)}</div>
+      <div class="icon-row">
+        <input class="icon-input" maxlength="8" value="${escapeHtml(cat.icon || "")}" placeholder="输入/粘贴表情"/>
+        <button class="sm-btn" data-act="ok">确定</button>
+      </div>
+      <div class="icon-grid">${ICON_PRESETS.map((e) => `<button class="icon-cell" data-e="${e}">${e}</button>`).join("")}</div>
+      <div class="sm-hint">支持任意 Emoji, 输入/粘贴后回车; 清空后确定 = 恢复默认 🗂</div>`;
+    document.body.appendChild(iconPopEl);
+    const r = iconPopEl.getBoundingClientRect();
+    iconPopEl.style.left = Math.min(x, window.innerWidth - r.width - 8) + "px";
+    iconPopEl.style.top = Math.min(y, window.innerHeight - r.height - 8) + "px";
+    iconPopEl.addEventListener("click", (e) => e.stopPropagation());
+    const input = iconPopEl.querySelector(".icon-input");
+    const apply = (v) => {
+      cat.icon = (v || "").trim() || "🗂";
+      markDirty(); renderAll(); closeIconPop();
+      toast(`图标已更新: ${cat.icon}`);
+    };
+    iconPopEl.querySelector('[data-act="ok"]').onclick = () => apply(input.value);
+    input.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === "Enter") apply(input.value);
+    };
+    iconPopEl.querySelectorAll(".icon-cell").forEach((b) => {
+      b.onclick = () => { input.value = b.dataset.e; apply(b.dataset.e); };
+    });
+    setTimeout(() => document.addEventListener("click", closeIconPop, { once: true }), 0);
+  }
+
   function recolorChildrenIds(cat, takenTagIds) {
     // 新建分类的子分类/标签 id 自动生成
     const seenSub = new Set();
@@ -522,7 +575,7 @@
     lib.categories.push({
       id,
       name: name.trim(),
-      icon: "🏷",
+      icon: "🗂",
       color: PALETTE[lib.categories.length % PALETTE.length],
       subcategories: [{ id: `${id}.misc`, name: "未分类", tags: [] }],
     });
@@ -726,7 +779,7 @@ ${TPL_RULES}
     for (const g of out.groups || []) {
       const head = document.createElement("div");
       head.className = "pv-group";
-      head.textContent = `${g.cat_icon || "📦"} ${g.cat} / ${g.sub}`;
+      head.textContent = `${g.cat_icon || "🗂"} ${g.cat} / ${g.sub}`;
       box.appendChild(head);
       const flow = document.createElement("div");
       flow.className = "pv-flow";

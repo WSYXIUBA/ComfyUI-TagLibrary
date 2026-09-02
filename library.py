@@ -321,7 +321,7 @@ def _uniq(oid: str, seen: set[str], what: str) -> None:
 
 
 def _ensure_icon_color(cat: dict) -> None:
-    cat.setdefault("icon", "🏷️")
+    cat.setdefault("icon", "🗂")
     color = cat.get("color")
     if not (isinstance(color, str) and re.match(r"^#[0-9a-fA-F]{6}$", color)):
         cat["color"] = "#888888"
