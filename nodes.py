@@ -31,12 +31,12 @@ try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶�
     from . import library
     from . import tagconflicts
     from . import runtime_snapshot
-    from . import random_engine
+    from . import engine
 except ImportError:  # pragma: no cover
     import library
     import tagconflicts
     import runtime_snapshot
-    import random_engine
+    import engine
 
 
 class TagLibraryNode:
@@ -99,51 +99,30 @@ class TagLibraryNode:
                     use_weights_syntax: bool, dedupe: bool,
                     separator: str, prefix: str | None, suffix: str | None,
                     exclude_keys: set):
-        """v2 自动模式: RandomEngine 在 RuntimeSnapshot 上出词 (Fast/Smart)。
+        """1.3.0 自动模式: 原子档案束引擎 (engine.run_auto)。
 
-        NSFW / 排除类目 / 互斥让位 / 配额全部在引擎池层面处理;
-        本方法只做: 引擎调用 → 顺序组装 → 权重语法/去重/prefix/suffix → 回显。
+        组互斥(R1)/跨池规则(R2)/资源预算(R3)/状态槽(R4) 全部在抽取时算账,
+        武器姿势由档案束原子带出; 本方法只做格式化与回显。
         """
         snap = runtime_snapshot.get_snapshot(lib)
-        cfg = random_engine.resolve_config(state, lib.get("settings") or {})
+        cfg = engine.resolve_config(state, lib.get("settings") or {})
         weights_map = self._safe_json(category_weights)
-        recent = getattr(self, "_recent_sets", None)
-        if recent is None:
-            recent = self._recent_sets = []
 
-        # diversity 组合撞车时有限重抽
-        res = None
-        for attempt in range(random_engine.MAX_REROLL):
-            res = random_engine.run_auto(snap, state, seed + attempt,
-                nsfw_on=nsfw_on, avoid_conflicts=avoid_conflicts,
-                search_text=search_text, cat_weights=weights_map,
-                config=cfg, recent_sets=recent)
-            if cfg.get("engine") != "smart":
-                break
-            if not random_engine.combo_is_recent(recent,
-                                                 res.fixed_ids + res.rest_ids):
-                break
-        random_engine.note_combination(recent, res.fixed_ids + res.rest_ids, cfg)
-
-        # 钉选必含常开: 引擎层 📌 已入 fixed_ids 并占子类目名额, 固定排在结果前段
-        ordered = res.fixed_ids + res.rest_ids
+        res = engine.run_auto(snap, state, seed,
+                              nsfw_on=nsfw_on, avoid_conflicts=avoid_conflicts,
+                              search_text=search_text, cat_weights=weights_map,
+                              config=cfg)
 
         echo_items = []
         tags = []
-        seen_cat = snap.cat_names
-        cat_of_sub, sub_of = snap.cat_of_sub, snap.sub_of
-        # 按大类稳定排序 (分类序 = 库定义序): shuffle 抽取序会让同类词分散,
-        # 前端分组标题随 lastGroup 反复切换 (同一大类显示多次)。
-        ordered = sorted(ordered, key=lambda i: cat_of_sub[sub_of[i]])
-        for i in ordered:
-            d = {"en": snap.tag_text[i], "weight": snap.base_weights[i],
-                 "zh": snap.tag_zh[i], "nsfw": bool(snap.nsfw_flag[i]),
-                 "gender": ("female" if snap.gender_flag[i] == 1 else
-                            "male" if snap.gender_flag[i] == 2 else "")}
-            d["_cat"] = seen_cat[cat_of_sub[sub_of[i]]]
-            echo_items.append({"en": d["en"], "zh": d["zh"], "cat": d["_cat"],
-                               "nsfw": d["nsfw"], "gender": d["gender"], "enabled": True})
-            tags.append(self._format_tag(d, use_weights_syntax))
+        for p in res.picks:
+            echo_items.append({"en": p.en, "zh": p.zh, "cat": p.cat,
+                               "nsfw": p.nsfw, "gender": p.gender,
+                               "enabled": True,
+                               **({"bundle": p.bundle, "src": p.source}
+                                  if p.kind == "ext" else {})})
+            tags.append(self._format_tag(
+                {"en": p.en, "weight": p.weight}, use_weights_syntax))
 
         if dedupe:
             seen: set[str] = set()
@@ -158,8 +137,7 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
-        # 被 mutex 让位的标签 (少量, 前端灰显+删除线)
-        dropped_en = [snap.tag_text[i] for i in res.mutex_dropped_ids]
+        dropped_en = [snap.tag_text[i] for i in res.dropped_ids]
         return {
             "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False),
                    "taglib_echo_dropped": json.dumps(dropped_en, ensure_ascii=False)},

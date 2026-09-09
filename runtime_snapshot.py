@@ -1,12 +1,14 @@
-"""RuntimeSnapshot (方案 V2.1 阶段 2) —— 热路径唯一输入, 只读, 双缓冲原子替换。
+"""RuntimeSnapshot (1.3.0) —— 热路径唯一输入, 只读, 双缓冲原子替换。
 
-编译 (冷路径, 库/规则变更时后台执行一次):
-    编辑树 (胖) + 规则文件 → RuntimeSnapshot (瘦)
+编译 (冷路径, 库/档案/规则变更时一次):
+    编辑树 (胖) + profiles.json + conflicts.json(跨池规则) → RuntimeSnapshot
 
-热路径 (build 每次生成):
-    snap = get_snapshot()   # 仅一次引用读取, 无锁无 I/O 无重编译
-
-数据为紧凑并行数组 + 预建候选池; 编辑层 dict 不进入 Snapshot。
+新架构要点:
+  - 互斥 = 全局组名交集 (R1) + 跨池集合规则 (R2), 不再是 81 条手写规则。
+  - 档案库 (tags_ext): 武器/物体档案的姿势编译进 action 轴的挂载池,
+    带资源消耗 (hands/gaze) 与状态槽 —— 抽取在 engine 里按预算算账 (R3/R4)。
+  - 轴 (axis) 决定输出顺序 (Anima 拼接序)。
+热路径: get_snapshot() 仅一次引用读取, 无锁无 I/O 无重编译。
 """
 
 from __future__ import annotations
@@ -18,12 +20,18 @@ try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
     from . import library
     from . import schema
     from . import tagconflicts
-    from . import rules_engine
+    from . import axes
+    from . import grouprules
+    from . import profiles as profiles_mod
 except ImportError:  # pragma: no cover
     import library
     import schema
     import tagconflicts
-    import rules_engine
+    import axes
+    import grouprules
+    import profiles as profiles_mod
+
+ALL = object()  # banned 集合中的全禁哨兵
 
 
 class _TagIndex:
@@ -53,7 +61,6 @@ class _TagIndex:
             return None
 
     def sub_index(self, key: str):
-        """key = '一级分类名/二级分类名' → 子分类序号。"""
         if "/" not in key:
             return None
         cname, sname = key.split("/", 1)
@@ -81,6 +88,15 @@ class RuntimeSnapshot:
         "pools_nofemale", "pools_nomale",
         "cat_tag_ids", "sub_tag_ids", "cat_subs", "sub_key_to_index", "sub_owner_cat",
         "en_to_id", "orig_id_to_int",
+        # ---- 1.3.0
+        "group_sets",        # per-tag frozenset[str] 全局互斥组名
+        "axis_arr", "order_arr", "pool_axis", "pool_order",
+        "cross_rules",       # [(frozenset L, tuple R)] 跨池结构性规则
+        "tags_ext",          # 档案姿势编译条目 (dict, 见 _compile_ext)
+        "profiles", "profile_errors",
+        "cross_banned",
+        "bundled_only",      # 只能经档案束出生的库内 tag id 集 (池抽取永跳过)
+        # ---- 旧编译规则 (conflicts 页语义保留; 1.3.0 起仅作兜底黑名单)
         "conflict_map", "require_closure", "boost_map", "cond_effects",
         "mutex_rules", "invalid_rules",
         "built_at",
@@ -97,25 +113,38 @@ class RuntimeSnapshot:
         self.type_names: list[str] = []
         self.nsfw_flag = bytearray()
         self.enabled_flag = bytearray()
-        self.gender_flag = bytearray()      # 0=双性 1=female专属 2=male专属
-        self.sub_of: list[int] = []           # tag → 子分类序号
-        self.cat_of_sub: list[int] = []       # 子分类序号 → 大类序号
-        self.sub_ids_str: list[str] = []      # 子分类原始 id 字符串 (selection_state 引用)
+        self.gender_flag = bytearray()
+        self.sub_of: list[int] = []
+        self.cat_of_sub: list[int] = []
+        self.sub_ids_str: list[str] = []
         self.sub_names: list[str] = []
         self.sub_keys: list[str] = []
-        self.tag_zh: list[str] = []           # 回显/搜索用
-        self.tag_lower: list[str] = []        # 预降序小写 (热路径免重复 lower)
-        self.tag_aliases: list = []           # tuple|None
+        self.tag_zh: list[str] = []
+        self.tag_lower: list[str] = []
+        self.tag_aliases: list = []
         self.cat_names: list[str] = []
-        self.pools: dict[int, list[int]] = {}         # 子分类序号 → 全部启用 tag ids
-        self.pools_nonsfw: dict[int, list[int]] = {}  # 子分类序号 → 非NSFW启用 tag ids
-        self.cat_tag_ids: list[list[int]] = []        # 大类序号 → tag ids (规则解析用)
-        self.sub_tag_ids: list[list[int]] = []        # 子分类序号 → tag ids
-        self.cat_subs: list[dict] = []                # 大类序号 → {子分类名: 子分类序号}
+        self.pools: dict[int, list[int]] = {}
+        self.pools_nonsfw: dict[int, list[int]] = {}
+        self.pools_nofemale: dict[int, list[int]] = {}
+        self.pools_nomale: dict[int, list[int]] = {}
+        self.cat_tag_ids: list[list[int]] = []
+        self.sub_tag_ids: list[list[int]] = []
+        self.cat_subs: list[dict] = []
         self.sub_key_to_index: dict[tuple, int] = {}
         self.sub_owner_cat: dict[tuple, int] = {}
         self.en_to_id: dict[str, int] = {}
-        self.orig_id_to_int: dict[str, int] = {}   # 编辑层标签 id 字符串 → int
+        self.orig_id_to_int: dict[str, int] = {}
+        self.group_sets: list[frozenset] = []
+        self.axis_arr: list[str] = []
+        self.order_arr: list[int] = []
+        self.pool_axis: dict[int, str] = {}
+        self.pool_order: dict[int, int] = {}
+        self.cross_rules: list[tuple[frozenset, tuple]] = []
+        self.cross_banned: dict[int, frozenset] = {}
+        self.bundled_only: frozenset = frozenset()
+        self.tags_ext: list[dict] = []
+        self.profiles: list = []
+        self.profile_errors: list[dict] = []
         self.conflict_map: dict[int, set] = {}
         self.require_closure: dict[int, tuple] = {}
         self.boost_map: dict[int, float] = {}
@@ -130,8 +159,8 @@ class RuntimeSnapshot:
 
 # ---------------------------------------------------------------- 编译 (冷路径)
 
-def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSnapshot:
-    """编辑树 + 规则 → RuntimeSnapshot。冷路径: 只在库/规则变更时执行一次。"""
+def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
+                   prof_data: dict | None = None) -> RuntimeSnapshot:
     snap = RuntimeSnapshot()
     import time as _t
     snap.built_at = _t.time()
@@ -178,13 +207,12 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
             sub_key_to_index[(cname, sname)] = si
             sub_owner_cat[(cname, sname)] = ci
             sub_ids_str.append(str(sub.get("id") or key))
+            axis, order = axes.axis_of(cname, sname)
+            snap.pool_axis[si] = axis
+            snap.pool_order[si] = order
             stags: list[int] = []
             snonsfw: list[int] = []
             sub_tag_ids.append(stags)
-
-            quota = sub.get("random_quota")
-            _ = quota  # 编辑层字段; 运行时配额仍读 selection_state (v1 兼容)
-            _ = sub.get("priority_boost", 1.0)
 
             for t in sub.get("tags", []) or []:
                 en = str(t.get("en", "")).strip()
@@ -222,6 +250,11 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
                 tag_zh.append(str(t.get("zh", "") or ""))
                 _al = t.get("aliases") or None
                 tag_aliases.append(tuple(_al) if _al else None)
+                # 1.3.0: 轴 + 全局互斥组名
+                snap.axis_arr.append(str(t.get("axis") or axis))
+                snap.order_arr.append(order)
+                gs = t.get("groups") or []
+                snap.group_sets.append(frozenset(str(x) for x in gs if x))
                 stags.append(i)
                 cat_tag_ids[ci].append(i)
                 if not nsfw:
@@ -229,8 +262,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
 
             pools[si] = list(stags)
             pools_nonsfw[si] = list(snonsfw)
-            pools_nofemale[si] = [i for i in stags if snap.gender_flag[i] != 1]  # 剔女性专属
-            pools_nomale[si] = [i for i in stags if snap.gender_flag[i] != 2]    # 剔男性专属
+            pools_nofemale[si] = [i for i in stags if snap.gender_flag[i] != 1]
+            pools_nomale[si] = [i for i in stags if snap.gender_flag[i] != 2]
 
     snap.n_tags = tid
     snap.sub_ids_str = sub_ids_str
@@ -252,17 +285,124 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None) -> RuntimeSna
     snap.pools_nofemale = pools_nofemale
     snap.pools_nomale = pools_nomale
 
-    # 规则编译 (mutex / requires / suppress / boost)
+    # ---- 规则编译: 跨池结构性规则 (conflicts.json 迁移后剩余部分)
     raw_rules = raw_rules if raw_rules is not None else tagconflicts.load_rules()
-    index = _TagIndex(snap)
-    cr = rules_engine.compile_rules(raw_rules, index)
-    snap.conflict_map = cr.conflict_map
-    snap.require_closure = cr.require_closure
-    snap.boost_map = cr.boost_map
-    snap.cond_effects = cr.cond_effects
-    snap.mutex_rules = cr.mutex_rules
-    snap.invalid_rules = cr.invalid
+    tag_conflicts_lib_index = tagconflicts._lib_index(lib)
+    for r in raw_rules:
+        lset, ok_l = tagconflicts.resolve_ref(r["left"], tag_conflicts_lib_index)
+        rset: set = set()
+        for ref in r.get("right") or []:
+            s, _ = tagconflicts.resolve_ref(ref, tag_conflicts_lib_index)
+            rset |= s
+        if not ok_l or not lset or not rset:
+            continue
+        lids = {snap.tag_id(x) for x in lset} - {None}
+        rids = {snap.tag_id(x) for x in rset} - {None}
+        if not lids or not rids:
+            continue
+        snap.cross_rules.append((frozenset(lids), tuple(sorted(rids))))
+
+    # 全局互斥域 (grouprules.json) 在此并集进 group_sets —— 标签身上的
+    # groups 字段会被热同步重导入抹掉, 独立文件按 en 查表才免疫。
+    gr_membership = grouprules.en_membership()
+    for en_l, gs in gr_membership.items():
+        tid = snap.en_to_id.get(en_l)
+        if tid is not None:
+            snap.group_sets[tid] = snap.group_sets[tid] | gs
+
+    # ---------- 档案编译 (tags_ext): 姿势挂载到武器身份词的池
+    if prof_data is None:
+        prof_data = profiles_mod.load_profiles()
+    profs, perrs = profiles_mod.compile_profiles(prof_data)
+    snap.profiles = profs
+    snap.profile_errors = perrs
+    _compile_ext(snap, profs)
+
+    # cross_banned 须在 grouprules/档案派生组并集之后构建 (保持简单: 此处重算一次)
+    cross_banned = {}
+    for lset, rids in snap.cross_rules:
+        rs = set(rids)
+        ls = set(lset)
+        for l in ls:
+            cross_banned.setdefault(l, set()).update(rs - {l})
+        for r in rs:
+            cross_banned.setdefault(r, set()).update(ls - {r})
+    snap.cross_banned = {k: frozenset(v) for k, v in cross_banned.items()}
+
+    # 旧规则类型 (requires/suppress/boost) 1.3.0 起停用 (任务书 §2.3)
     return snap
+
+
+def _compile_ext(snap: RuntimeSnapshot, profs) -> None:
+    """档案姿势 → tags_ext 条目。
+
+    条目字段:
+      pid, pose_id, mount (挂载武器 id 集合 = 身份词 tag id ∪ 档案级),
+      hands, gaze, weight, state (f"{slot}={value}" 集合),
+      axis='action', order (+1 使其紧跟身份词),
+      ext_tags (输出标签序列), en_key (占用判定), zh
+    """
+    ext: list[dict] = []
+    derived: dict[int, set] = {}   # 库内 tag → 束级派生组名 (implies/黑名单)
+    bundled: set[int] = set()      # 束专属词: 池中永不自抽 (姿势只能跟武器出生)
+    for prof in snap.profiles:
+        for pose in list(prof.poses) + list(prof.extras):
+            for t, gs in pose.group_membership().items():
+                tid = snap.tag_id(t)
+                if tid is not None:
+                    derived.setdefault(tid, set()).update(gs)
+            # 束专属 = 姿势/配件自己的 tags 词 (implies 是借用的通用词, 不专属)
+            for t in pose.tags:
+                tid = snap.tag_id(t)
+                if tid is not None:
+                    bundled.add(tid)
+    for tid, gs in derived.items():
+        snap.group_sets[tid] = frozenset(snap.group_sets[tid] | gs)
+    snap.bundled_only = frozenset(bundled)
+    for prof in snap.profiles:
+        mount_ids = set()
+        for w in prof.tags:
+            tid = snap.tag_id(w)
+            if tid is not None:
+                mount_ids.add(tid)
+        for pose in prof.poses:
+            if not pose.tags:
+                continue
+            state = {f"{k}={v}" for k, v in pose.state_slot.items()}
+            ext.append({
+                "pid": prof.id,
+                "pose_id": pose.pose_id,
+                "kind": "pose",
+                "mount_ids": frozenset(mount_ids),
+                "hands": pose.hands,
+                "gaze": pose.gaze,
+                "weight": max(pose.weight, 0.0),
+                "state": frozenset(state),
+                "axis": "action",
+                "ext_tags": tuple(pose.tags),
+                "en_key": tuple(t.lower() for t in pose.tags),
+                "zh": pose.zh,
+            })
+        for ex in prof.extras:
+            if not ex.tags:
+                continue
+            state = {f"{k}={v}" for k, v in ex.state_slot.items()}
+            ext.append({
+                "pid": prof.id,
+                "pose_id": ex.pose_id,
+                "kind": "extra",
+                "mount_ids": frozenset(mount_ids),
+                "hands": ex.hands,
+                "gaze": ex.gaze,
+                "weight": max(ex.weight, 0.0),
+                "state": frozenset(state),
+                "axis": "appearance",
+                "order": 2,
+                "ext_tags": tuple(ex.tags),
+                "en_key": tuple(t.lower() for t in ex.tags),
+                "zh": ex.zh,
+            })
+    snap.tags_ext = ext
 
 
 # ---------------------------------------------------------------- 双缓冲
@@ -277,11 +417,12 @@ def _snapshot_key(lib: dict) -> tuple:
         os.path.getmtime(library.DEFAULT_PATH) if os.path.exists(library.DEFAULT_PATH) else 0,
         os.path.getmtime(library.USER_PATH) if os.path.exists(library.USER_PATH) else 0,
         tagconflicts._mtime_c(),
+        grouprules._mtime(),
+        profiles_mod._mtime(),
     )
 
 
 def get_snapshot(lib: dict | None = None) -> RuntimeSnapshot:
-    """热路径入口: 返回当前快照 (key 变化时后台语义的一次重建, 原子替换引用)。"""
     global _current, _current_key
     if lib is None:
         lib = library.get_merged()
@@ -289,9 +430,9 @@ def get_snapshot(lib: dict | None = None) -> RuntimeSnapshot:
     with _lock:
         if _current is not None and _current_key == key:
             return _current
-    # 冷路径重建 (锁外; 并发时最多重复编译一次, 结果一致)
     raw_rules = tagconflicts.load_rules()
-    new_snap = build_snapshot(lib, raw_rules)
+    prof_data = profiles_mod.load_profiles()
+    new_snap = build_snapshot(lib, raw_rules, prof_data)
     with _lock:
         _current_key = key
         _current = new_snap
