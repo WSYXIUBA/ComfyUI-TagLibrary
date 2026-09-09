@@ -86,7 +86,7 @@ class _Ledger:
     """单次抽取的账本: 用过的词/组名/资源/状态槽 + 增量违禁集。"""
 
     __slots__ = ("used_lower", "used_groups", "hands", "gaze", "states",
-                 "used_ids", "banned_ids", "prop_count")
+                 "used_ids", "banned_ids", "prop_count", "gender_lock")
 
     def __init__(self):
         self.used_lower: set[str] = set()
@@ -97,6 +97,7 @@ class _Ledger:
         self.used_ids: set[int] = set()
         self.banned_ids: set[int] = set()  # cross_banned 增量并集
         self.prop_count = 0                # 已出生的武器档案身份词数
+        self.gender_lock = 0               # 0=未锁 1=女 2=男 (count 轴推导)
 
     def budget_ok(self, hands: int, gaze: int, state: frozenset,
                   groups: frozenset) -> bool:
@@ -147,13 +148,15 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     gmode = str(state.get("gender") or "off").strip().lower()
 
     def tag_ok(tid: int) -> bool:
-        """排除/NSFW/性别 三闸门 (候选级)。"""
+        """排除/NSFW/性别三态/性别锁 四闸门 (候选级)。"""
         if not nsfw_on and snap.nsfw_flag[tid]:
             return False
         g = snap.gender_flag[tid]
         if gmode == "female" and g == 2:
             return False
         if gmode == "male" and g == 1:
+            return False
+        if led.gender_lock and g and g != led.gender_lock:
             return False
         si = snap.sub_of[tid]
         cname = snap.cat_names[snap.cat_of_sub[si]]
@@ -183,6 +186,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             b = cross_banned.get(tid)
             if b:
                 led.banned_ids |= b
+        # 人数词 = 性别宣言: 1girl/1boy 一出, 全场性别锁定 (count 池先于角色池抽)
+        gf = snap.gender_flag[tid]
+        if gf and snap.axis_arr[tid] == "count":
+            if led.gender_lock == 0:
+                led.gender_lock = gf
         return p
 
     # ---------- 档案索引 ----------
@@ -254,6 +262,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         for j, t in enumerate(pose.tags):
             led.used_lower.add(_norm(t))
             led.used_groups |= pose.comp_groups
+            # 词不在库内时 (ext 词) comp_groups 里没有 grouprules 域 — 按词补查
+            eg = snap.en_groups.get(_norm(t))
+            if eg:
+                led.used_groups |= eg
             picks.append(Pick(None, t, pose.zh or "", 1.0, False, "",
                               host_cat, pose.axis,
                               host_base_order + j * 1e-7,
@@ -275,44 +287,29 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             commit_tag(tid, "implied")
 
     # ---------- 0. 钉选 ----------
-    state_tags = state.get("tags") or []
+    # 两代格式汇成一表, count 轴钉选先入账 (性别宣言先锁场再抽其余)
+    pinned_tids: list[int] = []
     pinned_sub_count: dict[int, int] = {}
-    for t in state_tags:
+
+    def _pin_collect(tid: int) -> None:
+        if tid is None:
+            return
+        lo = snap.tag_lower[tid]
+        if lo in led.used_lower or tid in led.used_ids:
+            return
+        if not tag_ok(tid):
+            return
+        if tid not in pinned_tids:
+            pinned_tids.append(tid)
+
+    for t in (state.get("tags") or []):
         if not isinstance(t, dict) or not t.get("pinned"):
             continue
-        lo = _norm(t.get("en"))
-        tid = snap.en_to_id.get(lo)
-        if tid is None or lo in led.used_lower:
-            continue
-        if not tag_ok(tid):
-            continue
-        g = str(t.get("gender") or "").strip().lower()
-        if gmode == "female" and g == "male":
-            continue
-        if gmode == "male" and g == "female":
-            continue
-        commit_tag(tid, "pinned")
-        pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
-        _host = picks[-1]
-        if mount_of_tag.get(tid):
-            attach_bundle(tid, _host.order, _host.cat, snap.axis_arr[tid])
-
-    # 旧工作流格式: state["pinned"] = 标签原始 id 字符串列表
+        _pin_collect(snap.en_to_id.get(_norm(t.get("en"))))
     for pid in (state.get("pinned") or []):
-        tid = snap.orig_id_to_int.get(str(pid))
-        if tid is None:
-            continue
-        lo = snap.tag_lower[tid]
-        if lo in led.used_lower:
-            continue
-        if not tag_ok(tid):
-            continue
-        g = ("female" if snap.gender_flag[tid] == 1
-             else "male" if snap.gender_flag[tid] == 2 else "")
-        if gmode == "female" and g == "male":
-            continue
-        if gmode == "male" and g == "female":
-            continue
+        _pin_collect(snap.orig_id_to_int.get(str(pid)))
+    pinned_tids.sort(key=lambda tid: 0 if snap.axis_arr[tid] == "count" else 1)
+    for tid in pinned_tids:
         commit_tag(tid, "pinned")
         pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
         if mount_of_tag.get(tid):
@@ -393,6 +390,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 continue
             if bundled_only and tid in bundled_only:
                 continue  # 束专属词: 只能经武器档案出生, 池中永不自抽
+            if not tag_ok(tid):
+                continue  # 动态闸门: 性别锁 (count 词入账后生效)
             if not tag_match(lo, tid):
                 continue
             w = (snap.base_weights[tid] * snap.spawn_rate[tid]

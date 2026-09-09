@@ -32,11 +32,13 @@ try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶�
     from . import tagconflicts
     from . import runtime_snapshot
     from . import engine
+    from . import nl
 except ImportError:  # pragma: no cover
     import library
     import tagconflicts
     import runtime_snapshot
     import engine
+    import nl
 
 
 class TagLibraryNode:
@@ -137,6 +139,12 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
+        # ---- NL 尾段 (1.3.0: 自然语言是一等输出层; state.nl_tail 默认开) ----
+        if state.get("nl_tail", True):
+            tail = nl.compile_tail(snap, res.picks, seed)
+            if tail:
+                text = (text + ". " + tail) if text and not text.endswith((".", "!", "?")) \
+                    else ((text + " " + tail) if text else tail)
         dropped_en = [snap.tag_text[i] for i in res.dropped_ids]
         return {
             "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False),

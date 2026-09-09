@@ -96,6 +96,7 @@ class RuntimeSnapshot:
         "profiles", "profile_errors",
         "cross_banned",
         "bundled_only",      # 只能经档案束出生的库内 tag id 集 (池抽取永跳过)
+        "en_groups",         # en_lower → grouprules 组名 (ext 词不在库内, 按词查表)
         # ---- 旧编译规则 (conflicts 页语义保留; 1.3.0 起仅作兜底黑名单)
         "conflict_map", "require_closure", "boost_map", "cond_effects",
         "mutex_rules", "invalid_rules",
@@ -142,6 +143,7 @@ class RuntimeSnapshot:
         self.cross_rules: list[tuple[frozenset, tuple]] = []
         self.cross_banned: dict[int, frozenset] = {}
         self.bundled_only: frozenset = frozenset()
+        self.en_groups: dict[str, frozenset] = {}
         self.tags_ext: list[dict] = []
         self.profiles: list = []
         self.profile_errors: list[dict] = []
@@ -305,6 +307,7 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
     # 全局互斥域 (grouprules.json) 在此并集进 group_sets —— 标签身上的
     # groups 字段会被热同步重导入抹掉, 独立文件按 en 查表才免疫。
     gr_membership = grouprules.en_membership()
+    snap.en_groups = gr_membership  # 档案 ext 词 (不在库内) 出生时按词查这张表
     for en_l, gs in gr_membership.items():
         tid = snap.en_to_id.get(en_l)
         if tid is not None:
@@ -362,13 +365,20 @@ def _compile_ext(snap: RuntimeSnapshot, profs) -> None:
     # 束完整组集 = 自己的组名 ∪ 全部成员词(含 implies)的组集 ——
     # 检查/登记都必须用这个全集, 只查自己那条组名会漏拦跨档案共享词
     # (如 "weapon on back" 同时属于 4 个档案的收纳组)。
+    # 成员词不在库内时 (ext 词, 如 sword out of mouth) group_sets 查不到,
+    # 按 en_groups 补查 grouprules 域 —— 否则衔物姿出生不拦 eating/smirk 等嘴部词。
     for prof in snap.profiles:
         for pose in list(prof.poses) + list(prof.extras):
             g = set(pose.extra_groups)
             for t in list(pose.tags) + list(pose.implies):
+                tl = str(t).strip().lower()
                 tid = snap.tag_id(t)
                 if tid is not None:
                     g |= snap.group_sets[tid]
+                else:
+                    eg = snap.en_groups.get(tl)
+                    if eg:
+                        g |= eg
             pose.comp_groups = frozenset(g)
     for prof in snap.profiles:
         mount_ids = set()
