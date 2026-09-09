@@ -25,8 +25,14 @@ except ImportError:  # pragma: no cover
     from profiles import BODY_RESOURCES
 
 MAX_REROLL = 3
-DEFAULT_CONFIG = {"total_max": None, "bundle_pose_prob": 0.85,
+DEFAULT_CONFIG = {"total_min": None, "total_max": None, "bundle_pose_prob": 0.85,
                   "extra_prob": 0.35}
+
+# count 轴"混合宣言词": 出现即锁 mixed (=3), 两性都放行且不再被单词重锁。
+# 这是词义 (danbooru 复合人数词固定那几个), 不是冲突规则。
+MIXED_COUNT_WORDS = frozenset({"1girl and 1boy", "1boy and 1girl", "couple",
+                               "mismatched couple", "interspecies couple",
+                               "female and male", "girl and boy"})
 
 
 class Pick:
@@ -76,7 +82,7 @@ def resolve_config(state: dict, lib_settings: dict | None) -> dict:
         configs = (lib_settings or {}).get("random_configs") or {}
         cfg.update(configs.get(ref) or {})
     # 面板 ⚙ 直写键优先
-    for k in ("bundle_pose_prob", "extra_prob", "total_max"):
+    for k in ("bundle_pose_prob", "extra_prob", "total_max", "max_weapons"):
         if state.get(k) is not None:
             cfg[k] = state[k]
     return cfg
@@ -156,7 +162,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             return False
         if gmode == "male" and g == 1:
             return False
-        if led.gender_lock and g and g != led.gender_lock:
+        if led.gender_lock == 1 and g == 2:
+            return False
+        if led.gender_lock == 2 and g == 1:
             return False
         si = snap.sub_of[tid]
         cname = snap.cat_names[snap.cat_of_sub[si]]
@@ -186,11 +194,13 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             b = cross_banned.get(tid)
             if b:
                 led.banned_ids |= b
-        # 人数词 = 性别宣言: 1girl/1boy 一出, 全场性别锁定 (count 池先于角色池抽)
+        # 性别宣言: 带性别标记的词立锁; 混合人数词 (couple 等) = 锁成 mixed(3),
+        # 两性放行。count 池先抽天然优先, character 轴词同样锁场。
         gf = snap.gender_flag[tid]
-        if gf and snap.axis_arr[tid] == "count":
-            if led.gender_lock == 0:
-                led.gender_lock = gf
+        if snap.axis_arr[tid] == "count" and snap.tag_lower[tid] in MIXED_COUNT_WORDS:
+            gf = 3
+        if gf and led.gender_lock == 0 and snap.axis_arr[tid] in ("count", "character", "appearance"):
+            led.gender_lock = gf
         return p
 
     # ---------- 档案索引 ----------

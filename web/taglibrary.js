@@ -674,18 +674,28 @@ export function buildPanelWidget(node, container) {
         pinnedBySub.set(k, (pinnedBySub.get(k) || 0) + 1);
       }
     }
-    // ② 按子分类抽取: 每个子分类读范围并扣除钉选占用, 反冲突避让
-    const subPools = buildSubPools(nsfwOn);
+    // ② 服务端真抽 (1.3.0): /taglib/api/draw 跑的就是节点执行的同一引擎 —
+    //    组互斥/资源预算/状态槽/武器束全部后端算账, 面板不再有本地复刻漂移。
     const usedEn = new Set(keptTags.map((t) => t.en.toLowerCase()));
-    const conflictMap = st.avoid_conflicts !== false ? await fetchConflicts() : null;
+    let drawRes;
+    try {
+      drawRes = await fetch("/taglib/api/draw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ state: { ...st, nsfw: nsfwOn },
+                               seed: (getState(node).seed | 0) + Math.floor(Math.random() * 1000) }),
+      }).then((r) => r.json());
+    } catch (e) { console.warn("[taglib] draw 失败", e); return; }
+    if (!drawRes?.ok) { console.warn("[taglib] draw 返回异常", drawRes); return; }
     const picked = [];
-    for (const sp of subPools) {
-      const [mn, mx] = getFillRange(st, sp.subId);
-      const pk = pinnedBySub.get(`${sp.catName}/${sp.subName}`) || 0;
-      const lo = Math.max(0, mn - pk), hi = Math.max(0, mx - pk);
-      if (hi <= 0) continue; // 钉满/配额为 0 → 该子分类跳过
-      const n = lo + Math.floor(Math.random() * (hi - lo + 1));
-      picked.push(...pickFrom(sp.tags, n, usedEn, conflictMap).map((t) => ({ ...t, _cat: sp.catName })));
+    for (const pk of drawRes.picks) {
+      const lo = String(pk.en).toLowerCase();
+      if (usedEn.has(lo)) continue;
+      usedEn.add(lo);
+      const item = { en: pk.en, zh: pk.zh || "", _cat: pk.cat || "", _auto: true, enabled: true };
+      if (pk.ext) { item._bundle = pk.bundle; }   // 档案束成员 (武器姿势/配件), 芯片特殊标识
+      if (pk.src === "implied") item._implied = true;
+      picked.push(item);
     }
     if (!picked.length && !keptTags.some((t) => t.pinned)) return;
     // ③ 写回: 全部按库类目顺序排列 (钉选不顶置, 随类目走); 分组标题含钉选保留词
@@ -729,9 +739,10 @@ export function buildPanelWidget(node, container) {
     const tg = tagGender(t);
     const gsym = tg === "female" ? '<span class="tl-gsym g-f">♀</span>'
                : tg === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
-    if (lang === "en") return gsym + t.en;
-    if (lang === "zh") return gsym + (t.zh || t.en);
-    return gsym + `${t.en}${t.zh ? `<span style="opacity:.8;font-size:10px">${t.zh}</span>` : ""}`;
+    const bsym = t._bundle ? '<span class="tl-bsym" title="武器档案束成员 (姿势/配件, 随武器出生)">⚔</span>' : "";
+    if (lang === "en") return bsym + gsym + t.en;
+    if (lang === "zh") return bsym + gsym + (t.zh || t.en);
+    return bsym + gsym + `${t.en}${t.zh ? `<span style="opacity:.8;font-size:10px">${t.zh}</span>` : ""}`;
   }
 
   function renderConflictBtn() {
@@ -975,11 +986,68 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-cf-rights .cf-rt-chip .x:hover { opacity:1; color:#ff6b6b; }
       .tp-cf-save { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
         border-radius:8px; padding:6px 18px; cursor:pointer; font-weight:600; font-size:12.5px; }
+      /* ---- 1.3.0: 视图切换条 / 轴视图 / 档案·互斥域·NL 视图 ---- */
+      .tp-viewmode { display:flex; gap:4px; margin-bottom:8px; }
+      .tp-vm { flex:1; padding:5px 0; font-size:11.5px; border-radius:7px; cursor:pointer;
+        border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#aab3c5; }
+      .tp-vm.active { background:rgba(84,160,255,.18); border-color:rgba(84,160,255,.5); color:#cfe4ff; }
+      .tp-axis-head { font-size:12.5px; color:#cfe4ff; font-weight:600; }
+      .tp-axis-n { opacity:.55; font-weight:400; }
+      .tp-axis-hint { font-size:10px; color:#f0a35e; font-weight:400; margin-left:8px; }
+      .tp-tag.bundled { border-style:dashed; border-color:rgba(240,163,94,.55); }
+      .tp-h1 { font-size:15px; font-weight:700; color:#e3e7ee; margin-bottom:6px; }
+      .tp-h1-sub { font-size:11px; color:#8b93a5; font-weight:400; margin-left:8px; }
+      .tp-note { font-size:11.5px; color:#98a1b3; line-height:1.65; margin-bottom:12px;
+        background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
+        border-radius:8px; padding:8px 12px; }
+      .tp-pcard { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.09);
+        border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+      .tp-pcard.err { border-color:rgba(255,107,107,.5); }
+      .tp-pcard-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
+      .tp-pcard-h code { color:#8fbaff; font-size:11px; }
+      .tp-pbadges { margin-left:auto; display:flex; gap:5px; }
+      .tp-b { font-size:10px; padding:2px 7px; border-radius:99px;
+        background:rgba(255,255,255,.07); color:#aab3c5; }
+      .tp-b.ok { background:rgba(125,212,125,.14); color:#7dd47d; }
+      .tp-b.warn { background:rgba(240,163,94,.16); color:#f0a35e; }
+      .tp-prow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:4px 0; }
+      .tp-pl { font-size:10.5px; color:#8b93a5; min-width:44px; }
+      .tp-chip { font-size:10.5px; padding:2px 8px; border-radius:6px;
+        background:rgba(84,160,255,.12); color:#cfe4ff; }
+      .tp-ptab { width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; }
+      .tp-ptab th { text-align:left; color:#8b93a5; font-weight:500; padding:4px 8px;
+        border-bottom:1px solid rgba(255,255,255,.1); }
+      .tp-ptab td { padding:4px 8px; border-bottom:1px solid rgba(255,255,255,.05); color:#c3cbdb; }
+      .tp-ptab code { color:#8fbaff; }
+      .tp-ptab tr.extra td { background:rgba(240,163,94,.05); }
+      .tp-ptab .dim { color:#8b93a5; font-size:10px; }
+      .tp-gitem { border:1px solid rgba(255,255,255,.08); border-radius:8px;
+        margin-bottom:6px; background:rgba(255,255,255,.025); }
+      .tp-gitem summary { cursor:pointer; padding:7px 12px; font-size:11.5px; color:#c3cbdb; }
+      .tp-gitem summary code { color:#8fbaff; }
+      .tp-gn { color:#8b93a5; font-size:10.5px; margin-left:8px; }
+      .tp-gmem { padding:6px 14px 10px; display:flex; flex-wrap:wrap; gap:5px; }
+      .tp-gmem .tp-chip { background:rgba(255,255,255,.06); color:#c3cbdb; }
+      .tp-fam { margin-bottom:10px; }
+      .tp-fam-h { font-size:12px; color:#cfe4ff; margin-bottom:3px; }
+      .tp-fam-s { font-size:11.5px; color:#aab3c5; padding:2px 0 2px 16px; }
+      .tp-jsonbox { margin-top:14px; border:1px solid rgba(255,255,255,.09); border-radius:8px; }
+      .tp-jsonbox summary { padding:8px 12px; font-size:12px; color:#aab3c5; cursor:pointer; }
+      .tp-jsonbox textarea { width:calc(100% - 24px); margin:0 12px; background:#12141a;
+        color:#c3cbdb; border:1px solid rgba(255,255,255,.1); border-radius:6px;
+        font-family:Consolas,monospace; font-size:11px; padding:8px; box-sizing:border-box; }
+      .tp-jrow { padding:8px 12px 12px; display:flex; align-items:center; gap:10px; }
+      .tp-jsave { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
+        border-radius:8px; padding:6px 16px; cursor:pointer; font-weight:600; font-size:12px; }
+      .tp-jmsg { font-size:11.5px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
         <h2>🏷 从标签库添加</h2>
         <button class="tp-tabbtn tp-picktab active">挑标签</button>
+        <button class="tp-tabbtn tp-proftab">⚔ 武器档案</button>
+        <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
+        <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
         <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
         <button class="tp-tabbtn tp-mgrtab">🏷 标签库管理</button>
         <button class="tp-tabbtn tp-cftab">🧷 防冲突关系</button>
@@ -990,6 +1058,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       <div class="tp-cols">
         <aside class="tp-cats"></aside>
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
+        <section class="tp-profview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
+        <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
+        <section class="tp-nlview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
         <section class="tp-mgrview" style="display:none;flex:1;min-width:0;"></section>
         <section class="tp-cfview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
@@ -1013,10 +1084,44 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   function libCats() { return (LIB_CACHE && LIB_CACHE.categories) || []; }
 
-  /* ---------- 三级侧栏树: 大类(可折叠) > 子分类 > 孙分类 + 抽取范围设置 ---------- */
+  /* ---------- 三级侧栏树: 大类(可折叠) > 子分类 > 孙分类 + 抽取范围设置 ----------
+     1.3.0: 顶栏可切 视图模式 — 分类树(浏览皮肤) / 拼装轴(引擎本体)。轴模式下
+     标签按 axis 字段聚合 (一词可跨面), 武器姿势词带 ⚔ 标记。 */
+  const AXES_ZH = {
+    meta: "💎 画质规格", count: "👥 人数", character: "🧿 角色身份",
+    appearance: "🎨 外貌特征", clothing: "👗 服装", prop: "🧰 道具武器",
+    action: "🤸 动作姿态", environment: "🏞 场景环境", lighting: "💡 光影",
+    camera: "🎬 镜头构图", style: "🖌 风格媒介", material: "✨ 材质特效",
+    misc: "📦 未归类",
+  };
+  const AXIS_ORDER = ["meta", "count", "character", "appearance", "clothing",
+                      "prop", "action", "environment", "lighting", "camera",
+                      "style", "material", "misc"];
+
+  function eachTag(lib, fn) {
+    for (const c of lib.categories || [])
+      for (const s of c.subcategories || [])
+        for (const t of s.tags || []) fn(t, c, s);
+  }
+
   function renderCats() {
     catsBox.innerHTML = "";
     if (!ui.openCats) ui.openCats = new Set();
+    if (!ui.viewMode) ui.viewMode = "tree";
+    // ---- 视图切换条 ----
+    const vmBox = document.createElement("div");
+    vmBox.className = "tp-viewmode";
+    vmBox.innerHTML = `
+      <button class="tp-vm ${ui.viewMode === "tree" ? "active" : ""}" data-vm="tree">🌲 分类树</button>
+      <button class="tp-vm ${ui.viewMode === "axis" ? "active" : ""}" data-vm="axis">🎯 拼装轴</button>`;
+    catsBox.appendChild(vmBox);
+    vmBox.querySelectorAll(".tp-vm").forEach((b) => {
+      b.onclick = () => {
+        ui.viewMode = b.dataset.vm;
+        ui.activeCat = null; ui.activeSub = ui.activeAxis = null;
+        renderCats(); renderChips();
+      };
+    });
     const allCount = libCats().reduce((n, c) => n + countTags(c), 0);
     // ---- 总控制开关 + 范围 (放在"全部"上面) ----
     const st = getState(node);
@@ -1036,7 +1141,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <span>~</span>
         <input type="number" class="tp-master-max" min="0" max="20" value="${mhi}"/>
       </div>
-      <div class="tp-range-hint">每个子分类抽取 ${mlo}~${mhi} 个</div>`;
+      <div class="tp-range-hint">每${ui.viewMode === "axis" ? "轴" : "个子分类"}抽取 ${mlo}~${mhi} 个</div>`;
     catsBox.appendChild(masterBox);
     masterBox.querySelector(".tp-master-sw").onchange = (e) => {
       setState(node, { fill_master: e.target.checked });
@@ -1054,6 +1159,29 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     masterBox.querySelector(".tp-master-max").onchange = saveMaster;
     // 排除的类目标注 0~0 (不填充)
     const excludedSet = new Set(getExcluded() || []);
+    // ---- 轴视图模式: 侧栏 = 拼装轴列表 (引擎本体) ----
+    if (ui.viewMode === "axis") {
+      const lib = LIB_CACHE || { categories: [] };
+      const axisCount = {};
+      eachTag(lib, (t) => {
+        const a = t.axis || "misc";
+        axisCount[a] = (axisCount[a] || 0) + 1;
+      });
+      mkRow(catsBox, {
+        id: "__axisall__", icon: "🎯", name: "全部轴", count: allCount, depth: 0,
+        active: !ui.activeAxis,
+        onclick: () => { ui.activeAxis = null; renderCats(); renderChips(); },
+      });
+      for (const a of AXIS_ORDER) {
+        if (!axisCount[a]) continue;
+        mkRow(catsBox, {
+          id: "axis:" + a, icon: "", name: AXES_ZH[a] || a, count: axisCount[a],
+          depth: 1, active: ui.activeAxis === a,
+          onclick: () => { ui.activeAxis = a; renderCats(); renderChips(); },
+        });
+      }
+      return;
+    }
     mkRow(catsBox, {
       id: "__all__", icon: "🗂", name: "全部", count: allCount,
       depth: 0, active: ui.activeCat === "__all__",
@@ -1156,7 +1284,80 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
            (t.aliases || []).some((a) => a.toLowerCase().includes(q));
   }
 
+  let WEAPON_POSES = null;   // 武器档案束成员词集 (⚔ 标记用), 懒加载一次
+  async function fetchWeaponPoses() {
+    if (WEAPON_POSES) return;
+    try {
+      const r = await fetch("/taglib/api/profiles");
+      const d = await r.json();
+      WEAPON_POSES = new Set((d.weapon_poses || []).map((x) => x.toLowerCase()));
+    } catch { WEAPON_POSES = new Set(); }
+  }
+
+  function renderAxisChips() {
+    chipsBox.innerHTML = "";
+    const existing = getExisting();
+    const lib = LIB_CACHE || { categories: [] };
+    const byAxis = {};
+    eachTag(lib, (t, c, s) => {
+      const a = t.axis || "misc";
+      (byAxis[a] = byAxis[a] || []).push({ t, c, s });
+    });
+    fetchWeaponPoses().finally(() => {
+      let shown = 0;
+      for (const a of AXIS_ORDER) {
+        if (ui.activeAxis && ui.activeAxis !== a) continue;
+        const rows = (byAxis[a] || []).filter((r) => matches(r.t));
+        if (!rows.length) continue;
+        shown += rows.length;
+        const head = document.createElement("div");
+        head.className = "tp-sub tp-axis-head";
+        head.innerHTML = `${AXES_ZH[a] || a} <span class="tp-axis-n">${rows.length}</span>`
+          + (a === "prop" || a === "action" ? ` <span class="tp-axis-hint">⚔=武器档案束成员, 随武器自动出生</span>` : "");
+        chipsBox.appendChild(head);
+        const grid = document.createElement("div");
+        grid.className = "tp-grid";
+        for (const { t, c, s } of rows) {
+          grid.appendChild(chipEl(t, c, s, existing));
+        }
+        chipsBox.appendChild(grid);
+      }
+      if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
+    });
+  }
+
+  function chipEl(t, c, s, existing) {
+    const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
+    const isExisting = existing.has(t.en.toLowerCase());
+    const isBundled = WEAPON_POSES && WEAPON_POSES.has(t.en.toLowerCase());
+    const el = document.createElement("span");
+    el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (t.gender ? " gender" : "")
+      + (isPicked ? " picked" : "") + (isExisting ? " dim" : "")
+      + (isBundled ? " bundled" : "");
+    if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
+    else {
+      el.title = (isBundled ? "⚔ 武器档案束成员 (抽中武器自动带出, 一般无需手点)\n" : "")
+        + (t.nsfw ? "🔞 NSFW 标签"
+          : t.gender === "female" ? "♀ 女性专属标签"
+          : t.gender === "male" ? "♂ 男性专属标签" : "")
+        + `\n轴: ${AXES_ZH[t.axis || "misc"] || t.axis} · 树: ${c.name}/${s.name}`;
+      el.onclick = () => {
+        const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
+        if (i >= 0) ui.picked.splice(i, 1);
+        else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw, gender: t.gender || "" });
+        countEl.textContent = ui.picked.length;
+        el.classList.toggle("picked", i < 0);
+      };
+    }
+    el.innerHTML = (isBundled ? '<span class="tl-bsym">⚔</span>' : "")
+      + (t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
+        : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "")
+      + `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
+    return el;
+  }
+
   function renderChips() {
+    if (ui.viewMode === "axis") { renderAxisChips(); return; }
     chipsBox.innerHTML = "";
     const existing = getExisting();
     // activeSub 可以是子分类 id 或孙分类 id
@@ -1200,29 +1401,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const grid = document.createElement("div");
     grid.className = "tp-grid";
     for (const t of hits) {
-      const isPicked = ui.picked.some((p) => p.en.toLowerCase() === t.en.toLowerCase());
-      const isExisting = existing.has(t.en.toLowerCase());
-      const el = document.createElement("span");
-          el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (t.gender ? " gender" : "") + (isPicked ? " picked" : "") + (isExisting ? " dim" : "");
-          if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
-          else {
-            el.title = t.nsfw ? "🔞 NSFW 标签"
-              : t.gender === "female" ? "♀ 女性专属标签"
-              : t.gender === "male" ? "♂ 男性专属标签" : "";
-            el.onclick = () => {
-              const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
-              if (i >= 0) ui.picked.splice(i, 1);
-              else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw, gender: t.gender || "" });
-              countEl.textContent = ui.picked.length;
-              el.classList.toggle("picked", i < 0);
-            };
-          }
-          el.innerHTML = (t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
-            : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "")
-            + `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
-          grid.appendChild(el);
-        }
-        chipsBox.appendChild(grid);
+      grid.appendChild(chipEl(t, { name: "", icon: "" }, { name: "" }, existing));
+    }
+    chipsBox.appendChild(grid);
   }
 
   /* ---------- 排除类目视图 ---------- */
@@ -1451,6 +1632,17 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         ${row("组合随机过滤词", `<input type="text" class="sv-search" value="${(st.search_text || "").replace(/"/g, "&quot;")}" placeholder="留空 = 全库抽取"/>`,
           "只从匹配的标签里随机 (支持中文/英文/别名)")}
       </div>
+      <div class="tp-set-h">1.3.0 引擎 <span class="sub">· 组互斥/资源算账/武器束/NL 尾段</span></div>
+      <div class="tp-set-card">
+        ${row("自然语言尾段", `<input type="checkbox" class="sv-nltail" ${st.nl_tail !== false ? "checked" : ""}/>`,
+          "输出末尾追加 2~4 句连贯英文描述 (句式随 seed 变, 关掉=纯标签)")}
+        ${row("武器带姿势概率", `<input type="number" class="sv-bundleprob" min="0" max="100" step="5" value="${Math.round((st.bundle_pose_prob ?? 0.85) * 100)}"/>`,
+          "% · 抽中武器时自动带出该武器一条姿势的概率")}
+        ${row("同时武器上限", `<input type="number" class="sv-maxweap" min="1" max="4" step="1" value="${st.max_weapons ?? 2}"/>`,
+          "超过后新武器不再配姿势 (手部资源有限, 背着一把再举一把没有意义)")}
+        ${row("配件出生概率", `<input type="number" class="sv-extrprob" min="0" max="100" step="5" value="${Math.round((st.extra_prob ?? 0.35) * 100)}"/>`,
+          "% · 武器档案的配件 (刀鞘/箭袋/镜) 随武器出现的概率")}
+      </div>
       <div class="tp-set-h">全局偏好 <span class="sub">· 与 ComfyUI 设置面板「标签库」双向同步</span></div>
       <div class="tp-set-card">
         ${row("新节点的默认模式", `<select class="sv-gmode">
@@ -1478,6 +1670,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     $(".sv-w").onchange = (e) => saveNode({ use_weights_syntax: e.target.checked });
     $(".sv-dd").onchange = (e) => saveNode({ dedupe: e.target.checked });
     $(".sv-search").onchange = (e) => saveNode({ search_text: e.target.value.trim() });
+    const clampPct = (v, d) => Math.min(100, Math.max(0, parseInt(v) ?? d)) / 100;
+    $(".sv-nltail").onchange = (e) => saveNode({ nl_tail: e.target.checked });
+    $(".sv-bundleprob").onchange = (e) => saveNode({ bundle_pose_prob: clampPct(e.target.value, 85) });
+    $(".sv-maxweap").onchange = (e) => saveNode({ max_weapons: Math.min(4, Math.max(1, parseInt(e.target.value) || 2)) });
+    $(".sv-extrprob").onchange = (e) => saveNode({ extra_prob: clampPct(e.target.value, 35) });
     // 全局偏好: 写入 ComfyUI 设置 (官方持久化) + 当前面板即时跟随; 其他节点由轮询跟进
     const saveGlobal = (id, value) => { setSetting(id, value); onGlobalChange?.(); };
     $(".sv-gmode").onchange = (e) => saveGlobal(SET_DEFAULT_MODE, e.target.value);
@@ -1490,6 +1687,132 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   /* ---------- 🧷 防冲突关系页签 ---------- */
   const cfView = $(".tp-cfview");
+
+  /* ---------- 1.3.0 新视图: 武器档案 / 互斥域 / NL 句式 ---------- */
+  const profView = $(".tp-profview");
+  const grpView = $(".tp-grpview");
+  const nlView = $(".tp-nlview");
+
+  function editorFoot(scope, apiUrl, getData) {
+    const ta = scope.querySelector(".tp-json");
+    const btn = scope.querySelector(".tp-jsave");
+    const msg = scope.querySelector(".tp-jmsg");
+    if (btn) btn.onclick = async () => {
+      let payload;
+      try { payload = JSON.parse(ta.value); }
+      catch (e) { msg.textContent = "❌ JSON 解析失败: " + e.message; msg.style.color = "#ff6b6b"; return; }
+      btn.disabled = true; msg.textContent = "保存中…"; msg.style.color = "#8b93a5";
+      try {
+        const r = await fetch(apiUrl, { method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(getData(payload)) });
+        const d = await r.json();
+        if (d.ok) { msg.textContent = "✅ 已保存, 引擎即时生效"; msg.style.color = "#7dd47d"; WEAPON_POSES = null; }
+        else { msg.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 160); msg.style.color = "#ff6b6b"; }
+      } catch (e) { msg.textContent = "❌ " + e.message; msg.style.color = "#ff6b6b"; }
+      btn.disabled = false;
+    };
+  }
+
+  const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+
+  async function renderProfView() {
+    profView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
+    let d;
+    try { d = await fetch("/taglib/api/profiles").then((r) => r.json()); }
+    catch { profView.innerHTML = `<div class="tp-empty" style="padding:30px;color:#ff6b6b">档案接口加载失败</div>`; return; }
+    const profs = (d.data && d.data.profiles) || [];
+    let html = `
+      <div class="tp-h1">⚔ 武器档案 <span class="tp-h1-sub">${profs.length} 份 · ${((d.weapon_poses || []).length)} 个束成员词</span></div>
+      <div class="tp-note">姿势不独立存在: 每条姿势挂在武器档案下, 抽中/钉选武器时按概率自动带出一条; 束成员词在随机池里永不单抽 (悬停标签看 ⚔ 标记)。资源列 = 吃几只手/视线, 引擎抽取时实时算账, 超预算组合出生前就被丢。</div>`;
+    for (const p of profs) {
+      const dg = (d.diag || []).find((x) => x.id === p.id) || {};
+      html += `
+      <div class="tp-pcard">
+        <div class="tp-pcard-h"><b>${esc(p.zh || "")}</b> <code>${esc(p.id)}</code>
+          <span class="tp-pbadges">
+            <span class="tp-b">${(p.poses || []).length} 姿势</span>
+            <span class="tp-b">${(p.extras || []).length} 配件</span>
+            ${dg.mount_ok !== undefined ? `<span class="tp-b ${dg.mount_ok === dg.mount_total ? "ok" : "warn"}">挂载 ${dg.mount_ok}/${dg.mount_total}${dg.missing && dg.missing.length ? " 缺:" + dg.missing.join(",") : ""}</span>` : ""}
+          </span></div>
+        <div class="tp-prow"><span class="tp-pl">身份词</span>${(p.tags || []).map((t) => `<span class="tp-chip">${esc(t)}</span>`).join("")}</div>
+        <table class="tp-ptab"><tr><th>姿势</th><th>标签</th><th>手/视</th><th>状态槽</th><th>排斥</th></tr>
+        ${(p.poses || []).map((x) => `<tr><td><code>${esc(x.id)}</code></td>
+          <td>${(x.tags || []).map((t) => esc(t)).join(" + ")}</td>
+          <td>${x.hands ?? 1} / ${x.gaze ?? 0}</td>
+          <td>${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",")) || "—"}</td>
+          <td class="dim">${esc((x.conflicts_with || []).slice(0, 4).join(", "))}${(x.conflicts_with || []).length > 4 ? "…" : ""}</td></tr>`).join("")}
+        ${(p.extras || []).map((x) => `<tr class="extra"><td>🎒 <code>${esc(x.id)}</code></td>
+          <td>${(x.tags || []).map((t) => esc(t)).join(" + ")}</td><td>—</td>
+          <td>${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",")) || "—"}</td>
+          <td class="dim">${esc((x.conflicts_with || []).slice(0, 4).join(", "))}</td></tr>`).join("")}
+        </table>
+      </div>`;
+    }
+    if ((d.errors || []).length) {
+      html += `<div class="tp-pcard err"><b>⚠ 校验错误</b><pre>${esc(JSON.stringify(d.errors, null, 1))}</pre></div>`;
+    }
+    html += `
+      <details class="tp-jsonbox"><summary>✏ 编辑全部档案 (JSON, 保存前自动备份 .bak)</summary>
+        <textarea class="tp-json" rows="16" spellcheck="false">${esc(JSON.stringify(d.data, null, 1))}</textarea>
+        <div class="tp-jrow"><button class="tp-jsave">💾 保存档案</button><span class="tp-jmsg"></span></div>
+      </details>`;
+    profView.innerHTML = html;
+    editorFoot(profView, "/taglib/api/profiles", (payload) => ({ data: payload }));
+  }
+
+  async function renderGrpView() {
+    grpView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
+    let d;
+    try { d = await fetch("/taglib/api/grouprules").then((r) => r.json()); }
+    catch { grpView.innerHTML = `<div style="padding:30px;color:#ff6b6b">互斥域接口加载失败</div>`; return; }
+    const groups = d.groups || [];
+    let html = `
+      <div class="tp-h1">🧬 互斥域 <span class="tp-h1-sub">${groups.length} 组</span></div>
+      <div class="tp-note">取代旧 81 条手写冲突规则: 同域内任意两词天然不可能同现 (抽取时查组名交集, O(1))。武器姿势的排斥关系不在这里 — 在档案的 conflicts_with 字段。</div>
+      <input class="tp-gsearch" placeholder="🔍 过滤组名 / 成员…" style="width:100%;box-sizing:border-box;margin-bottom:10px" />
+      <div class="tp-glist">
+      ${groups.map((g) => `
+        <details class="tp-gitem" data-key="${esc(g.id + " " + g.members.join(" "))}">
+          <summary><code>${esc(g.id)}</code> <span class="tp-gn">${g.members.length} 词</span></summary>
+          <div class="tp-gmem">${g.members.map((m) => `<span class="tp-chip">${esc(m)}</span>`).join("")}</div>
+        </details>`).join("")}
+      </div>
+      <details class="tp-jsonbox"><summary>✏ 编辑互斥域 (JSON)</summary>
+        <textarea class="tp-json" rows="16" spellcheck="false">${esc(JSON.stringify({ groups }, null, 1))}</textarea>
+        <div class="tp-jrow"><button class="tp-jsave">💾 保存互斥域</button><span class="tp-jmsg"></span></div>
+      </details>`;
+    grpView.innerHTML = html;
+    const gs = grpView.querySelector(".tp-gsearch");
+    gs.oninput = () => {
+      const q = gs.value.trim().toLowerCase();
+      grpView.querySelectorAll(".tp-gitem").forEach((el) => {
+        el.style.display = !q || el.dataset.key.toLowerCase().includes(q) ? "" : "none";
+      });
+    };
+    editorFoot(grpView, "/taglib/api/grouprules", (payload) => ({ groups: payload.groups }));
+  }
+
+  async function renderNlView() {
+    nlView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
+    let d;
+    try { d = await fetch("/taglib/api/nl").then((r) => r.json()); }
+    catch { nlView.innerHTML = `<div style="padding:30px;color:#ff6b6b">NL 接口加载失败</div>`; return; }
+    const F = d.data || {};
+    const fams = Object.entries(F.families || {});
+    let html = `
+      <div class="tp-h1">✍ NL 句式素材 <span class="tp-h1-sub">${fams.length} 族 · ${fams.reduce((n, [, v]) => n + v.length, 0)} 句</span></div>
+      <div class="tp-note">末尾自然语言段的素材库。模板占位符: {S}=主语(She/He/They 随人数词自动) · {POS}=所有格 · {O}=宾语名词 (从档案 obj_kind→words 解析)。${(d.uncovered || []).length ? `<br><b style="color:#f0a35e">⚠ 档案姿势词未进 pose_map (${d.uncovered.length}): ${esc(d.uncovered.join(", "))}</b>` : "<br><b style=\"color:#7dd47d\">✓ 全部武器姿势词已有句式覆盖</b>"}</div>
+      ${fams.map(([fam, vs]) => `
+        <div class="tp-fam"><div class="tp-fam-h"><code>${esc(fam)}</code> <span class="tp-gn">${vs.length} 变体</span></div>
+          ${vs.map((v, i) => `<div class="tp-fam-s">${i + 1}. ${esc(v)}</div>`).join("")}</div>`).join("")}
+      <details class="tp-jsonbox"><summary>✏ 编辑全部句式 (JSON)</summary>
+        <textarea class="tp-json" rows="18" spellcheck="false">${esc(JSON.stringify(F, null, 1))}</textarea>
+        <div class="tp-jrow"><button class="tp-jsave">💾 保存句式</button><span class="tp-jmsg"></span></div>
+      </details>`;
+    nlView.innerHTML = html;
+    editorFoot(nlView, "/taglib/api/nl", (payload) => ({ data: payload }));
+  }
   let cfRights = [];   // 新增规则的右侧引用 [{kind, value}]
 
   function cfKindName(kind) {
@@ -1662,11 +1985,17 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     rootEl.querySelector(".tp-mgrtab").classList.toggle("active", tab === "manager");
     rootEl.querySelector(".tp-cftab").classList.toggle("active", tab === "cf");
     rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
+    rootEl.querySelector(".tp-proftab")?.classList.toggle("active", tab === "prof");
+    rootEl.querySelector(".tp-grptab")?.classList.toggle("active", tab === "grp");
+    rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
     excView.style.display = tab === "exclude" ? "block" : "none";
     mgrView.style.display = tab === "manager" ? "flex" : "none";
     cfView.style.display = tab === "cf" ? "block" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
+    profView.style.display = tab === "prof" ? "block" : "none";
+    grpView.style.display = tab === "grp" ? "block" : "none";
+    nlView.style.display = tab === "nl" ? "block" : "none";
     searchEl.style.visibility = tab === "pick" ? "visible" : "hidden";
     const info = $(".tp-footinfo");
     if (tab === "pick") {
@@ -1678,6 +2007,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       info.innerHTML = `管理页改动保存后全局生效`;
     } else if (tab === "cf") {
       info.innerHTML = `反冲突规则双向互斥 · 填充/自动模式生效`;
+    } else if (tab === "prof") {
+      info.innerHTML = `⚔ 姿势只能随武器出生 · 改档案保存即生效`;
+    } else if (tab === "grp") {
+      info.innerHTML = `🧬 同域任意两词永不共存 (引擎抽取期拦截)`;
+    } else if (tab === "nl") {
+      info.innerHTML = `✍ 句式素材 · 与标签同 seed 确定性输出`;
     } else {
       info.innerHTML = `节点参数即改即存 · 全局偏好双向同步`;
     }
@@ -1689,12 +2024,18 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (tab === "exclude") renderExclude();
     if (tab === "settings") renderSettingsView();
     if (tab === "cf") renderCfView();
+    if (tab === "prof") renderProfView();
+    if (tab === "grp") renderGrpView();
+    if (tab === "nl") renderNlView();
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
   rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
   rootEl.querySelector(".tp-mgrtab").onclick = () => { ensureMgrFrame(); switchTab("manager"); };
   rootEl.querySelector(".tp-cftab").onclick = () => switchTab("cf");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
+  rootEl.querySelector(".tp-proftab")?.addEventListener("click", () => switchTab("prof"));
+  rootEl.querySelector(".tp-grptab")?.addEventListener("click", () => switchTab("grp"));
+  rootEl.querySelector(".tp-nltab")?.addEventListener("click", () => switchTab("nl"));
   $(".tp-close2").onclick = onCancel;
 
   searchEl.oninput = () => { ui.filter = searchEl.value; renderChips(); };
