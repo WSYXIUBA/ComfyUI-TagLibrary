@@ -570,11 +570,12 @@ async def export_folder(request: web.Request) -> web.Response:
 # ------------------------------------------------------------ 1.3.0: 档案 / 互斥域 / NL / 抽取
 
 async def get_profiles(_request: web.Request) -> web.Response:
-    """GET /taglib/api/profiles -> profiles.json 原文 + 校验/挂载诊断。"""
+    """GET /taglib/api/profiles -> profiles.json 原文 + 校验/挂载诊断 + 词中文对照。"""
     data = _profiles.load_profiles()
     valid, errs = _profiles.validate_profiles(data)
     snap = runtime_snapshot.get_snapshot(library.get_merged())
     diag = []
+    langmap = {}
     for p in data.get("profiles") or []:
         tags = [str(t).strip() for t in (p.get("tags") or [])]
         miss = [t for t in tags if snap.tag_id(t) is None]
@@ -583,8 +584,22 @@ async def get_profiles(_request: web.Request) -> web.Response:
                      "mount_total": len(tags), "missing": miss,
                      "poses": len(p.get("poses") or []),
                      "extras": len(p.get("extras") or [])})
+        for x in (p.get("poses") or []) + (p.get("extras") or []):
+            xzh = str(x.get("zh") or "")
+            for t in (x.get("tags") or []):
+                tl = str(t).strip().lower()
+                if tl not in langmap:
+                    tid = snap.tag_id(tl)
+                    langmap[tl] = (snap.tag_zh[tid] if tid is not None else "") or xzh
+        for t in tags:
+            tl = t.lower()
+            if tl not in langmap:
+                tid = snap.tag_id(tl)
+                if tid is not None:
+                    langmap[tl] = snap.tag_zh[tid]
     return _json_response({"ok": True, "data": data, "errors": errs, "diag": diag,
-                           "weapon_poses": sorted(snap.tag_text[i] for i in snap.bundled_only)})
+                           "weapon_poses": sorted(snap.tag_text[i] for i in snap.bundled_only),
+                           "lang": langmap})
 
 
 async def save_profiles(request: web.Request) -> web.Response:

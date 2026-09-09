@@ -1040,6 +1040,13 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-jsave { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
         border-radius:8px; padding:6px 16px; cursor:pointer; font-weight:600; font-size:12px; }
       .tp-jmsg { font-size:11.5px; }
+      .tp-zh { opacity:.55; font-size:10px; margin-left:3px; }
+      .tp-chip .tp-zh { margin-left:2px; }
+      .tp-langbtn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05);
+        color:#aab3c5; border-radius:6px; font-size:10.5px; padding:1px 7px; cursor:pointer;
+        margin-left:8px; vertical-align:2px; }
+      .tp-langbtn.en { color:#f0a35e; border-color:rgba(240,163,94,.5); }
+      .tp-arrow { color:#54a0ff; margin:0 4px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
@@ -1716,6 +1723,44 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 
+  /* ---- 双语辅助: 词→中文 (一次性建全库 EN_ZH 表 + 档案 lang 兜底库外束词) ---- */
+  const TP_LANG = { en: false };  // 新 tab 独立的 中/英 显示开关
+  try { TP_LANG.en = localStorage.getItem("taglib.tpLang") === "en"; } catch {}
+  let _EN_ZH = null;
+  function enZhMap() {
+    if (_EN_ZH) return _EN_ZH;
+    const m = {};
+    for (const c of libCats())
+      for (const s of c.subcategories || [])
+        for (const t of s.tags || []) {
+          const k = String(t.en).toLowerCase();
+          if (t.zh && !(k in m)) m[k] = t.zh;
+        }
+    _EN_ZH = m;
+    return m;
+  }
+  let LANG_MAP = {};  // 档案接口带回: 库外束词(如 drawing bow)的中文
+  function zhOf(en) {
+    const k = String(en).toLowerCase();
+    return LANG_MAP[k] || enZhMap()[k] || "";
+  }
+  function langBtnHtml() {
+    return `<button class="tp-langbtn ${TP_LANG.en ? "en" : ""}" title="中/英文显示切换">文A</button>`;
+  }
+  function bindLang(scope, rerender) {
+    const b = scope.querySelector(".tp-langbtn");
+    if (b) b.onclick = () => {
+      TP_LANG.en = !TP_LANG.en;
+      try { localStorage.setItem("taglib.tpLang", TP_LANG.en ? "en" : "zh"); } catch {}
+      b.classList.toggle("en", TP_LANG.en);
+      rerender();
+    };
+  }
+  function bi(en) {  // 双语渲染: 纯英模式或被查词无中文 → 只留英文
+    const z = zhOf(en);
+    return (TP_LANG.en || !z) ? esc(en) : `${esc(en)}<span class="tp-zh">${esc(z)}</span>`;
+  }
+
   async function renderProfView() {
     profView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
     let d;
@@ -1723,7 +1768,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     catch { profView.innerHTML = `<div class="tp-empty" style="padding:30px;color:#ff6b6b">档案接口加载失败</div>`; return; }
     const profs = (d.data && d.data.profiles) || [];
     let html = `
-      <div class="tp-h1">⚔ 武器档案 <span class="tp-h1-sub">${profs.length} 份 · ${((d.weapon_poses || []).length)} 个束成员词</span></div>
+      <div class="tp-h1">⚔ 武器档案 ${langBtnHtml()} <span class="tp-h1-sub">${profs.length} 份 · ${((d.weapon_poses || []).length)} 个束成员词</span></div>
       <div class="tp-note">姿势不独立存在: 每条姿势挂在武器档案下, 抽中/钉选武器时按概率自动带出一条; 束成员词在随机池里永不单抽 (悬停标签看 ⚔ 标记)。资源列 = 吃几只手/视线, 引擎抽取时实时算账, 超预算组合出生前就被丢。</div>`;
     for (const p of profs) {
       const dg = (d.diag || []).find((x) => x.id === p.id) || {};
@@ -1735,17 +1780,17 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
             <span class="tp-b">${(p.extras || []).length} 配件</span>
             ${dg.mount_ok !== undefined ? `<span class="tp-b ${dg.mount_ok === dg.mount_total ? "ok" : "warn"}">挂载 ${dg.mount_ok}/${dg.mount_total}${dg.missing && dg.missing.length ? " 缺:" + dg.missing.join(",") : ""}</span>` : ""}
           </span></div>
-        <div class="tp-prow"><span class="tp-pl">身份词</span>${(p.tags || []).map((t) => `<span class="tp-chip">${esc(t)}</span>`).join("")}</div>
-        <table class="tp-ptab"><tr><th>姿势</th><th>标签</th><th>手/视</th><th>状态槽</th><th>排斥</th></tr>
-        ${(p.poses || []).map((x) => `<tr><td><code>${esc(x.id)}</code></td>
-          <td>${(x.tags || []).map((t) => esc(t)).join(" + ")}</td>
+        <div class="tp-prow"><span class="tp-pl">身份词</span>${(p.tags || []).map((t) => `<span class="tp-chip">${bi(t)}</span>`).join("")}</div>
+        <table class="tp-ptab"><tr><th>姿势 (代号)</th><th>出词</th><th>手/视线</th><th>状态槽</th><th>排斥词</th></tr>
+        ${(p.poses || []).map((x) => `<tr><td><code>${esc(x.id)}</code>${x.zh ? `<span class="tp-zh">${esc(x.zh)}</span>` : ""}</td>
+          <td>${(x.tags || []).map((t) => bi(t)).join(" + ")}</td>
           <td>${x.hands ?? 1} / ${x.gaze ?? 0}</td>
-          <td>${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",")) || "—"}</td>
-          <td class="dim">${esc((x.conflicts_with || []).slice(0, 4).join(", "))}${(x.conflicts_with || []).length > 4 ? "…" : ""}</td></tr>`).join("")}
-        ${(p.extras || []).map((x) => `<tr class="extra"><td>🎒 <code>${esc(x.id)}</code></td>
-          <td>${(x.tags || []).map((t) => esc(t)).join(" + ")}</td><td>—</td>
-          <td>${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",")) || "—"}</td>
-          <td class="dim">${esc((x.conflicts_with || []).slice(0, 4).join(", "))}</td></tr>`).join("")}
+          <td>${esc((Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",") || "—"))}</td>
+          <td class="dim">${(x.conflicts_with || []).slice(0, 4).map((t) => esc(t + (TP_LANG.en ? "" : (zhOf(t) ? " " + zhOf(t) : "")))).join(", ")}${(x.conflicts_with || []).length > 4 ? "…" : ""}</td></tr>`).join("")}
+        ${(p.extras || []).map((x) => `<tr class="extra"><td>🎒 <code>${esc(x.id)}</code>${x.zh ? `<span class="tp-zh">${esc(x.zh)}</span>` : ""}</td>
+          <td>${(x.tags || []).map((t) => bi(t)).join(" + ")}</td><td>—</td>
+          <td>${esc((Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",") || "—"))}</td>
+          <td class="dim">${(x.conflicts_with || []).slice(0, 4).map((t) => esc(t + (TP_LANG.en ? "" : (zhOf(t) ? " " + zhOf(t) : "")))).join(", ")}</td></tr>`).join("")}
         </table>
       </div>`;
     }
@@ -1757,7 +1802,10 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <textarea class="tp-json" rows="16" spellcheck="false">${esc(JSON.stringify(d.data, null, 1))}</textarea>
         <div class="tp-jrow"><button class="tp-jsave">💾 保存档案</button><span class="tp-jmsg"></span></div>
       </details>`;
+    LANG_MAP = Object.assign(LANG_MAP, d.lang || {});
+    _EN_ZH = null;  // 档案保存后库可能变, 语言按钮重进视图时重建
     profView.innerHTML = html;
+    bindLang(profView, renderProfView);
     editorFoot(profView, "/taglib/api/profiles", (payload) => ({ data: payload }));
   }
 
@@ -1768,14 +1816,14 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     catch { grpView.innerHTML = `<div style="padding:30px;color:#ff6b6b">互斥域接口加载失败</div>`; return; }
     const groups = d.groups || [];
     let html = `
-      <div class="tp-h1">🧬 互斥域 <span class="tp-h1-sub">${groups.length} 组</span></div>
+      <div class="tp-h1">🧬 互斥域 ${langBtnHtml()} <span class="tp-h1-sub">${groups.length} 组</span></div>
       <div class="tp-note">取代旧 81 条手写冲突规则: 同域内任意两词天然不可能同现 (抽取时查组名交集, O(1))。武器姿势的排斥关系不在这里 — 在档案的 conflicts_with 字段。</div>
       <input class="tp-gsearch" placeholder="🔍 过滤组名 / 成员…" style="width:100%;box-sizing:border-box;margin-bottom:10px" />
       <div class="tp-glist">
       ${groups.map((g) => `
-        <details class="tp-gitem" data-key="${esc(g.id + " " + g.members.join(" "))}">
+        <details class="tp-gitem" data-key="${esc(g.id + " " + g.members.join(" ") + " " + g.members.map((m) => zhOf(m)).join(" "))}">
           <summary><code>${esc(g.id)}</code> <span class="tp-gn">${g.members.length} 词</span></summary>
-          <div class="tp-gmem">${g.members.map((m) => `<span class="tp-chip">${esc(m)}</span>`).join("")}</div>
+          <div class="tp-gmem">${g.members.map((m) => `<span class="tp-chip">${bi(m)}</span>`).join("")}</div>
         </details>`).join("")}
       </div>
       <details class="tp-jsonbox"><summary>✏ 编辑互斥域 (JSON)</summary>
@@ -1783,6 +1831,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <div class="tp-jrow"><button class="tp-jsave">💾 保存互斥域</button><span class="tp-jmsg"></span></div>
       </details>`;
     grpView.innerHTML = html;
+    bindLang(grpView, renderGrpView);
     const gs = grpView.querySelector(".tp-gsearch");
     gs.oninput = () => {
       const q = gs.value.trim().toLowerCase();
@@ -1806,11 +1855,14 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       ${fams.map(([fam, vs]) => `
         <div class="tp-fam"><div class="tp-fam-h"><code>${esc(fam)}</code> <span class="tp-gn">${vs.length} 变体</span></div>
           ${vs.map((v, i) => `<div class="tp-fam-s">${i + 1}. ${esc(v)}</div>`).join("")}</div>`).join("")}
+      <div class="tp-fam"><div class="tp-fam-h">动作词 → 句式族 <span class="tp-gn">${Object.keys(F.pose_map || {}).length} 项</span></div>
+        ${Object.entries(F.pose_map || {}).filter(([k]) => k !== "null").map(([k, v]) => `<div class="tp-fam-s">${bi(k)} <span class="tp-arrow">→</span> <code>${esc(v)}</code></div>`).join("")}</div>
       <details class="tp-jsonbox"><summary>✏ 编辑全部句式 (JSON)</summary>
         <textarea class="tp-json" rows="18" spellcheck="false">${esc(JSON.stringify(F, null, 1))}</textarea>
         <div class="tp-jrow"><button class="tp-jsave">💾 保存句式</button><span class="tp-jmsg"></span></div>
       </details>`;
     nlView.innerHTML = html;
+    bindLang(nlView, renderNlView);
     editorFoot(nlView, "/taglib/api/nl", (payload) => ({ data: payload }));
   }
   let cfRights = [];   // 新增规则的右侧引用 [{kind, value}]

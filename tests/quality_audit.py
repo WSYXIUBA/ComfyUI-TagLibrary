@@ -63,8 +63,9 @@ def _fixed_hash(s: str) -> int:
 
 
 print("=" * 100)
+SEEDS_PER_SCEN = int(os.environ.get("QA_SEEDS", "5"))
 for name, state in SCENARIOS:
-    for seed in range(5):
+    for seed in range(SEEDS_PER_SCEN):
         res = engine.run_auto(snap, state, seed * 97 + _fixed_hash(name),
                               nsfw_on=False, avoid_conflicts=True,
                               search_text="", cat_weights=None,
@@ -103,9 +104,11 @@ for name, state in SCENARIOS:
             if any(p.kind == "ext" and p.source == "bundle" for p in res.picks):
                 bundle_stat[1] += 1
 
-        print(f"### {name} seed{seed}")
-        print(text[:520] + ("…" if len(text) > 520 else ""))
-        print()
+        rate_note = ""
+        if seed < 5:
+            print(f"### {name} seed{seed}")
+            print(text[:520] + ("…" if len(text) > 520 else ""))
+            print()
 
 rate = bundle_stat[1] / max(bundle_stat[0], 1)
 print(f"束出生率: {bundle_stat[1]}/{bundle_stat[0]} = {rate:.0%}")

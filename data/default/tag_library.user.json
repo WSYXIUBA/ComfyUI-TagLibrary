@@ -2083,7 +2083,7 @@
        "axis": "count"
       },
       {
-       "en": "multiple others(多人(其他))",
+       "en": "multiple others",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
@@ -2097,7 +2097,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "count"
+       "axis": "count",
+       "zh": "多人（其他）"
       },
       {
        "en": "group",
@@ -2285,6 +2286,13 @@
        "meta": {},
        "gender": "",
        "axis": "count"
+      },
+      {
+       "en": "multiple others(多人(其他))",
+       "aliases": [],
+       "weight": 1.0,
+       "enabled": true,
+       "id": "imported.c2.sub.multiple-others-2"
       }
      ],
      "random_quota": null,
