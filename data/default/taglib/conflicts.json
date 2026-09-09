@@ -1,4 +1,5 @@
 {
+ "_说明": "这是 ComfyUI-TagLibrary 的反冲突文件 (conflicts.json)。把本文件和「全量模板 taglib_模板_全量.md」一起发给 AI, AI 即可认识库中全部标签,按下面的规则格式生成新的反冲突文件; 拿回来在管理页「📥 导入」预览确认即可。\n规则 = left 与 right 双向互斥: 随机填充/自动模式抽到 left 一侧时, right 一侧的标签自动让位 (手动点选不受影响)。\nleft/right 的 kind 取值:\n  tag  = 单个标签, value 填标签英文 (如 \"nude\")\n  tags = 多个标签, value 填英文数组 (仅 left 使用)\n  sub  = 二级分类, value 填 \"一级分类名/二级分类名\" (如 \"服装系统/上装\")\n  cat  = 一级分类, value 填一级分类名 (如 \"光影氛围\")\n每条规则必须有唯一 id; note 为可选备注。完成后输出整个 JSON 文件内容。",
  "version": 1,
  "rules": [
   {
@@ -1200,7 +1201,169 @@
      "value": "sleet"
     }
    ]
+  },
+  {
+   "id": "calm-vs-excited",
+   "note": "平静状态 ↔ 激烈情绪",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "calm",
+     "serene expression",
+     "sleepy",
+     "tired",
+     "bored",
+     "sleeping",
+     "unconscious",
+     "contemplative",
+     "meditating",
+     "relieved"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "ecstatic"
+    },
+    {
+     "kind": "tag",
+     "value": "frantic"
+    },
+    {
+     "kind": "tag",
+     "value": "overwhelmed"
+    },
+    {
+     "kind": "tag",
+     "value": "laughing"
+    },
+    {
+     "kind": "tag",
+     "value": "screaming"
+    },
+    {
+     "kind": "tag",
+     "value": "shouting"
+    },
+    {
+     "kind": "tag",
+     "value": "yelling"
+    },
+    {
+     "kind": "tag",
+     "value": "crying"
+    }
+   ],
+   "type": "mutex",
+   "enabled": true,
+   "priority": 100,
+   "scope": [
+    "auto",
+    "manual_fill"
+   ],
+   "params": {}
+  },
+  {
+   "id": "solo-focus-vs-multi",
+   "note": "聚焦单人 ↔ 多人词",
+   "left": {
+    "kind": "tags",
+    "value": [
+     "0others",
+     "solo focus",
+     "solo"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "multiple others"
+    },
+    {
+     "kind": "tag",
+     "value": "crowd"
+    },
+    {
+     "kind": "tag",
+     "value": "group"
+    },
+    {
+     "kind": "tag",
+     "value": "large group"
+    },
+    {
+     "kind": "tag",
+     "value": "small group"
+    },
+    {
+     "kind": "tag",
+     "value": "everyone"
+    },
+    {
+     "kind": "tag",
+     "value": "couple"
+    },
+    {
+     "kind": "tag",
+     "value": "pair"
+    },
+    {
+     "kind": "tag",
+     "value": "trio"
+    },
+    {
+     "kind": "tag",
+     "value": "quartet"
+    },
+    {
+     "kind": "tag",
+     "value": "2girls"
+    },
+    {
+     "kind": "tag",
+     "value": "3girls"
+    },
+    {
+     "kind": "tag",
+     "value": "4girls"
+    },
+    {
+     "kind": "tag",
+     "value": "5girls"
+    },
+    {
+     "kind": "tag",
+     "value": "6+girls"
+    },
+    {
+     "kind": "tag",
+     "value": "2boys"
+    },
+    {
+     "kind": "tag",
+     "value": "3boys"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple girls"
+    },
+    {
+     "kind": "tag",
+     "value": "multiple boys"
+    },
+    {
+     "kind": "tag",
+     "value": "1girl and 1boy"
+    }
+   ],
+   "type": "mutex",
+   "enabled": true,
+   "priority": 100,
+   "scope": [
+    "auto",
+    "manual_fill"
+   ],
+   "params": {}
   }
- ],
- "doc": "跨池结构性互斥规则 (tag↔整池)。组内全互斥已编入标签 groups 字段。"
+ ]
 }

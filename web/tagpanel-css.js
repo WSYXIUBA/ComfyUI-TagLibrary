@@ -139,6 +139,7 @@ html:not(.dark-theme) .taglib-panel[data-theme="light"],
 .tl-gsym { font-weight: 700; margin-right: 3px; }
 .tl-gsym.g-f { color: #ff6b9d; }
 .tl-gsym.g-m { color: #54a0ff; }
+.tl-bsym { font-weight: 700; margin-right: 3px; color: #f0a35e; }
 /* 性别词 chip 边框提亮 (旧值 .25/.35 观感发灰发浅) */
 .tl-ttag.gender { border-color: color-mix(in srgb, #54a0ff 45%, rgba(255,255,255,.16)); }
 .tl-ttag.gender:has(.g-f) { border-color: rgba(255,107,157,.6); }
