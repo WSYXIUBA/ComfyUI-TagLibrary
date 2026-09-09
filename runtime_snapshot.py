@@ -359,6 +359,17 @@ def _compile_ext(snap: RuntimeSnapshot, profs) -> None:
     for tid, gs in derived.items():
         snap.group_sets[tid] = frozenset(snap.group_sets[tid] | gs)
     snap.bundled_only = frozenset(bundled)
+    # 束完整组集 = 自己的组名 ∪ 全部成员词(含 implies)的组集 ——
+    # 检查/登记都必须用这个全集, 只查自己那条组名会漏拦跨档案共享词
+    # (如 "weapon on back" 同时属于 4 个档案的收纳组)。
+    for prof in snap.profiles:
+        for pose in list(prof.poses) + list(prof.extras):
+            g = set(pose.extra_groups)
+            for t in list(pose.tags) + list(pose.implies):
+                tid = snap.tag_id(t)
+                if tid is not None:
+                    g |= snap.group_sets[tid]
+            pose.comp_groups = frozenset(g)
     for prof in snap.profiles:
         mount_ids = set()
         for w in prof.tags:
