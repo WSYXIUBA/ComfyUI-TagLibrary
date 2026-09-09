@@ -1,0 +1,1028 @@
+{
+ "version": 1,
+ "profiles": [
+  {
+   "id": "weapon.katana",
+   "zh": "武士刀",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "katana",
+    "odachi"
+   ],
+   "poses": [
+    {
+     "id": "draw",
+     "zh": "拔刀",
+     "tags": [
+      "drawing sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword",
+      "katana on back",
+      "scabbard"
+     ],
+     "implies": [],
+     "nl": [
+      "She is halfway through drawing her katana, the steel whispering from the scabbard.",
+      "Her hand closes on the hilt and the blade slides free.",
+      "The katana leaves its sheath in one fluid motion."
+     ]
+    },
+    {
+     "id": "two_handed",
+     "zh": "双手持刀",
+     "tags": [
+      "two-handed sword",
+      "holding weapon two-handed"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "one_handed",
+     "zh": "单手持刀",
+     "tags": [
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "reverse_grip",
+     "zh": "反手握持",
+     "tags": [
+      "reverse grip",
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "rest_shoulder",
+     "zh": "扛肩",
+     "tags": [
+      "weapon resting on shoulder",
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword",
+      "katana on back"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "mouth",
+     "zh": "衔刀",
+     "tags": [
+      "sword out of mouth"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword",
+      "biting tongue"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "sheathing",
+     "zh": "收刀",
+     "tags": [
+      "sheathing sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "sheathing"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": [
+    {
+     "id": "sheath",
+     "zh": "刀鞘",
+     "tags": [
+      "katana sheath"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "sheathed"
+     },
+     "conflicts_with": [
+      "drawing sword",
+      "holding sword",
+      "two-handed sword",
+      "reverse grip",
+      "weapon resting on shoulder",
+      "sheathing sword",
+      "sword out of mouth"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背负",
+     "tags": [
+      "katana on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "drawing sword",
+      "holding sword",
+      "two-handed sword",
+      "reverse grip",
+      "weapon resting on shoulder",
+      "sheathing sword",
+      "sword out of mouth"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ]
+  },
+  {
+   "id": "weapon.sword",
+   "zh": "剑",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "sword",
+    "rapier",
+    "energy sword",
+    "lightsaber",
+    "dagger",
+    "kunai"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持剑",
+     "tags": [
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "two_handed",
+     "zh": "双手持剑",
+     "tags": [
+      "two-handed sword",
+      "holding weapon two-handed"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "raised",
+     "zh": "举剑",
+     "tags": [
+      "weapon raised",
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "shoulder",
+     "zh": "扛剑",
+     "tags": [
+      "weapon resting on shoulder",
+      "holding sword"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "behind_back",
+     "zh": "背手执剑",
+     "tags": [
+      "sword behind back"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "spin",
+     "zh": "转剑",
+     "tags": [
+      "spinning weapon"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "mouth",
+     "zh": "衔剑",
+     "tags": [
+      "sword out of mouth"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword",
+      "biting tongue"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "dual",
+     "zh": "双持",
+     "tags": [
+      "dual swords",
+      "holding sword"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "drawn"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": [
+    {
+     "id": "sheathed",
+     "zh": "入鞘",
+     "tags": [
+      "sheathed sword"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "sheathed"
+     },
+     "conflicts_with": [
+      "holding sword",
+      "two-handed sword",
+      "weapon raised",
+      "spinning weapon",
+      "sword out of mouth",
+      "sword behind back",
+      "drawing sword",
+      "reverse grip",
+      "weapon resting on shoulder"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ]
+  },
+  {
+   "id": "weapon.greatsword",
+   "zh": "大剑",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "greatsword",
+    "claymore",
+    "war hammer",
+    "battle axe",
+    "axe",
+    "mace",
+    "flail",
+    "chainsaw"
+   ],
+   "poses": [
+    {
+     "id": "two_handed",
+     "zh": "双手持握",
+     "tags": [
+      "two-handed sword",
+      "holding weapon two-handed"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "raised",
+     "zh": "高举",
+     "tags": [
+      "weapon raised",
+      "holding weapon two-handed"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "shoulder",
+     "zh": "扛肩",
+     "tags": [
+      "weapon resting on shoulder"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "one_hand",
+     "zh": "单手提握",
+     "tags": [
+      "holding weapon"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背负",
+     "tags": [
+      "weapon on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "two-handed sword",
+      "weapon raised",
+      "holding weapon",
+      "weapon resting on shoulder"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "drag",
+     "zh": "拖行",
+     "tags": [
+      "weapon drag"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": []
+  },
+  {
+   "id": "weapon.gun",
+   "zh": "枪械",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "gun",
+    "pistol",
+    "revolver",
+    "rifle",
+    "assault rifle",
+    "shotgun",
+    "submachine gun",
+    "sniper rifle",
+    "plasma rifle",
+    "energy gun",
+    "laser pistol",
+    "rocket launcher",
+    "dual pistols",
+    "magic wand"
+   ],
+   "poses": [
+    {
+     "id": "aim",
+     "zh": "双手瞄准",
+     "tags": [
+      "aiming gun"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking at viewer",
+      "looking away",
+      "looking down",
+      "looking up",
+      "sideways glance",
+      "holding phone"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "aim_viewer",
+     "zh": "瞄准镜头",
+     "tags": [
+      "aiming at viewer"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking away",
+      "looking down",
+      "looking up",
+      "sideways glance",
+      "closed eyes"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "one_handed",
+     "zh": "单手持枪",
+     "tags": [
+      "holding gun",
+      "one handed gun hold"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "sheathed sword"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "behind_back",
+     "zh": "背后持枪",
+     "tags": [
+      "holding gun behind back"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "lowered",
+     "zh": "垂手持枪",
+     "tags": [
+      "holding gun",
+      "gun lowered"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背枪",
+     "tags": [
+      "weapon on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "aiming gun",
+      "aiming at viewer",
+      "holding gun",
+      "holding gun behind back"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "two_hands",
+     "zh": "双手端枪",
+     "tags": [
+      "holding weapon two-handed"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": [
+    {
+     "id": "scope",
+     "zh": "狙击镜",
+     "tags": [
+      "sniper scope"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    }
+   ]
+  },
+  {
+   "id": "weapon.bow",
+   "zh": "弓",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "bow (weapon)",
+    "compound bow",
+    "bow and arrow",
+    "crossbow"
+   ],
+   "poses": [
+    {
+     "id": "draw",
+     "zh": "拉弓",
+     "tags": [
+      "drawing bow"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking away",
+      "looking down",
+      "looking up",
+      "sideways glance",
+      "closed eyes",
+      "eating",
+      "drinking"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "nocked",
+     "zh": "搭箭",
+     "tags": [
+      "nocked arrow",
+      "drawing bow"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking away",
+      "closed eyes"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "hold_ready",
+     "zh": "持弓",
+     "tags": [
+      "holding weapon"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "aim_viewer",
+     "zh": "瞄准镜头",
+     "tags": [
+      "aiming at viewer"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking away",
+      "looking down",
+      "sideways glance",
+      "closed eyes"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "lowered",
+     "zh": "垂弓",
+     "tags": [
+      "bow lowered",
+      "holding weapon"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "drawing bow"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背弓",
+     "tags": [
+      "weapon on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "drawing bow",
+      "nocked arrow"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": [
+    {
+     "id": "quiver",
+     "zh": "箭袋",
+     "tags": [
+      "quiver"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    }
+   ]
+  },
+  {
+   "id": "weapon.staff",
+   "zh": "法杖",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "staff",
+    "magical staff",
+    "scythe",
+    "chain whip",
+    "grimoire",
+    "trident"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持杖",
+     "tags": [
+      "holding staff"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "raise",
+     "zh": "举杖",
+     "tags": [
+      "weapon raised",
+      "holding staff"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "lean",
+     "zh": "拄杖",
+     "tags": [
+      "holding staff"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "lying",
+      "sitting"
+     ],
+     "implies": [
+      "standing"
+     ],
+     "nl": []
+    },
+    {
+     "id": "spin",
+     "zh": "转杖",
+     "tags": [
+      "spinning weapon"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "two_handed",
+     "zh": "双手持杖",
+     "tags": [
+      "holding weapon two-handed",
+      "holding staff"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背负",
+     "tags": [
+      "weapon on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "holding staff",
+      "weapon raised",
+      "spinning weapon"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": []
+  },
+  {
+   "id": "weapon.polearm",
+   "zh": "长柄武器",
+   "mount_sub": "人物主体/武器装备",
+   "tags": [
+    "spear",
+    "naginata",
+    "halberd",
+    "scythe"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持枪",
+     "tags": [
+      "holding spear"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "two_handed",
+     "zh": "双手持握",
+     "tags": [
+      "holding weapon two-handed",
+      "holding spear"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "thrust",
+     "zh": "突刺",
+     "tags": [
+      "spear thrusting stance",
+      "holding spear"
+     ],
+     "hands": 2,
+     "gaze": 1,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [
+      "looking away",
+      "closed eyes"
+     ],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "shoulder",
+     "zh": "扛枪",
+     "tags": [
+      "weapon resting on shoulder",
+      "holding spear"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "raised",
+     "zh": "高举",
+     "tags": [
+      "weapon raised"
+     ],
+     "hands": 2,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "held"
+     },
+     "conflicts_with": [],
+     "implies": [],
+     "nl": []
+    },
+    {
+     "id": "on_back",
+     "zh": "背负",
+     "tags": [
+      "weapon on back"
+     ],
+     "hands": 0,
+     "gaze": 0,
+     "state_slot": {
+      "weapon_state": "on_back"
+     },
+     "conflicts_with": [
+      "holding spear",
+      "weapon raised"
+     ],
+     "implies": [],
+     "nl": []
+    }
+   ],
+   "extras": []
+  }
+ ]
+}

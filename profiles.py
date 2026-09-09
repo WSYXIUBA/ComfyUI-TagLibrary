@@ -127,7 +127,7 @@ class PoseEntry:
 
     __slots__ = ("pid", "pose_id", "tags", "hands", "gaze", "weight",
                  "state_slot", "nl", "is_extra", "zh", "implies", "conflicts_with",
-                 "state_slot_keys", "axis")
+                 "state_slot_keys", "axis", "comp_groups")
 
     def __init__(self, pid: str, pose: dict, is_extra: bool = False):
         self.pid = pid
@@ -147,8 +147,9 @@ class PoseEntry:
         self.conflicts_with = [str(x).strip().lower()
                                for x in (pose.get("conflicts_with") or [])]
         self.state_slot_keys = frozenset(
-            f"{k}={v}" for k, v in self.state_slot.items())
+            f"{pid}:{k}={v}" for k, v in self.state_slot.items())
         self.axis = "appearance" if is_extra else "action"
+        self.comp_groups = self.extra_groups  # 快照编译期会被扩成全集
 
     @property
     def extra_groups(self) -> frozenset:

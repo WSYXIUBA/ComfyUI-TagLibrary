@@ -37,10 +37,12 @@ class Pick:
     """
 
     __slots__ = ("id", "en", "zh", "weight", "nsfw", "gender", "cat",
-                 "axis", "order", "kind", "bundle", "source")
+                 "axis", "order", "kind", "bundle", "source", "hands", "gaze",
+                 "is_extra")
 
     def __init__(self, tid, en, zh, weight, nsfw, gender, cat, axis, order,
-                 kind="tag", bundle=None, source="random"):
+                 kind="tag", bundle=None, source="random", hands=0, gaze=0,
+                 is_extra=False):
         self.id = tid
         self.en = en
         self.zh = zh
@@ -53,6 +55,9 @@ class Pick:
         self.kind = kind
         self.bundle = bundle
         self.source = source
+        self.hands = hands
+        self.gaze = gaze
+        self.is_extra = is_extra
 
 
 class AutoResult:
@@ -81,7 +86,7 @@ class _Ledger:
     """单次抽取的账本: 用过的词/组名/资源/状态槽 + 增量违禁集。"""
 
     __slots__ = ("used_lower", "used_groups", "hands", "gaze", "states",
-                 "used_ids", "banned_ids")
+                 "used_ids", "banned_ids", "prop_count")
 
     def __init__(self):
         self.used_lower: set[str] = set()
@@ -91,6 +96,7 @@ class _Ledger:
         self.states: dict[str, str] = {}   # slot -> value
         self.used_ids: set[int] = set()
         self.banned_ids: set[int] = set()  # cross_banned 增量并集
+        self.prop_count = 0                # 已出生的武器档案身份词数
 
     def budget_ok(self, hands: int, gaze: int, state: frozenset,
                   groups: frozenset) -> bool:
@@ -167,6 +173,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     def commit_tag(tid: int, source: str = "random") -> Pick:
         p = make_pick(tid, source)
+        # order = 池基数 + 提交序号: 同池按出生序, 束成员紧贴宿主 (基数差≥1 ≫ 序号增量)
+        p.order = snap.order_arr[tid] + len(picks) * 1e-5
         picks.append(p)
         led.used_ids.add(tid)
         led.used_lower.add(snap.tag_lower[tid])
@@ -179,11 +187,14 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     # ---------- 档案索引 ----------
     mount_of_tag: dict[int, list] = {}
+    pose_group_of: dict[str, frozenset] = {}
     for prof in snap.profiles:
+        pose_group_of[prof.id] = frozenset({f"prof:{prof.id}"})
         for w in prof.tags:
             tid = snap.tag_id(w)
             if tid is not None:
                 mount_of_tag.setdefault(tid, []).append(prof)
+    max_prop = int(cfg.get("max_weapons", 2) or 2)
 
     def attach_bundle(host_tid: int, host_order: int, host_cat: str,
                       host_axis: str) -> int:
@@ -191,17 +202,23 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         profs = mount_of_tag.get(host_tid)
         if not profs:
             return 0
+        if led.prop_count >= max_prop:
+            return 0
+        led.prop_count += 1
         prof = profs[0]
+        my_g = pose_group_of[prof.id]
         n = 0
         if rng.random() < float(cfg.get("bundle_pose_prob", 0.85)) and prof.poses:
-            cands = [p for p in prof.poses if p.weight > 0]
-            rng.shuffle(cands)
-            for pose in cands:
-                if not _pose_fits(pose, led):
-                    continue
+            # 两阶段分配: 先收集全部可行姿势, 按 hands 升序 (同手数随机) ——
+            # 多武器同抽时保证每把先拿"最低手"姿势, 剩余资源才轮到双手姿,
+            # 杜绝"第一把双手占满、第二把裸奔"(repro① 病根)。
+            fitted = [p for p in prof.poses if p.weight > 0
+                      and _pose_fits(p, led)]
+            if fitted:
+                fitted.sort(key=lambda p: (p.hands, rng.random()))
+                pose = fitted[0]
                 _commit_ext(pose, host_order, host_cat, picks, led)
-                n += len(pose.tags)
-                break
+                n = len(pose.tags)
         for ex in prof.extras:
             if rng.random() >= float(cfg.get("extra_prob", 0.35)):
                 continue
@@ -213,7 +230,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     def _pose_fits(pose, led: _Ledger) -> bool:
         if not led.budget_ok(pose.hands, pose.gaze, pose.state_slot_keys,
-                             pose.extra_groups):
+                             pose.comp_groups):
             return False
         for t in pose.tags:
             if _norm(t) in led.used_lower:
@@ -233,13 +250,17 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 return False
         return True
 
-    def _commit_ext(pose, host_order, host_cat, picks, led: _Ledger) -> None:
+    def _commit_ext(pose, host_base_order, host_cat, picks, led: _Ledger) -> None:
         for j, t in enumerate(pose.tags):
             led.used_lower.add(_norm(t))
-            led.used_groups |= pose.extra_groups
+            led.used_groups |= pose.comp_groups
             picks.append(Pick(None, t, pose.zh or "", 1.0, False, "",
-                              host_cat, pose.axis, host_order + j * 1e-4,
-                              "ext", pose.pose_id, "bundle"))
+                              host_cat, pose.axis,
+                              host_base_order + j * 1e-7,
+                              "ext", f"{pose.pid}:{pose.pose_id}", "bundle",
+                              hands=pose.hands if j == 0 else 0,
+                              gaze=pose.gaze if j == 0 else 0,
+                              is_extra=pose.is_extra))
         led.hands += pose.hands
         led.gaze += pose.gaze
         for sv in pose.state_slot_keys:
@@ -272,10 +293,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             continue
         commit_tag(tid, "pinned")
         pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
-        led_order = snap.order_arr[tid]
+        _host = picks[-1]
         if mount_of_tag.get(tid):
-            attach_bundle(tid, led_order + 1e-3, snap.cat_names[snap.cat_of_sub[snap.sub_of[tid]]],
-                          snap.axis_arr[tid])
+            attach_bundle(tid, _host.order, _host.cat, snap.axis_arr[tid])
 
     # 旧工作流格式: state["pinned"] = 标签原始 id 字符串列表
     for pid in (state.get("pinned") or []):
@@ -296,7 +316,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         commit_tag(tid, "pinned")
         pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
         if mount_of_tag.get(tid):
-            attach_bundle(tid, snap.order_arr[tid] + 1e-3,
+            attach_bundle(tid, picks[-1].order,
                           snap.cat_names[snap.cat_of_sub[snap.sub_of[tid]]],
                           snap.axis_arr[tid])
 
@@ -405,7 +425,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             commit_tag(tid)
             got += 1
             if mount_of_tag.get(tid):
-                n = attach_bundle(tid, snap.order_arr[tid] + 1e-3, cname,
+                n = attach_bundle(tid, picks[-1].order, cname,
                                   snap.axis_arr[tid])
                 if n:
                     stats["bundle_attached"] += 1
