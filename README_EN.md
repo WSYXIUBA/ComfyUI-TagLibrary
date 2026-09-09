@@ -128,20 +128,8 @@ python tests/ui_v13_check.py          # CDP browser UI walkthrough (screenshots 
 
 ## Changelog
 
-### v1.3.0 (this release, core refactor)
-- Assembly axes (12) with dual-view picker; tree demoted to browsing skin
-- 18 profiles (7 weapons + 11 objects), 27 bundle words, 93 pose rows; weapons always birth with grip; all-or-nothing bundles
-- Structural conflicts: axis/group mutex, hands/gaze budget, state slots, 50 global mutex domains; legacy rules migrated
-- NL tail: 34 table-driven families, three anti-stitch laws, seed-reproducible, toggleable; every object pose uses verified real Danbooru tags — zero invented tags
-- Full UI overhaul: 8-tab picker, three new bilingual tabs (文A toggle), 🎲 fill now shares the server engine (preview ≡ output), 1.3.0 settings section
-- Engine merger: Fast/Smart unified into one structural engine; `random_engine.py` / `rules_engine.py` retired
-- Heavy testing: 9 green Python gates + 10k-draw stress (0 violations) + real HTTP queue + CDP UI screenshots
-
-### v1.2.2
-- Anti-conflict stress pass: rules 55 → 81, zero dead refs; toddler-safety rules; synonym dedupe
-
-### v1.2.0
-- Library v2 restructure (9 cats / 63 subs / 1615 entries); +2700 merged tags; generation metadata; translator immunity
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.3.0** — core refactor:
+assembly axes, weapon & object profiles with pose bundles, resource-budget conflict model, NL tail compiler.
 
 ## License
 
