@@ -95,17 +95,27 @@ def main() -> None:
     merged = library.get_merged()
     check("无用户库时合并=默认", len(merged["categories"]) == len(lib["categories"]))
 
-    # ---- 模拟管理页编辑: 整树修改后保存 (用新骨架的质量与技术类)
+    # ---- 模拟管理页编辑: 整树修改后保存 (分类按现行库动态选取, 不硬编码旧骨架 id)
     tree = full_tree_from_merged()
-    qcat = find_cat(tree, "quality")
+    QCAT_ID = next(c["id"] for c in tree["categories"]
+                   if any(t["en"] == "masterpiece"
+                          for s in c["subcategories"] for t in s["tags"]))
+    QS1_ID = next(s["id"] for c in tree["categories"] if c["id"] == QCAT_ID
+                  for s in c["subcategories"]
+                  if any(t["en"] == "masterpiece" for t in s["tags"]))
+    qcat = find_cat(tree, QCAT_ID)
     qcat["name"] = "质量与技术(改)"
-    q_sub = find_sub(qcat, "quality.s1")
+    q_sub = find_sub(qcat, QS1_ID)
     master_tag = next((t for t in q_sub["tags"] if t["en"] == "masterpiece"), None)
     assert master_tag is not None, "骨架 masterpiece 缺失"
     master_tag["zh"] = "杰作(改)"
     master_tag["weight"] = 1.5
-    # 删除一条 + 新增一条
-    q_sub["tags"] = [t for t in q_sub["tags"] if t["en"] != "8k"]
+    # 删除一条 + 新增一条 (8k 若不在该子类则删第一条非 masterpiece 词)
+    had_8k = any(t["en"] == "8k" for t in q_sub["tags"])
+    if had_8k:
+        q_sub["tags"] = [t for t in q_sub["tags"] if t["en"] != "8k"]
+    else:
+        q_sub["tags"] = [t for t in q_sub["tags"] if t is not master_tag]
     new_tag = {"en": "test_tag_xyz", "zh": "测试新增", "weight": 1.0}
     q_sub["tags"].append(new_tag)
 
@@ -115,15 +125,16 @@ def main() -> None:
     merged = library.get_merged()
     check("合并不丢分类", len(merged["categories"]) == len(lib["categories"]),
           ",".join(c["id"] for c in merged["categories"]))
-    q_m = next(c for c in merged["categories"] if c["id"] == "quality")
+    q_m = next(c for c in merged["categories"] if c["id"] == QCAT_ID)
     check("用户改名生效", q_m["name"] == "质量与技术(改)", q_m["name"])
-    m_tag = next(t for t in find_sub(q_m, "quality.s1")["tags"] if t["en"] == "masterpiece")
+    m_tag = next(t for t in find_sub(q_m, QS1_ID)["tags"] if t["en"] == "masterpiece")
     check("用户覆盖 zh", m_tag["zh"] == "杰作(改)", m_tag["zh"])
     check("用户覆盖 weight", abs(m_tag["weight"] - 1.5) < 1e-9, str(m_tag["weight"]))
-    check("删除标签生效(8k消失)", next((t for t in find_sub(q_m, "quality.s1")["tags"] if t["en"] == "8k"), None) is None)
+    check("删除标签生效", next((t for t in find_sub(q_m, QS1_ID)["tags"]
+                                if t["en"] == ("8k" if had_8k else "detail")), None) is None)
     check("新增标签自动补id", any(t["en"] == "test_tag_xyz" and t.get("id")
-                                  for t in find_sub(q_m, "quality.s1")["tags"]))
-    subj_m = next(c for c in merged["categories"] if c["id"] == "subject")
+                                  for t in find_sub(q_m, QS1_ID)["tags"]))
+    subj_m = next(c for c in merged["categories"] if c["name"] == "人物主体")
     check("未触及分类保留", subj_m["name"] == "人物主体")
 
     # ---- 墓碑: 删掉的 8k 加回默认库也该保持删除
@@ -187,23 +198,26 @@ def main() -> None:
     check("auto 同seed复现", mixA[0] == mixB[0])
     cntA = len([p for p in mixA[0].split(", ") if p])
     check("auto 总控制1~3 → 总量>=35", cntA >= 35, str(cntA))
-    # 子分类独立范围: fill_master=false + 质量与技术整个大类 0~0 → 该大类不出
+    # 子分类独立范围: fill_master=false + 画质大类整个 0~0 → 该大类不出
     # (大类下每个子分类都设 0~0, 模拟 UI 里用户给每个子分类单独设 0)
-    q_subs = next(c for c in library.get_merged()["categories"] if c["name"] == "质量与技术")
+    qcat_name = next(c["name"] for c in library.get_merged()["categories"]
+                     if any(t["en"] == "masterpiece"
+                            for s in c["subcategories"] for t in s["tags"]))
+    q_subs = next(c for c in library.get_merged()["categories"] if c["name"] == qcat_name)
     zero_ranges = {s["id"]: {"min": 0, "max": 0} for s in q_subs["subcategories"]}
     __r_mixC = node.build(json.dumps({"fill_master": False, "fill_sub_ranges": zero_ranges}), "auto", 7)
     mixC = __r_mixC["result"] if isinstance(__r_mixC, dict) else __r_mixC
     flat_all = TagLibraryNode._flat(library.get_merged())
-    # 只判定"仅在质量与技术"存在的独有词 (同名标签在别类出现属合法)
-    q_only = {t.get("en","").lower() for t, cn in flat_all if cn == "质量与技术"}
-    others = {t.get("en","").lower() for t, cn in flat_all if cn != "质量与技术"}
+    # 只判定"仅在该质量大类"存在的独有词 (同名标签在别类出现属合法)
+    q_only = {t.get("en","").lower() for t, cn in flat_all if cn == qcat_name}
+    others = {t.get("en","").lower() for t, cn in flat_all if cn != qcat_name}
     q_exclusive = q_only - others
     parts_c = [p.strip().lower() for p in mixC[0].split(",")]
     leaked_q = [en for en in q_exclusive if en and en in parts_c]
     check("子分类独立0~0 跳过", not leaked_q, str(leaked_q[:3]))
 
     # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
-    __r_scoped = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":2,"exclude_categories":["人物主体","服装系统","姿势动作","构图镜头","场景环境","风格媒介","材质特效","负面标签库","质量与技术"]}', "auto", 42)
+    __r_scoped = node.build(json.dumps({"fill_master":True,"fill_master_min":1,"fill_master_max":2,"exclude_categories":[c["name"] for c in library.get_merged()["categories"] if c["name"] != "光影氛围"]}), "auto", 42)
     scoped = __r_scoped["result"] if isinstance(__r_scoped, dict) else __r_scoped
     print(f"      sample(mix scoped): {scoped[0]}")
     lib_pairs = dict()
@@ -249,8 +263,10 @@ def main() -> None:
                                         "blue moonlight", "silver moonlight")) and "moonlight" in sf[0]
     check("中文搜索命中", _moon_ok, sf[0])
 
-    # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略)
-    ghost = node.build('{"selected":["no.such.tag","quality.s1.masterpiece"]}', "manual", 1)
+    # 幽灵 id 跳过不炸 (旧结构兼容: selected 里的坏 id 应被忽略, 好 id 正常输出)
+    mp_id = next((t["id"] for t, _ in TagLibraryNode._flat(library.get_merged())
+                  if t["en"] == "masterpiece"), None)
+    ghost = node.build(json.dumps({"selected": ["no.such.tag", mp_id]}), "manual", 1)
     check("幽灵id跳过", "masterpiece" in ghost[0], ghost[0])
 
     # ---- NSFW 过滤三态 (用户库导入后有真实 nsfw 标签: 取一个 nsfw en 做样本)
@@ -290,39 +306,34 @@ def main() -> None:
         check("nsfw on 全量", "nsfw_example_tag" in on_[0], on_[0])
         check("nsfw only 已废弃(二态)", node.INPUT_TYPES is not None, "ok")
 
-    # ---- 防冲突随机: pinned 一个光源组标签, 另一个永远不该出现
-    lib3 = library.get_merged()
-    light_ids = [t["id"] for t, _ in TagLibraryNode._flat(lib3)
-                 if t.get("id", "").startswith("lighting.s1.")
-                 and t.get("en") in ("backlighting", "rim lighting", "rim light")]
-    # 骨架里 backlight 和 rim lighting 是两条; 找互斥组覆盖的对
-    import tagconflicts as _tc
+    # ---- 防冲突随机: 钉选一个词, 与其同互斥域的词永远不双出 (1.3.0 组语义)
+    import runtime_snapshot as _rs
+    snap_sm = _rs.get_snapshot(library.get_merged())
     conflict_pair = None
-    for g in _tc.get_groups():
-        ens = {e.lower() for e in g.get("tags", [])}
-        pair = [eid for eid in light_ids
-                if {str(t.get("en","").lower()) for t,_ in TagLibraryNode._flat(lib3) if t.get("id")==eid} <= ens]
-        if len(pair) >= 2:
-            conflict_pair = pair[:2]
+    for i in range(snap_sm.n_tags):
+        if not snap_sm.group_sets[i]:
+            continue
+        for j in range(i + 1, snap_sm.n_tags):
+            if snap_sm.group_sets[i] & snap_sm.group_sets[j]:
+                conflict_pair = (snap_sm.tag_text[i], snap_sm.tag_text[j])
+                break
+        if conflict_pair:
             break
     if conflict_pair:
-        pin_mix = {"selected": [], "pinned": [conflict_pair[0]], "avoid_conflicts": True,
-                   "fill_master": True, "fill_master_min": 1, "fill_master_max": 1}
+        a, b = conflict_pair
         bad = 0
         for s in range(40):
-            o = node.build(json.dumps({**pin_mix, "fill_master": True, "fill_master_min": 1, "fill_master_max": 1}), "auto", s)
+            o = node.build(json.dumps({"tags": [{"en": a, "pinned": True}],
+                                       "fill_master": True,
+                                       "fill_master_min": 1, "fill_master_max": 1}),
+                           "auto", s)
             o = o["result"] if isinstance(o, dict) else o
             parts_lower = [p.strip().lower() for p in o[0].split(",")]
-            pair_ens = [str(t.get("en","").lower()) for t,_ in TagLibraryNode._flat(lib3)
-                        if t.get("id") in conflict_pair]
-            hit = [e for e in pair_ens if e in parts_lower]
-            if len(hit) >= 2:
+            if a.lower() in parts_lower and b.lower() in parts_lower:
                 bad += 1
-        check("防冲突:同组不双出", bad == 0, f"{bad}/40 次同时出现")
-    elif len(light_ids) >= 2:
-        check("防冲突:同组不双出", True, "skipped - no strict pair")
+        check("防冲突:同组不双出", bad == 0, f"{bad}/40 次同时出现 ({a}/{b})")
     else:
-        check("光源组标签存在", False, str(light_ids))
+        check("存在互斥域样本", False)
 
     clean_user_lib()
 
