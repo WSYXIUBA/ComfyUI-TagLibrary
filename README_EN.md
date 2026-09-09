@@ -2,55 +2,53 @@
 
 [中文文档](README.md) | **English**
 
-Structured prompt tag library node for ComfyUI: 9 categories / 65 subcategories / 4300+ tags.
-In-node selection panel + standalone manager page + dual-mode random engine + anti-conflict system +
-folder-based storage with hot sync.
-Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEncode.text`. Runs in 1-4ms per generation.
+1.3.0 core refactor: assembly axes + entry profiles + resource-budget engine + natural-language tail.
+9 categories / 65 subcategories / 4300+ tags / 18 weapon & object profiles / 34 NL sentence families.
+Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input on any workflow's `CLIPTextEncode.text`. 1-4ms per generation.
 
 ![license](https://img.shields.io/badge/license-MIT-green) ![comfyui](https://img.shields.io/badge/ComfyUI-custom--node-blue) ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
 
+## The 1.3.0 Architecture (four pillars)
+
+- **Assembly axes**: the real skeleton of the library is no longer the 2-level tree — all 4356 tags are re-aggregated onto 12 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …). The tree becomes a browsing skin: the picker toggles between "🌲 Category tree" and "🎯 Assembly axes", and every chip shows both its axis and tree origin on hover.
+- **Weapon & object profiles (⚔ bundles)**: weapon poses no longer live in a global pool. 7 weapon profiles (katana/sword/greatsword/gun/bow/staff/polearm) + 11 everyday-object profiles (phone/book/umbrella/guitar/cup/camera/mic/flower/binoculars/snack/pen) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
+- **Resource-budget conflict model**: most of the old 81 hand-written anti-conflict rules are retired. Same-axis/same-group mutex + hands/gaze ledgers + state slots + 50 global mutex domains (🧬 inspectable & editable) derive conflicts structurally; `conflicts.json` keeps only cross-pool rules. Gender lock and mouth-domain double-occupation are enforced at pool level AND exit level.
+- **Natural-language tail (✍ NL)**: after the tag body, 1-3 English sentences compiled from 34 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
+
+## Features
+
+- **In-node panel**: category-grouped chips, drag-to-reorder, 📌 pinning, bilingual EN/中文, NSFW toggle, 🗑 clear; 🎲 fill runs the real server-side engine — preview ≡ output
+- **Two modes**
+  - `Manual` — pick by hand, or 🎲 fill with per-subcategory count ranges
+  - `Auto` — every generation rolls a fresh combination; the echo only replaces engine-rolled tags, manual picks are never wiped
+- **➕ Add Tags picker (8 tabs)**: Pick (axis/tree views) / ⚔ Profiles / 🧬 Mutex domains / ✍ NL families / Exclusions / Library manager / Conflicts / Settings — the three new tabs render fully bilingual with a 文A toggle
+- **Profile visualization**: per-card identity tags, full pose table (tags / hands / state slot / exclusions), mount diagnostics badge (unmounted weapon words flagged red), JSON editor with instant save
+- **Standalone manager page**: `http://127.0.0.1:8188/taglib` or the 🏷 topbar button — full CRUD, custom icons, chip flow, batch paste import
+- **NSFW tiers**: explicit tags shown in red, gated for display and output
+- **Folder-based storage (hot sync)**: the library IS a folder tree, synced both ways in real time
+- **AI collaboration loop**: export templates (basic/full/conflicts), extend with your AI, import back with auto-placement, dedupe and confirm preview
+- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library
+- **Pin semantics**: 📌 pinned tags always survive rolls and echoes; pinned weapons birth with bundles too
+- **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt), reproducible per seed
+- **Translator immunity**: tag English is never rewritten by ComfyUI-DD-Translation or similar
+- **Performance**: 1-4ms per execution; 10k-tag snapshot build p50 1.1ms; 3300 profile draws in 13.6s
+- **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
+
 ## UI Preview
+
+| 1.3.0 axis view (⚔ bundle chips / axis+tree toggle) | 1.3.0 weapon & object profiles (pose tables / mount diagnostics) |
+|---|---|
+| ![Axis view](docs/screenshot_axis_view.png) | ![Profiles](docs/screenshot_profiles.png) |
 
 | Node panel (pick / grouped fill / NSFW toggle) | Library manager (CRUD / import-export / backups) |
 |---|---|
 | ![Node panel](docs/screenshot_node_panel.png) | ![Library manager](docs/screenshot_manager.png) |
 
-## Features
-
-- **In-node panel**: category-grouped chips, drag-to-reorder selected tags, 📌 pinning,
-  bilingual EN/中文 display, NSFW toggle, 🗑 one-click clear
-- **Two modes**
-  - `Manual` — pick tags by hand, or 🎲 fill randomly with per-subcategory count ranges
-  - `Auto` — every generation rolls a fresh combination by the rules; results echo back into the panel
-    (the echo only replaces what the engine rolled — manually picked tags are never wiped)
-- **➕ Add Tags picker (5 tabs)**: Pick Tags / Exclusions / Library Manager / Conflicts / Settings
-- **Standalone manager page**: open `http://127.0.0.1:8188/taglib` directly, or use the 🏷 topbar button —
-  full CRUD for categories/subcategories/tags (right-click rename/delete/reorder), **custom category icons
-  (click an icon to set any emoji)**, chip-flow layout, NSFW red badges
-- **NSFW tiers**: nudity/explicit tags shown in red, gated by a toggle for display and output; everything else unaffected
-- **Anti-conflict system**: rule file with free import/export; mutual exclusion between any mix of
-  tags / subcategories / categories — when random picks one side, the other side steps aside (manual picks unaffected)
-- **Folder-based storage (hot sync)**: the library IS a folder tree, synced both ways with the manager page in real time
-- **AI collaboration loop**: export templates (basic/full) + conflicts file, send to your AI to extend or restructure,
-  import the result with auto-placement, dedupe and a confirm preview
-- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting a full template first)
-- **Pin semantics**: 📌 pinned tags are always included in random/fill/generation echoes, never overwritten,
-  and occupy one slot of their subcategory; pins beat excluded categories (always on — no toggle)
-- **Gender filter**: ⚧/♀/♂ toggle to drop male-only or female-only tags by their gender flag;
-  panel marking (dimmed + strikethrough), preview, 🎲 fill and output all follow the same rule
-- **Generation metadata**: PNG info automatically carries a `TagLibrary` chunk (node / mode / seed / actual
-  prompt) — even auto-mode rolls are fully inspectable and reproducible per seed
-- **Translator immunity**: the panel, picker and manager page are immune to ComfyUI-DD-Translation and
-  similar translator extensions — tag English text is never rewritten
-- **Data layout**: all plugin data nested under `data/default/` with English backup names (backups/factory_backup.json etc.), auto-migrated on upgrade
-- **Performance**: 1-4ms per node execution; library reads cached, hot-sync scans throttled
-- **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
-
 ## Installation
 
 ### Option 1: ComfyUI Manager search (recommended)
 
-1. Click the Manager icon in the top bar → **Custom Nodes Manager**
+1. Manager icon → **Custom Nodes Manager**
 2. Search **`Tag Library`** (or `taglibrary`) → find "🏷 Tag Library 标签库" → **Install**
 3. Restart ComfyUI when prompted
 
@@ -58,7 +56,6 @@ Outputs plain `STRING` — just Convert to Input on any workflow's `CLIPTextEnco
 
 ### Option 2: Install via Git URL
 
-Manager → **Install via Git URL** → paste:
 ```
 https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 ```
@@ -74,130 +71,77 @@ Restart ComfyUI. No pip dependencies.
 
 ## Quick Start
 
-1. Double-click the canvas, search "🏷 标签库" (TagLibrary) and add the node
-2. On a `CLIPTextEncode` node, right-click `text` → **Convert to Input** → connect the library's `positive`
-3. Open **➕ Add Tags**: pick tags, set exclusions, manage the library, configure conflicts, tweak settings
-4. `Manual` mode: select or 🎲 fill; `Auto` mode: just queue — every run rolls a new combination
-5. Connect `tags_preview` to a Preview Text node to inspect the output
-
-```
-[🏷 TagLibrary] ──positive──▶ [CLIPTextEncode.text (converted)] ──▶ ...
-     └─ tags_preview ──▶ [Preview Text]
-```
+1. Double-click the canvas, search "🏷 Tag Library"
+2. Right-click `CLIPTextEncode.text` → **Convert to Input** → connect `positive`
+3. Hit **➕ Add Tags**: pick tags / browse profiles / tune mutex & NL / settings
+4. `Manual`: pick or 🎲 fill. `Auto`: just Queue — every run rolls anew
+5. Wire `tags_preview` to a Preview Text node to inspect output
 
 ## Node Interface
 
-| Input/Output | Description |
+| In/Out | Notes |
 |---|---|
-| `mode` | Manual / Auto |
-| `seed` | Random seed, deterministic per seed |
-| `selection_state` | Panel state (managed automatically, don't hand-edit) |
-| `prefix` / `suffix` (optional inputs) | Upstream text concatenated around the tags |
-| `positive` output | Assembled prompt → CLIPTextEncode |
-| `tags_preview` output | The actual content → Preview Text |
+| `mode` | manual / auto |
+| `seed` | same seed, same output |
+| `selection_state` | panel state (auto-maintained, don't hand-edit) |
+| `prefix` / `suffix` (optional inputs) | upstream text concatenated around the tags |
+| `positive` output | tags + NL tail → CLIPTextEncode |
+| `tags_preview` output | actual text preview → Preview Text |
 
 ## Data Files
 
-| File/Directory | Description |
+| File | Notes |
 |---|---|
-| `data/default/tag_library.json` | Factory default library (ships with the plugin) |
-| `data/default/tag_library.user.json` | User library snapshot (manager saves, with deletion tombstones; survives plugin updates) |
-| `data/default/taglib/` | **Folder-based library** (bi-directional hot sync, see below); contains `conflicts.json` |
-| `data/default/backups/` | Backup location (`factory_backup.json` factory / `user_backup.json` user) |
+| `data/default/tag_library.json` | factory default library (updated with the plugin) |
+| `data/default/tag_library.user.json` | user snapshot (survives upgrades) |
+| `data/default/taglib/` | folder-style library (hot sync) |
+| `data/default/taglib/profiles.json` | **1.3.0 weapon & object profiles** (bundles / resources / state slots / NL) |
+| `data/default/taglib/grouprules.json` | **1.3.0 global mutex domains** (50 groups) |
+| `data/default/taglib/nl_flavors.json` | **1.3.0 NL families** (34 families + pose_map + object pools) |
+| `data/default/taglib/conflicts.json` | legacy cross-pool rules (kept for compatibility) |
+| `data/default/backups/` | backups |
 
-Deleting the user library resets to factory defaults (same as the Clear Library button).
+## Conflict Model (1.3.0)
 
-## Folder-Based Library (Bi-directional Hot Sync)
-
-```
-data/default/taglib/
-├── conflicts.json        ← anti-conflict rules
-├── 画质规格/              ← level-1 category = folder
-│   ├── 画质增强/          ← level-2 category = subfolder
-│   │   └── 画质增强.md    ← # category / ## subcategory heading + tag lines
-│   └── 细节强化/
-└── 人物主体/ ...
-```
-
-- **Manager changes → folder**: adding/removing/renaming categories syncs the tree instantly on save
-- **Folder → manager**: hand-edit a file (`english(Chinese){weight}[nsfw]`, comma separated), save,
-  refresh the page and the tags appear — heading-less files are classified by their containing folder
-- The `标签文件` dialog supports: tree browsing / per-file import / ⏩ import all / 📁 sync library to folder
-
-## Anti-Conflict System
-
-```jsonc
-// data/taglib/conflicts.json
-{ "rules": [
-  { "id": "nude-vs-clothes",
-    "left":  { "kind": "tags", "value": ["nude", "topless", "..."] },
-    "right": [ { "kind": "sub", "value": "服装系统/上装" } ] }
-]}
-```
-
-- **A rule = bi-directional exclusion**: when random fill / auto mode picks one side, the other side yields;
-  manual selection is never blocked
-- `kind` supports: `tag` single tag / `tags` multiple tags / `sub` subcategory / `cat` category
-- **Three ways to configure**: ① right-click any tag / subcategory / category → 🧷 Conflict Settings
-  (checkbox tree, saves instantly) ② the Conflicts tab in the picker lists all rules with add/delete
-  ③ export the file and let an AI generate a new one
-- **Invalid references auto-detected**: rules pointing at missing categories/tags are flagged in red
-- Ships with 55 default rules (aligned with the v2 taxonomy): nudity ↔ tops/bottoms/one-piece outfits;
-  photorealistic ↔ anime style; mutual-exclusion groups for mouths/eyes/sitting/orientation/key light/
-  headwear/seasons/time/weather/counts/age groups/weapons; legacy groups are migrated automatically
-
-## Changelog
-
-### v1.2.2
-- **Anti-conflict stress-test optimization**: 300-generation stress test (no filter / ♂ / ♀ × 100,
-  12–30 tag draws) drove the rules from 55 to 81 with zero invalid refs: outfit-count mutex
-  (dresses/uniforms/traditional/specialty single-select + pairwise), base-pose single-select,
-  shoes/bottoms/socks/panties/bras single-select, ahegao ↔ smile-family clashes, child-safety rules
-  (children ↔ adult body/makeup/nudity/NSFW states), no-humans ↔ person dimensions, rain ↔ snow,
-  clear sky ↔ precipitation; existing mutex groups absorb all supplement-pack tags
-- **Synonym dedupe**: judo uniform merged into judo gi
-- **Data sync**: user library (4356 tags) synced to default library and factory/user backups,
-  byte-identical restore roundtrip
-
-### v1.2.0
-- **Tag library v2 taxonomy rework**: 9 categories / 63 subcategories / 1615 tags. Expressions / mouth /
-  emotions, weapons / food / props / instruments, hosiery & underwear, dresses / uniforms / traditional /
-  specialty outfits, headwear / jewelry / bags, natural / artificial light & lighting techniques,
-  natural / urban scenes, time / weather / night sky / holidays — all split and re-homed; the counts
-  category is now count-only; stray Chinese in English fields fixed; 55 conflict rules realigned
-- **Supplement packs merged**: two incremental word packs imported (~2700 new tags; legacy category
-  names auto-routed into the v2 taxonomy, three-layer dedupe), adding a new "Race & Fantasy Identity"
-  subcategory; count/age/time/weather mutex groups extended (+101 exclusion pairs)
-- **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt)
-- **Translator immunity**: panel/picker/manager are no longer rewritten by ComfyUI-DD-Translation etc.
-- **Gender filter consistency**: panel marking, preview, 🎲 fill and output share one rule set
-- **Auto echo keeps manual picks**: each round only replaces the engine-rolled portion
-- **Misc**: mode toggle re-syncs with the panel after refresh; 🔒 lock button replaced by 🗑 clear-all;
-  pinning is always on (toggle removed); English display mode no longer mixes Chinese;
-  fill-group headers survive page refreshes
-
-## AI Collaboration Loop
-
-「📤 Export Template」 offers four choices: **Basic template** (skeleton + samples, for AI to generate new tag
-files), **Full template** (every tag — extend it, restructure categories with Clear Library, or share your
-library), **Conflicts file only**, **Conflicts + full template (two files)**.
-Send the pair to your AI → it generates a new conflicts file per the embedded instructions →
-「📥 Import」 with preview (auto-placement + dedupe + invalid markers) → confirm.
-
-## Performance
-
-Node execution measured at **1-4ms**. Library reads are cached; hot-sync folder scans are throttled
-(1.5s min interval). Occasional hundred-ms attribution windows come from Python GIL contention with
-other plugins' background threads (Manager registry updates, hardware pollers) — not this node's compute.
+| Mechanism | Example | Source of truth |
+|---|---|---|
+| Same-axis / same-group mutex | `smile` blocks `grin` | `axis` / `groups` in library |
+| Global mutex domains | mouth: `cigarette in mouth` ⊄ `food in mouth` | `grouprules.json` |
+| Resource budget | hands ≤ 2, gaze ≤ 1 — umbrella + two-handed cup is structurally impossible | `profiles.json` |
+| State slots | one weapon can't be `drawn` and `sheathed` at once | `profiles.json` |
+| Cross-pool rules | photorealism ⊄ anime-style | `conflicts.json` |
+| Gender lock | with `1boy`, `1girl/milf/witch` blocked at pool + exit | gender flags |
 
 ## Tests
 
 ```bash
-python tests/smoke_test.py            # backend engine assertions (sandboxed)
-python tests/conflicts_test.py        # anti-conflict engine
-python tests/folder_template_test.py  # folder export/scan/merge-by-name/hot-sync roundtrip
-python tests/parser_conflict_test.py  # .md parser
+python tests/m1_engine_test.py        # engine core (axes/groups/cross-pool/determinism)
+python tests/m2_weapon_slice_test.py  # weapon bundles + repro-defect regression
+python tests/m3_nl_test.py            # NL compiler + anti-stitch assertions
+python tests/m4_objects_test.py       # object profiles + 10k-seed stress (--long)
+python tests/quality_audit.py         # 30 full-prompt audit
+python tests/smoke_test.py            # backend full-chain
+python tests/perf_build_test.py       # perf gate (10k tags, p50 < 3ms)
+python tests/real_http_test.py        # real ComfyUI HTTP queue acceptance
+python tests/ui_v13_check.py          # CDP browser UI walkthrough (screenshots + asserts)
 ```
+
+## Changelog
+
+### v1.3.0 (this release, core refactor)
+- Assembly axes (12) with dual-view picker; tree demoted to browsing skin
+- 18 profiles (7 weapons + 11 objects), 27 bundle words, 93 pose rows; weapons always birth with grip; all-or-nothing bundles
+- Structural conflicts: axis/group mutex, hands/gaze budget, state slots, 50 global mutex domains; legacy rules migrated
+- NL tail: 34 table-driven families, three anti-stitch laws, seed-reproducible, toggleable; every object pose uses verified real Danbooru tags — zero invented tags
+- Full UI overhaul: 8-tab picker, three new bilingual tabs (文A toggle), 🎲 fill now shares the server engine (preview ≡ output), 1.3.0 settings section
+- Engine merger: Fast/Smart unified into one structural engine; `random_engine.py` / `rules_engine.py` retired
+- Heavy testing: 9 green Python gates + 10k-draw stress (0 violations) + real HTTP queue + CDP UI screenshots
+
+### v1.2.2
+- Anti-conflict stress pass: rules 55 → 81, zero dead refs; toddler-safety rules; synonym dedupe
+
+### v1.2.0
+- Library v2 restructure (9 cats / 63 subs / 1615 entries); +2700 merged tags; generation metadata; translator immunity
 
 ## License
 
