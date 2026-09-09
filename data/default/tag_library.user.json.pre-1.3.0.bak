@@ -1926,7 +1926,7 @@
        "meta": {}
       },
       {
-       "en": "multiple others",
+       "en": "multiple others(多人(其他))",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
@@ -1939,8 +1939,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
-       "zh": "多人（其他）"
+       "gender": ""
       },
       {
        "en": "group",

@@ -1,0 +1,561 @@
+{
+ "version": 1,
+ "doc": "自然语言尾段素材库 (1.3.0-M3)。families=动作姿态句式(按姿势id归族), env/light=场景与光线条, words=宾语名词池。全部人工/AI起草, 管理页可编辑; 热路径纯查表。",
+ "words": {
+  "blade": [
+   "blade",
+   "sword",
+   "steel"
+  ],
+  "katana": [
+   "katana",
+   "blade",
+   "sword"
+  ],
+  "gun": [
+   "pistol",
+   "gun",
+   "weapon"
+  ],
+  "rifle": [
+   "rifle",
+   "gun",
+   "weapon"
+  ],
+  "bow": [
+   "bow",
+   "longbow of dark wood",
+   "weapon"
+  ],
+  "staff": [
+   "staff",
+   "staff of pale wood",
+   "weapon"
+  ],
+  "spear": [
+   "spear",
+   "long shaft of steel and wood",
+   "weapon"
+  ],
+  "greatsword": [
+   "greatsword",
+   "huge blade",
+   "weapon"
+  ],
+  "dagger": [
+   "dagger",
+   "small blade"
+  ],
+  "phone": [
+   "phone",
+   "the smartphone"
+  ],
+  "book": [
+   "book",
+   "the open book"
+  ],
+  "umbrella": [
+   "umbrella",
+   "the paper umbrella"
+  ],
+  "guitar": [
+   "guitar",
+   "acoustic guitar"
+  ],
+  "cup": [
+   "cup",
+   "the teacup"
+  ],
+  "camera": [
+   "camera",
+   "the camera"
+  ],
+  "mic": [
+   "microphone",
+   "the mic"
+  ],
+  "flower": [
+   "rose",
+   "flower"
+  ],
+  "binoculars": [
+   "binoculars",
+   "brass binoculars"
+  ],
+  "food": [
+   "apple",
+   "cookie",
+   "onigiri"
+  ],
+  "pen": [
+   "pen",
+   "brush"
+  ]
+ },
+ "families": {
+  "hold_one": [
+   "{S} holds {O} in one hand, {POS} arm loose at {POS} side.",
+   "{O} rests easily in {POS} grip, held low with one hand.",
+   "One hand carries {O} like an afterthought."
+  ],
+  "hold_two": [
+   "{S} grips {O} with both hands, knuckles steady.",
+   "Both of {POS} hands close around {O}, ready and unhurried.",
+   "{O} sits level in a two-handed hold."
+  ],
+  "aim": [
+   "{S} lines up {O} toward the target, one eye narrowed.",
+   "{O} rises to the aiming line; everything else blurs away.",
+   "Steady, {S} take aim, the {O} squared to {POS} shoulder."
+  ],
+  "aim_viewer": [
+   "{S} point {O} straight at us.",
+   "The muzzle of {O} is aimed directly at the viewer.",
+   "{O} levels toward the camera, unblinking."
+  ],
+  "draw": [
+   "{S} are halfway through drawing {O}, the steel whispering free.",
+   "{O} comes out of its sheath in one smooth breath.",
+   "A hand on the hilt, a flash of edge - {O} is drawn."
+  ],
+  "sheathe": [
+   "{S} guide {O} back into its sheath with careful hands.",
+   "The last of {O} disappears into the scabbard with a soft click.",
+   "{O} is being sheathed, the motion almost tender."
+  ],
+  "mouth": [
+   "{S} hold {O} between {POS} teeth, both hands free.",
+   "{O} is clamped lightly at the mouth, a practiced habit.",
+   "Gripping {O} in {POS} teeth, {S} look entirely at ease."
+  ],
+  "shoulder": [
+   "{O} rests across {POS} shoulders, lazy and balanced.",
+   "{S} carry {O} over one shoulder like a walking stick.",
+   "The {O} lies athwart {POS} back, held by one slack hand."
+  ],
+  "spin": [
+   "{O} turns in {POS} hand, a slow blur of edge and light.",
+   "{S} twirl {O} once, casually, before it settles.",
+   "Spun between fingers, {O} catches the light as it circles."
+  ],
+  "raised": [
+   "{O} is lifted overhead, catching the light.",
+   "{S} raise {O} high, arms fully extended.",
+   "Held aloft, {O} flashes once against the sky."
+  ],
+  "behind_back": [
+   "{O} is hidden behind {POS} back, grip concealed.",
+   "{S} keep {O} low behind {POS} back, out of sight.",
+   "One hand curls around {O}, tucked discreetly behind {POS}."
+  ],
+  "lowered": [
+   "{O} hangs lowered at {POS} side.",
+   "{S} hold {O} down and away, barrel toward the ground.",
+   "The {O} points at the floor, relaxed but not sheathed."
+  ],
+  "on_back": [
+   "{O} rides on {POS} back, secured across the shoulders.",
+   "Strapped behind {POS}, {O} waits out of reach.",
+   "{S} carry {O} on {POS} back, hilt over the shoulder."
+  ],
+  "sheathed_idle": [
+   "{O} stays sheathed at {POS} hip.",
+   "The sheathed {O} knocks gently against {POS} leg.",
+   "{O} sleeps in its scabbard, undisturbed."
+  ],
+  "gaze_front": [
+   "{POS} gaze meets ours directly.",
+   "{S} look straight into the camera.",
+   "Eyes find the viewer and hold."
+  ],
+  "gaze_side": [
+   "{S} glance off to one side, attention elsewhere.",
+   "A sidelong look, aimed at nothing we can see.",
+   "{POS} eyes drift to the edge of the frame."
+  ],
+  "gaze_down": [
+   "{S} look down, lost in thought.",
+   "Her gaze drops toward the ground.",
+   "Eyes lowered, {S} seem to listen to something far off."
+  ],
+  "gaze_back": [
+   "Over {POS} shoulder, {S} look back at us.",
+   "{S} twist to glance back, mid-step.",
+   "A look thrown backward, half-curiosity, half-warning."
+  ],
+  "phone_look": [
+   "{S} stare into {POS} phone, the world on mute.",
+   "Thumbs hover over the glowing screen.",
+   "Nothing exists but the phone and whatever is on it."
+  ],
+  "phone_call": [
+   "{O} pressed to {POS} ear, a call in progress.",
+   "Mid-sentence on the phone, {POS} free hand idles.",
+   "Listening to whoever is on the other end, {S} forget to blink."
+  ],
+  "read": [
+   "{S} read {O}, eyes tracking the lines.",
+   "Pages wait under {POS} fingers, spine soft from use.",
+   "{O} open in both hands, everything else forgotten."
+  ],
+  "hold_book": [
+   "{O} held against {POS} chest like a small shield."
+  ],
+  "umbrella": [
+   "{O} blooms above {POS} shoulder, keeping the rain honest.",
+   "{S} hold {O} tilted just enough against the drizzle.",
+   "Under {O}, the weather stays somebody else's problem."
+  ],
+  "guitar_play": [
+   "{S} work the strings like {POS} hands have done it a thousand times.",
+   "A chord hangs half-formed in the air as {POS} fingers settle.",
+   "Strummed lazy and low, the guitar keeping time with {POS} breathing."
+  ],
+  "guitar_hold": [
+   "The guitar rests at the neck, casual as a walking stick."
+  ],
+  "cup_hold": [
+   "{O} raised in a small, thoughtful toast to nowhere.",
+   "Both hands wrap around {O}, stealing its warmth."
+  ],
+  "sip": [
+   "{S} take a careful sip, eyes half-closed at the taste.",
+   "The cup tips just enough for one more sip."
+  ],
+  "photo": [
+   "{S} raise {O} to one eye and frame the shot.",
+   "A click hangs in the air — the camera still leveled.",
+   "Selfie arm extended, catching the angle on the first try."
+  ],
+  "mic_sing": [
+   "{O} close to {POS} lips, a note caught mid-air.",
+   "Singing into the microphone like nobody volunteered to listen."
+  ],
+  "flower": [
+   "{O} twirled loosely in {POS} fingers.",
+   "Held out toward us, the rose offering itself.",
+   "Petals brushed against {POS} cheek as {S} admire them."
+  ],
+  "peer": [
+   "{O} pressed to {POS} eyes, scanning far off.",
+   "Watching the distance through the binoculars, unblinking."
+  ],
+  "bite": [
+   "{S} bite into {O}, cheeks puffing mid-chew.",
+   "A first bite, eyes closing in quiet approval."
+  ],
+  "write": [
+   "{O} scratching lines across whatever {S} can reach.",
+   "Head down, the pen moving in small quick strokes."
+  ]
+ },
+ "pose_map": {
+  "drawing sword": "draw",
+  "sheathing sword": "sheathe",
+  "holding sword": "hold_one",
+  "reverse grip": "hold_one",
+  "sword out of mouth": "mouth",
+  "sword behind back": "behind_back",
+  "two-handed sword": "hold_two",
+  "holding weapon two-handed": "hold_two",
+  "weapon resting on shoulder": "shoulder",
+  "spinning weapon": "spin",
+  "weapon raised": "raised",
+  "weapon on back": "on_back",
+  "katana on back": "on_back",
+  "sheathed sword": "sheathed_idle",
+  "katana sheath": "sheathed_idle",
+  "aiming gun": "aim",
+  "aiming at viewer": "aim_viewer",
+  "holding gun": "hold_one",
+  "one handed gun hold": "hold_one",
+  "holding gun behind back": "behind_back",
+  "gun lowered": "lowered",
+  "holding staff": "hold_one",
+  "holding spear": "hold_one",
+  "spear thrusting stance": "aim",
+  "drawing bow": "aim",
+  "nocked arrow": "aim",
+  "bow lowered": "lowered",
+  "holding weapon": "hold_one",
+  "dual swords": "hold_two",
+  "holding guitar": "guitar_hold",
+  "holding book": "hold_book",
+  "open book": "read",
+  "book closed": "hold_book",
+  "holding phone": "hold_one",
+  "looking at phone": "phone_look",
+  "phone to ear": "phone_call",
+  "camera up": "photo",
+  "holding camera": "hold_one",
+  "taking picture": "photo",
+  "selfie": "photo",
+  "holding microphone": "mic_sing",
+  "holding binoculars": "peer",
+  "binoculars over eyes": "peer",
+  "biting food": "bite",
+  "holding food": "hold_one",
+  "sipping": "sip",
+  "drinking": "sip",
+  "weapon drag": "hold_one"
+ },
+ "sub_family": {
+  "weapon.katana": {
+   "draw": "draw",
+   "two_handed": "hold_two",
+   "one_handed": "hold_one",
+   "reverse_grip": "hold_one",
+   "rest_shoulder": "shoulder",
+   "mouth": "mouth",
+   "sheathing": "sheathe",
+   "sheath": "sheathed_idle",
+   "on_back": "on_back"
+  },
+  "weapon.sword": {
+   "hold": "hold_one",
+   "two_handed": "hold_two",
+   "raised": "raised",
+   "shoulder": "shoulder",
+   "behind_back": "behind_back",
+   "spin": "spin",
+   "mouth": "mouth",
+   "dual": "hold_two",
+   "sheathed": "sheathed_idle"
+  },
+  "weapon.greatsword": {
+   "two_handed": "hold_two",
+   "raised": "raised",
+   "shoulder": "shoulder",
+   "one_hand": "hold_one",
+   "on_back": "on_back",
+   "drag": "hold_one"
+  },
+  "weapon.gun": {
+   "aim": "aim",
+   "aim_viewer": "aim_viewer",
+   "one_handed": "hold_one",
+   "behind_back": "behind_back",
+   "lowered": "lowered",
+   "on_back": "on_back",
+   "two_hands": "hold_two",
+   "scope": null
+  },
+  "weapon.bow": {
+   "draw": "aim",
+   "nocked": "aim",
+   "hold_ready": "hold_one",
+   "aim_viewer": "aim_viewer",
+   "lowered": "lowered",
+   "on_back": "on_back",
+   "quiver": null
+  },
+  "weapon.staff": {
+   "hold": "hold_one",
+   "raise": "raised",
+   "lean": "hold_one",
+   "spin": "spin",
+   "two_handed": "hold_two",
+   "on_back": "on_back"
+  },
+  "weapon.polearm": {
+   "hold": "hold_one",
+   "two_handed": "hold_two",
+   "thrust": "aim",
+   "shoulder": "shoulder",
+   "raised": "raised",
+   "on_back": "on_back"
+  },
+  "obj.phone": {
+   "hold": "hold_one",
+   "look": "phone_look",
+   "call": "phone_call"
+  },
+  "obj.book": {
+   "read": "read",
+   "hold": "hold_book",
+   "closed": "hold_book"
+  },
+  "obj.umbrella": {
+   "open": "umbrella",
+   "closed": "hold_one"
+  },
+  "obj.guitar": {
+   "play": "guitar_play",
+   "hold": "guitar_hold"
+  },
+  "obj.cup": {
+   "hold": "cup_hold",
+   "both": "cup_hold",
+   "sip": "sip"
+  },
+  "obj.camera": {
+   "shoot": "photo",
+   "hold": "hold_one",
+   "selfie": "photo",
+   "neck": null
+  },
+  "obj.mic": {
+   "sing": "mic_sing"
+  },
+  "obj.flower": {
+   "hold": "flower",
+   "bouquet": "flower"
+  },
+  "obj.optics": {
+   "peer": "peer",
+   "hang": null
+  },
+  "obj.snack": {
+   "hold": "hold_one",
+   "bite": "bite"
+  },
+  "obj.pen": {
+   "write": "write"
+  }
+ },
+ "obj_kind": {
+  "weapon.katana": "katana",
+  "weapon.sword": "blade",
+  "weapon.greatsword": "greatsword",
+  "weapon.gun": "gun",
+  "weapon.bow": "bow",
+  "weapon.staff": "staff",
+  "weapon.polearm": "spear",
+  "obj.phone": "phone",
+  "obj.book": "book",
+  "obj.umbrella": "umbrella",
+  "obj.guitar": "guitar",
+  "obj.cup": "cup",
+  "obj.camera": "camera",
+  "obj.mic": "mic",
+  "obj.flower": "flower",
+  "obj.optics": "binoculars",
+  "obj.snack": "food",
+  "obj.pen": "pen"
+ },
+ "env": {
+  "night": [
+   "Night has settled over everything.",
+   "The world has gone dark and quiet.",
+   "It is deep into the night."
+  ],
+  "daytime": [
+   "Daylight fills the frame.",
+   "It is broad daylight.",
+   "Sun sits high over the scene."
+  ],
+  "rain": [
+   "Rain falls steadily, darkening the ground.",
+   "A soft rain keeps time against everything.",
+   "Rain streaks the air."
+  ],
+  "snowing": [
+   "Snow drifts down without hurry.",
+   "Flakes gather on {POS} hair and shoulders.",
+   "A slow snowfall hushes the scene."
+  ],
+  "fog": [
+   "Fog blurs the distance into pale nothing.",
+   "A low mist softens every edge.",
+   "Fog muffles the world behind {POS}."
+  ],
+  "wind": [
+   "Wind lifts {POS} hair and tugs at the clothes.",
+   "A gust moves through the frame.",
+   "Wind pushes at {POS} from the side."
+  ],
+  "sunset": [
+   "The sky is burning quietly at sunset.",
+   "Low sun gilds everything it touches.",
+   "Dusk light stretches long shadows."
+  ],
+  "starry sky": [
+   "A dense scatter of stars hangs overhead.",
+   "The night sky is thick with stars.",
+   "Starlight dusts the dark above."
+  ],
+  "forest": [
+   "Trees close in behind, green and dim.",
+   "A forest stands patient at the edges of the scene.",
+   "Trunks fade into shade behind {POS}."
+  ],
+  "beach": [
+   "The sea lies flat and silver behind.",
+   "Waves break slowly at the edge of the sand.",
+   "Open water fills the background."
+  ],
+  "city street": [
+   "City streets run out behind, lamps glowing.",
+   "A quiet street stretches into the distance.",
+   "Buildings line the road like spectators."
+  ],
+  "bedroom": [
+   "The bedroom feels warm and half-lit.",
+   "Familiar clutter surrounds, soft and still.",
+   "A bed and a lamp make the room small and safe."
+  ],
+  "classroom": [
+   "An empty classroom glows in afternoon light.",
+   "Rows of desks wait quietly behind.",
+   "Chalk dust hangs in a shaft of sun."
+  ],
+  "rooftop": [
+   "A rooftop opens to the whole skyline.",
+   "The city spreads below the edge of the roof.",
+   "Wind moves freely across the open rooftop."
+  ],
+  "library": [
+   "Shelves of books rise floor to ceiling behind.",
+   "The library holds its usual hush.",
+   "Lamp light warms the spines of old books."
+  ],
+  "cherry blossoms": [
+   "Cherry petals drift through the air.",
+   "Pink blossoms hang heavy on the branches.",
+   "Petals keep falling, slower than snow."
+  ]
+ },
+ "light": {
+  "backlighting": [
+   "Light pours in from behind, rimming the silhouette.",
+   "A bright halo traces {POS} outline from behind."
+  ],
+  "rim lighting": [
+   "A hard rim of light carves {POS} out of the dark.",
+   "Edge light glances along shoulders and hair."
+  ],
+  "candle": [
+   "Candlelight flickers across the scene.",
+   "A nearby candle makes everything tremble with warm light."
+  ],
+  "window light": [
+   "Soft daylight comes through the window.",
+   "Window light lies gentle across the floor."
+  ],
+  "neon": [
+   "Neon signs paint the dark in pinks and blues.",
+   "Colored light bleeds across wet surfaces."
+  ],
+  "moonlight": [
+   "Moonlight lays a cool sheen over everything.",
+   "Pale light from the moon flattens every color."
+  ]
+ },
+ "intro": {
+  "1girl": [
+   "A girl is the whole of the picture.",
+   "There is only her.",
+   "One girl, and everything else is background."
+  ],
+  "1boy": [
+   "A boy stands alone in the frame.",
+   "It is only him.",
+   "One boy, nothing else to look at."
+  ],
+  "solo_default": [
+   "A single figure holds the frame.",
+   "The subject stands alone.",
+   "Only one person occupies the scene."
+  ]
+ }
+}
