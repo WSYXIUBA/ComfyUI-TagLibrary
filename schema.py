@@ -132,12 +132,24 @@ def migrate_subcategory(sub: dict, cat_name: str) -> dict:
     sub.setdefault("priority_boost", 1.0)
     seen: set[str] = set()
     kept: list[dict] = []
+    taken_ids: set[str] = set()
+    sub_id = str(sub.get("id") or "")
     for t in sub.get("tags", []) or []:
         migrate_tag(t, cat_name, sub.get("name", ""))
         key = str(t.get("en") or "").strip().lower()
         if key and key in seen:
             continue          # 修复后与既有词重名的副本: 丢弃
         seen.add(key)
+        # id 兜底: `library.deep_merge` 是按 id 归并的, 没有 id 的标签会全部
+        # 塌成同一个 None 键而互相覆盖 (实测新增 81 词只生效 16 个)。
+        if not t.get("id") and sub_id:
+            base = f"{sub_id}.{re.sub(r'\s+', '-', key)}"
+            tid, n = base, 2
+            while tid in taken_ids:
+                tid, n = f"{base}-{n}", n + 1
+            t["id"] = tid
+        if t.get("id"):
+            taken_ids.add(t["id"])
         kept.append(t)
     if len(kept) != len(sub.get("tags") or []):
         sub["tags"] = kept
