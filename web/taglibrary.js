@@ -937,7 +937,7 @@ export function buildPanelWidget(node, container) {
 /* --------------------------------------------- tag picker (全库挑选器) */
 
 function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChange, getExisting, getExcluded, setExcluded, node }) {
-  const ui = { activeCat: null, filter: "", picked: [], tab: "pick", libTouched: false };  // pick | exclude | manager | settings
+  const ui = { activeCat: null, filter: "", picked: [], tab: "pick", libTouched: false };  // pick | exclude | settings
 
   rootEl.innerHTML = `
     <style>
@@ -1010,6 +1010,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                         border-radius:6px; color:var(--tl-text); padding:3px 5px; font-size:11.5px; text-align:center; }
       .tp-range-hint { font-size:10.5px; color:var(--tl-dim); margin-top:5px; }
       .tp-empty { color:var(--tl-muted); }
+      /* 段位分隔标题 (Anima tag order 的六段) */
+      .tp-sec-head { font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--tl-accent-text);
+                     opacity:.85; padding:9px 4px 3px; margin-top:2px;
+                     border-top:1px solid var(--tl-border); }
+      .tp-sec-head:first-of-type { border-top:0; margin-top:0; padding-top:2px; }
       /* ---- 设置页 (可折叠分区) ---- */
       .tp-set-sec { margin:0 0 10px; }
       .tp-set-sec > summary { cursor:pointer; font-size:12px; font-weight:700; color:var(--tl-accent-text);
@@ -1143,7 +1148,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
         <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
         <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
-        <button class="tp-tabbtn tp-mgrtab">🏷 标签库管理</button>
         <button class="tp-tabbtn tp-cftab">🧷 防冲突关系</button>
         <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
@@ -1156,7 +1160,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-nlview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
-        <section class="tp-mgrview" style="display:none;flex:1;min-width:0;"></section>
         <section class="tp-cfview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-setview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
       </div>
@@ -1188,9 +1191,20 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     camera: "🎬 镜头构图", style: "🖌 风格媒介", material: "✨ 材质特效",
     misc: "📦 未归类",
   };
-  const AXIS_ORDER = ["meta", "count", "character", "appearance", "clothing",
-                      "prop", "action", "environment", "lighting", "camera",
-                      "style", "material", "misc"];
+  // 段位 (与 py 侧 axes.AXIS_SECTION 一一对应) —— Anima 官方 tag order 的六段。
+  // 轴列表按**段位序**展示, 让用户直接看到"输出时各轴落在哪一段"。
+  const AXIS_SECTION = {
+    meta: 1, style: 1, count: 2, character: 3,
+    appearance: 6, clothing: 6, prop: 6, action: 6,
+    environment: 6, lighting: 6, camera: 6, material: 6, misc: 9,
+  };
+  const SECTION_ZH = {
+    1: "① 质量 · 元信息 · 风格", 2: "② 人数", 3: "③ 角色",
+    4: "④ 作品", 5: "⑤ 画师", 6: "⑥ 通用", 9: "⑨ 未归类",
+  };
+  const AXIS_ORDER = ["meta", "style", "count", "character", "appearance",
+                      "clothing", "prop", "action", "environment", "lighting",
+                      "camera", "material", "misc"];
 
   function eachTag(lib, fn) {
     for (const c of lib.categories || [])
@@ -1271,8 +1285,18 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         active: !ui.activeAxis,
         onclick: () => { ui.activeAxis = null; renderCats(); renderChips(); },
       });
+      let curSec = 0;
       for (const a of AXIS_ORDER) {
         if (!axisCount[a]) continue;
+        const sec = AXIS_SECTION[a] || 6;
+        if (sec !== curSec) {
+          // 段位分隔标题 —— 让"输出时这一轴落在第几段"一目了然
+          const h = document.createElement("div");
+          h.className = "tp-sec-head";
+          h.textContent = SECTION_ZH[sec] || `第 ${sec} 段`;
+          catsBox.appendChild(h);
+          curSec = sec;
+        }
         mkRow(catsBox, {
           id: "axis:" + a, icon: "", name: AXES_ZH[a] || a, count: axisCount[a],
           depth: 1, active: ui.activeAxis === a,
@@ -1693,18 +1717,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     }
   }
 
-  /* ---------- 页签: 挑标签 | 排除类目 | 标签库管理 | 设置 ---------- */
-  const mgrView = $(".tp-mgrview");
+  /* ---------- 页签: 挑标签 | 排除类目 | 设置 ---------- */
   const setView = $(".tp-setview");
-
-  // 内嵌管理页 (iframe 懒加载, 首次进入才创建; 离开/关闭时按需刷新库缓存)
-  function ensureMgrFrame() {
-    ui.libTouched = true;
-    if (!mgrView.querySelector("iframe")) {
-      mgrView.innerHTML =
-        `<iframe src="${managerUrl()}" style="width:100%;height:100%;border:0;display:block;background:var(--tl-bg-solid)"></iframe>`;
-    }
-  }
 
   function refreshLibIfTouched() {
     if (!ui.libTouched) return;
@@ -2142,11 +2156,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   function switchTab(tab) {
-    if (ui.tab === "manager" && tab !== "manager") refreshLibIfTouched();
     ui.tab = tab;
     rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
     rootEl.querySelector(".tp-excludetab").classList.toggle("active", tab === "exclude");
-    rootEl.querySelector(".tp-mgrtab").classList.toggle("active", tab === "manager");
     rootEl.querySelector(".tp-cftab").classList.toggle("active", tab === "cf");
     rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
     rootEl.querySelector(".tp-proftab")?.classList.toggle("active", tab === "prof");
@@ -2154,7 +2166,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
     excView.style.display = tab === "exclude" ? "block" : "none";
-    mgrView.style.display = tab === "manager" ? "flex" : "none";
     cfView.style.display = tab === "cf" ? "block" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     profView.style.display = tab === "prof" ? "block" : "none";
@@ -2194,7 +2205,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
   rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
-  rootEl.querySelector(".tp-mgrtab").onclick = () => { ensureMgrFrame(); switchTab("manager"); };
   rootEl.querySelector(".tp-cftab").onclick = () => switchTab("cf");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
   rootEl.querySelector(".tp-proftab")?.addEventListener("click", () => switchTab("prof"));

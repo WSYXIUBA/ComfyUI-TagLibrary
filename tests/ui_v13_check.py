@@ -244,7 +244,8 @@ def main():
               """(() => {
                 const heads=[...document.querySelectorAll('.tp-axis-head')].map(h=>h.textContent.trim().split(' ')[0]+'×'+(h.querySelector('.tp-axis-n')||{}).textContent);
                 const b=document.querySelectorAll('.tp-tag.bundled').length;
-                return JSON.stringify({axisHeads: heads.slice(0,8), bundleChips: b});
+                const secs=[...document.querySelectorAll('.tp-sec-head')].map(x=>x.textContent.trim());
+                return JSON.stringify({axisHeads: heads.slice(0,8), bundleChips: b, sections: secs});
               })()""", "AXIS")
 
     # 5) 武器档案
