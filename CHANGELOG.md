@@ -2,6 +2,57 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.5.1 — 词表补齐：基准词 + 质量词，基准覆盖率 55% → 97%（2026-09-10）
+
+承接 v1.5.0。用群内那条真实提示词（62 词）当尺子量覆盖率，起点只有 **55%**。
+
+### 缺的不是生僻词，是最基础的"基准词"
+
+系统扫描 82 个常见 Danbooru 基准名词，**缺 40 个**：
+`breasts` / `thighs` / `hair` / `eyes` / `legs` / `arms` / `hands` / `feet` / `ears` / `stomach` /
+`bow` / `socks` / `shoes` / `boots` / `apron` / `hood` / `jewelry` /
+`water` / `fire` / `moon` / `sun` / `star` / `sky` / `cloud` / `tree` / `flower` / `snow` / `blood` /
+`cup` / `bottle` / `chair` / `window` / `door` / `tongue` / `teeth` / `lips` / `nose` …
+
+库里有 `small breasts` / `huge breasts` 却**没有 `breasts`**，后果有两层：
+1. 表达不了"普通"状态，只能抽到带修饰的（`只有 thick thighs` → 永远是粗腿）；
+2. 大/小、粗/细可能同时被抽中（`large breasts` + `small breasts`）。
+
+同时质量/细节层整层缺失：`score_*` 全部 0 词、`ultra-detailed` / `huge filesize` /
+`detailed pupils` / `sharp focus` / `amazing quality` 等（Anima 与群内提示词都在用）。
+
+### 补齐方式
+
+新增 `tools/add_base_vocab.py`（幂等，可复核）：按「槽位 → 词表」的显式清单补齐，
+**只用真实标签、不生成组合**。共两轮：
+- 第一轮 81 词：基准身体部位 / 服装 / 场景 / 物件 / 质量细节；
+- 第二轮 25 词：全部取自群内那条提示词（即在用的词），含颜色+物体复合词
+  （`black choker` / `white bow` / `black sailor collar` / `black pantyhose` …）。
+
+⚠ 两个必须同时写的库：`library.get_merged()` 走 `deep_merge` 且**用户库优先**，
+只写出厂库时新增词会被用户库同 id 子分类整个覆盖（实测 81 词只生效 16 个）。
+
+⚠ 每条标签必须有 `id`：`deep_merge` 是按 id 归并的，无 id 的标签会全部塌成同一个
+`None` 键互相覆盖。已把 **id 兜底**加进 `schema.migrate_subcategory`（`{子类id}.{en把空格换成-}`，
+同槽位冲突自动加序号），历史数据一并回写。
+
+### 质量槽配额调整
+
+参考提示词的质量/细节块约 16 个词，故放宽这两槽：
+`画质规格/画质增强` (3,2) → **(5,3)**；`画质规格/细节强化` (2,1) → **(4,2)**。
+
+### 结果
+
+| 指标 | 起点 | 现在 |
+|---|---|---|
+| 库内词数 | 4352 | **4448** |
+| 群内基准覆盖率 | 55% | **97%**（60/62） |
+| 输出词数 | 200~213（v1.5.0 前） | 中位 **60**，区间 40~60 |
+| 门禁 | 10 项 | **11 项**（含输出质量门禁） |
+
+仍缺 2 个：`plana (blue archive)` 与 `blue archive` —— 具名角色 + 作品（copyright），
+属于另一类数据（character / series），需要单独的词表来源，不在本次范围。
+
 ## v1.5.0 — 输出质量修复：抽取语义重构 + 括号缺陷（2026-09-10）
 
 > 用群里一条真实提示词（62 词）当基准实测后发现：**分类只是表症，抽取语义本身错了**。

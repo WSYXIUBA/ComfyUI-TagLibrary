@@ -28,9 +28,13 @@ from __future__ import annotations
 # ------------------------------------------------------------------ 逐槽位配额
 # (max_n, min_n)
 SLOT_MAX: dict[str, tuple[int, int]] = {
-    # ---- 第 1 段: 质量 / 元信息 (对齐 Anima 推荐前缀, 固定出几个) ----
-    "画质规格/画质增强": (3, 2),
-    "画质规格/细节强化": (2, 1),
+    # ---- 第 1 段: 质量 / 元信息 (对齐 Anima 推荐前缀 + 群内提示词的实际用量) ----
+    # 参考提示词的质量/细节块有约 16 个词 (score_9/8/7 + masterpiece + best quality
+    # + amazing quality + very aesthetic + absurdres + newest + highres + ultra-detailed
+    # + huge filesize + detailed eyes + detailed pupils + sharp focus …),
+    # 所以这两槽的配额要比其它槽宽。
+    "画质规格/画质增强": (5, 3),
+    "画质规格/细节强化": (4, 2),
 
     # ---- 第 2 段: 人数 (单选 + 必出) ----
     "人物主体/人数": (1, 1),
