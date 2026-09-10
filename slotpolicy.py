@@ -173,7 +173,7 @@ def total_min_sum() -> int:
 # ------------------------------------------------------------------ 人数语义
 # 单人词: 出现即表示画面只有一个人 -> 互动类槽位不成立
 SINGLE_COUNT_WORDS = frozenset({
-    "solo", "1girl", "1boy", "1other", "single",
+    "solo", "1girl", "1boy", "1other", "single", "0others",
 })
 
 # 多人词: 表示画面有多人 -> 互动类槽位成立
@@ -185,3 +185,8 @@ MULTI_COUNT_WORDS = frozenset({
 
 # 仅在多人场景成立的槽位
 MULTI_ONLY_SLOTS = frozenset({"姿势动作/互动与双人"})
+
+# "画面里没有人"的人数词 —— 出现即抑制全部人物相关轴,
+# 否则会产出 "no humans + long hair" 这类直接矛盾的组合。
+NO_HUMAN_COUNT_WORDS = frozenset({"no humans"})
+NO_HUMAN_SKIP_AXES = frozenset({"character", "appearance", "clothing"})
