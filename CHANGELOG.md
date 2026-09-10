@@ -2,6 +2,64 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.4.0 — 主题一致性 · 性能 · 工程收敛（2026-09-10）
+
+**修复**
+- **`toast()` 未定义**：`taglibrary.js` 里有 13 处 `toast(...)` 调用但从未定义该函数
+  （`manager.js` 里那个是 IIFE 内的局部函数，不是全局）。后果不止提示不显示——
+  调用抛错会中断后续语句，例如保存/删除反冲突规则后紧跟的 `renderCfView()` 不执行，
+  列表要重开页签才更新。已补上模块级实现（复用面板主题变量）。
+- **出厂库缺 `axis` 字段**：`data/default/tag_library.json` 的 4356 个标签全部没有
+  `axis`，而用户库与两份备份都有。引擎侧因 `t.get("axis") or axis_of(...)` 有兜底
+  不受影响，但挑选器「🎯 拼装轴」视图用 `t.axis || "misc"`——一旦用户库被清空后
+  由 md 模板重建，全部词会塌进「📦 未归类」。现改为在 `schema.migrate_tag()` 里按
+  `axes.axis_of(大类, 子类)` 兜底注入（已有值 `setdefault` 原样保留），修好故障路径。
+- 挑选器分类项颜色被 JS 内联写死（`#cfd6e4`/`#aab3c5`），浅色主题下不可读 → 交由
+  CSS 变量；JSON 编辑器状态色、顶栏按钮配色同样改为跟随主题。
+
+**主题适配（新增）**
+- 抽出共享主题作用域 `.tl-scope`：一套变量同时服务**节点面板 / 挑选器弹窗 / 管理弹窗**，
+  覆盖 ComfyUI 六套内置主题（arc/dark/github/light/solarized/nord）的深浅与色偏。
+- 挑选器 170 行内联硬编码色值全部改为消费变量；管理页补齐浅色主题（原先零适配），
+  新增 `?theme=&light=` 参数 + `postMessage` 双通道下发（iframe 不继承父页 html 类）。
+- 顶栏 🏷 按钮、chip 右键菜单、toast 一并接入主题变量。
+
+**性能**
+- **新增 `GET /taglib/api/panel-index`（轻量索引）**：面板只需要分类名/图标 + 每个词的
+  树路径 + 性别/NSFW 标记，却每次拉取含标签正文的全量库。索引用（子分类下标, 孙分类下标）
+  二元组编码避免重复内联分类名，实测 **336KB → 110KB，比全量库小约 12 倍**；含正文的
+  全量库改为**打开挑选器时才懒加载**。
+- 全局偏好轮询改为**模块级单例**：原先每个节点各起一个 `setInterval(2s)`，多节点画布下
+  开销线性叠加；现在一个定时器驱动所有面板，面板脱离 DOM 后自动注销。
+- 挑选器轴视图的按轴分桶结果加缓存（库对象变了才重建），不再每次渲染都遍历 4300+ 词。
+- chip 右键菜单改为单例复用，不再每次右键都新建/销毁 DOM。
+
+**交互**
+- 挑选器设置页三个分区改为可折叠（`<details>`），原先 36 个控件扁平铺开。
+- 补 `:focus-visible` 样式与搜索框 focus 态，键盘操作有可见反馈。
+
+**工程收敛**
+- `api.py`（880 行 / 27 端点）拆为 `api/` 包：`_common` / `library_routes` /
+  `tagfiles_routes` / `conflicts_routes` / `v13_routes`，对外契约
+  `from .api import register_routes` 不变（路由逐条核对：29 → 30，新增的即 panel-index）。
+- 前端与后端死代码清理：删除重复定义的 `getFillRange`（2 处）与零调用的
+  `pickFrom`/`buildSubPools`/`fetchConflicts`（前端约 108 行）、
+  `weighted_sample`/`_tag_matches`/`_norm` 及不可达的 auto 回显分支（后端约 48 行）；
+  `tagpanel-css.js` 清掉 18 个零引用 CSS 类（约 106 行）。
+- `tests/` 分层：13 个门禁保留，52 个历史诊断脚本移入 `tests/_scratch/`（并修正其仓库根定位）。
+- 新增 `tools/run_gates.py` 一键门禁：自动快照/还原 `data/default/taglib/`，
+  解决部分门禁真实写入镜像目录、污染工作区的问题。
+- 新增 `tests/ui_theme_check.py`（CDP 主题巡检，22 项断言）与最小 CI
+  `.github/workflows/gates.yml`。
+- 一次性脚本 `migrate_axes.py` / `m4_objects_patch.py` 移入 `tools/` 并加"勿重复执行"标注；
+  删除空目录 `src/`。
+- README 测试章节重写（一键门禁 + 门禁清单 + 在线/离线区分）。
+
+**说明**
+- 库格式只增字段不改语义，旧工作流与旧库文件直接兼容。
+- `data/default/conflicts.json` 经核实**不是**遗留文件：它是 `tagconflicts.LEGACY_GROUPS_PATH`，
+  新装时 `_migrate_legacy_groups()` 会用它迁移 20 组旧互斥域，予以保留。
+
 ## v1.3.0 — 底层重构（2026-09-09）
 
 **架构（四板斧）**
