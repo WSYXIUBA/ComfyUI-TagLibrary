@@ -47,10 +47,11 @@ OFFLINE = [
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
 ]
 
-# 在线门禁: 需要 127.0.0.1:8188 的 ComfyUI, ui_* 还需要 Edge 远程调试 (9222)
+# 需要 ComfyUI 在跑的在线门禁 (--with-online 才跑)
 ONLINE = [
-    ("real_http_test", "真机 ComfyUI HTTP queue 验收"),
-    ("ui_v13_check", "CDP 浏览器 UI 巡检 (逐 tab 截图+断言)"),
+    ("real_http_test", "真机 ComfyUI HTTP queue 验收 (接口/端口/性别锁)"),
+    ("node_output_test", "真机节点输出测试 (60 次生成 × 文本层断言)"),
+    ("ui_v13_check", "CDP 浏览器 UI 巡检 (面板/页签/可编辑/开关)"),
     ("ui_theme_check", "CDP 浏览器主题一致性巡检 (深色/浅色/管理页)"),
 ]
 
