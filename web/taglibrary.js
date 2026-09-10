@@ -253,9 +253,11 @@ function defaultState() {
     // 面板只显示这里 —— "已添加到本节点" 的标签, 每条:
     // { en, zh?, nsfw?, enabled:bool, pinned?:true }
     tags: [],
-    // 排除的类目 (分类名数组): 唯一的范围控制 —
+    // 排除的类目 (轴名数组): 唯一的范围控制 —
     // 随机抽不到、🎲填充不填也不清空该分类的已填标签
-    exclude_categories: [],
+    // 画师默认关闭: 它是"选定"而不是"随机"的维度, 引擎随机抽一个画师只会毁掉整体观感。
+    // 想用时在侧栏把「画师」勾上, 或直接手动往节点里加 @画师名。
+    exclude_categories: ["画师"],
     avoid_conflicts: true,
     nsfw: null,
   };
@@ -1225,6 +1227,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
      标签按 axis 字段聚合 (一词可跨面), 武器姿势词带 ⚔ 标记。 */
   const AXES_ZH = {
     meta: "💎 画质规格", count: "👥 人数", character: "🧿 角色身份",
+    artist: "🎨 画师",
     appearance: "🎨 外貌特征", clothing: "👗 服装", prop: "🧰 道具武器",
     action: "🤸 动作姿态", environment: "🏞 场景环境", lighting: "💡 光影",
     camera: "🎬 镜头构图", style: "🖌 风格媒介", material: "✨ 材质特效",
@@ -1233,7 +1236,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   // 段位 (与 py 侧 axes.AXIS_SECTION 一一对应) —— Anima 官方 tag order 的六段。
   // 轴列表按**段位序**展示, 让用户直接看到"输出时各轴落在哪一段"。
   const AXIS_SECTION = {
-    meta: 1, style: 1, count: 2, character: 3,
+    meta: 1, style: 1, count: 2, character: 3, artist: 5,
     appearance: 6, clothing: 6, prop: 6, action: 6,
     environment: 6, lighting: 6, camera: 6, material: 6, misc: 9,
   };
@@ -1243,12 +1246,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   };
   // 轴的中文名 → 轴 id (与 py 侧 axes.AXIS_NAME_ZH 对应)
   const AXIS_ZH_TO_ID = {
-    "画质规格": "meta", "人数": "count", "角色身份": "character",
+    "画质规格": "meta", "人数": "count", "角色身份": "character", "画师": "artist",
     "外貌特征": "appearance", "服装": "clothing", "道具武器": "prop",
     "动作姿态": "action", "场景环境": "environment", "光影氛围": "lighting",
     "构图镜头": "camera", "风格媒介": "style", "材质特效": "material",
   };
-  const AXIS_ORDER = ["meta", "style", "count", "character", "appearance",
+  const AXIS_ORDER = ["meta", "style", "count", "character", "artist", "appearance",
                       "clothing", "prop", "action", "environment", "lighting",
                       "camera", "material", "misc"];
 

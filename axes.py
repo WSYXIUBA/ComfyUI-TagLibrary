@@ -22,6 +22,7 @@ AXIS_ORDER = [
     "meta",            # 画质/通用质量词 (masterpiece…)
     "count",           # 人数
     "character",       # 角色/种族/年龄等身份域
+    "artist",          # 画师 (@ 前缀); 留空 + 默认关闭
     "appearance",      # 外貌 (发/眼/体型/皮肤/表情…)
     "clothing",        # 服装 (含裸露)
     "prop",            # 道具 (武器/食物/日用/乐器/动物伙伴)
@@ -38,7 +39,7 @@ AXIS_ORDER = [
 # 这些名字与前端 AXES_ZH / 迁移前的部分大类名保持一致, 避免用户重新认路。
 AXIS_NAME_ZH: dict[str, str] = {
     "meta": "画质规格", "count": "人数", "character": "角色身份",
-    "appearance": "外貌特征", "clothing": "服装", "prop": "道具武器",
+    "artist": "画师", "appearance": "外貌特征", "clothing": "服装", "prop": "道具武器",
     "action": "动作姿态", "environment": "场景环境", "lighting": "光影氛围",
     "camera": "构图镜头", "style": "风格媒介", "material": "材质特效",
 }
@@ -67,7 +68,8 @@ AXIS_SECTION: dict[str, int] = {
     "meta": 1, "style": 1,            # 质量/元信息 + 风格槽
     "count": 2,                        # 1girl / 1boy / 1other
     "character": 3,                    # 具名角色
-    # 4 = series(copyright) / 5 = artist(@) —— 暂无对应轴, 词表补齐后接入
+    # 4 = series(copyright) —— 暂无对应轴
+    "artist": 5,
     "appearance": 6, "clothing": 6, "prop": 6, "action": 6,
     "environment": 6, "lighting": 6, "camera": 6, "material": 6,
     "misc": 9,
@@ -172,9 +174,16 @@ SUB_TO_AXIS: dict[str, tuple[str, int]] = {
 }
 
 
+# 默认关闭的轴 —— 新节点的 exclude_categories 会带上它们。
+# 画师不是"随机抽"的维度: 你选定某个画风就固定用它, 让引擎随机抽一个画师只会毁掉整体观感;
+# 而且 Anima 官方要求 artist 必须带 `@` 前缀。所以这个轴留空 (等你自己填名字) 且默认关闭。
+AXIS_DEFAULT_OFF: tuple[str, ...] = ("画师",)
+
 # S4 重构后的路径表: "轴中文名/槽位名" → (轴 id, 次序)。
 # 由 tools/migrate_to_axes.py 生成 —— 按 SUB_TO_AXIS 把 63 个槽位重挂到 12 条轴。
 SUB_TO_AXIS_V2: dict[str, tuple[str, int]] = {
+    # ---- 画师 (artist) ---- 留空槽位, 默认关闭; 次序用段位内自由值 800
+    "画师/画师名": ("artist", 800),
     # ---- 画质规格 (meta) ----
     "画质规格/画质增强": ("meta", 0),
     "画质规格/细节强化": ("meta", 1),
