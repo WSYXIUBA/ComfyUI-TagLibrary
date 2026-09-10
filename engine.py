@@ -135,6 +135,19 @@ def _norm(x) -> str:
     return str(x or "").strip().lower()
 
 
+def _lib_key(x) -> str:
+    """库内查表用的键 —— 去掉 artist 的 `@` 前缀 (库内存的是裸名)。"""
+    return str(x or "").strip().lower().lstrip("@")
+
+
+def _artist_text(text: str, axis: str) -> str:
+    """Anima 官方: artist 必须带 `@` 前缀, 否则效果很弱。库内存裸名, 输出时补前缀。"""
+    t = str(text or "").strip()
+    if axis == "artist" and t and not t.startswith("@"):
+        return "@" + t
+    return t
+
+
 # S4 分类重构前的 9 个大类名 → 现在对应的轴 (md 目录名)。
 # 注意"人物主体"跨 5 条轴, 整类排除只能展开成逐轴排除。
 _OLD_CAT_TO_AXES_ZH: dict[str, tuple[str, ...]] = {
@@ -250,7 +263,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     def make_pick(tid: int, source: str = "random") -> Pick:
         si = snap.sub_of[tid]
         ci = snap.cat_of_sub[si]
-        return Pick(tid, snap.tag_text[tid], snap.tag_zh[tid],
+        return Pick(tid, _artist_text(snap.tag_text[tid], snap.axis_arr[tid]),
+                    snap.tag_zh[tid],
                     snap.base_weights[tid], bool(snap.nsfw_flag[tid]),
                     ("female" if snap.gender_flag[tid] == 1 else
                      "male" if snap.gender_flag[tid] == 2 else ""),
@@ -390,7 +404,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     for t in (state.get("tags") or []):
         if not isinstance(t, dict) or not t.get("pinned"):
             continue
-        _pin_collect(snap.en_to_id.get(_norm(t.get("en"))))
+        _pin_collect(snap.en_to_id.get(_lib_key(t.get("en"))))
     for pid in (state.get("pinned") or []):
         _pin_collect(snap.orig_id_to_int.get(str(pid)))
     pinned_tids.sort(key=lambda tid: 0 if snap.axis_arr[tid] == "count" else 1)

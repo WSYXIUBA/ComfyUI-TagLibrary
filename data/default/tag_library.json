@@ -4521,6 +4521,23 @@
    ]
   },
   {
+   "id": "axis.artist",
+   "name": "画师",
+   "icon": "🎨",
+   "color": "",
+   "subcategories": [
+    {
+     "id": "axis.artist.name",
+     "name": "画师名",
+     "tags": [],
+     "random_quota": null,
+     "min_count": 1,
+     "max_count": 1,
+     "priority_boost": 1.0
+    }
+   ]
+  },
+  {
    "id": "axis.appearance",
    "name": "外貌特征",
    "icon": "🎨",
@@ -87173,6 +87190,5 @@
   "subject.s3.yawning",
   "subject.s3.yelling"
  ],
- "settings": {},
- "schema_version": 2
+ "settings": {}
 }

@@ -167,6 +167,10 @@ class TagLibraryNode:
     @staticmethod
     def _format_tag(tag: dict, use_weights: bool) -> str:
         text = tag.get("en", "").strip()
+        # Anima 官方: artist 必须带 `@` 前缀, 否则效果很弱。
+        # 库内存裸名 (方便你编辑), 输出时补前缀。_cat 是库里第一级 = 轴中文名。
+        if tag.get("_cat") == "画师" and text and not text.startswith("@"):
+            text = "@" + text
         w = float(tag.get("weight", 1.0))
         if use_weights and abs(w - 1.0) > 1e-6:
             return f"({text}:{w:g})"
