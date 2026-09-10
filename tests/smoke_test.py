@@ -134,8 +134,11 @@ def main() -> None:
                                 if t["en"] == ("8k" if had_8k else "detail")), None) is None)
     check("新增标签自动补id", any(t["en"] == "test_tag_xyz" and t.get("id")
                                   for t in find_sub(q_m, QS1_ID)["tags"]))
-    subj_m = next(c for c in merged["categories"] if c["name"] == "人物主体")
-    check("未触及分类保留", subj_m["name"] == "人物主体")
+    # S4 之后第一级是轴 (画质规格/人数/角色身份/外貌特征/服装/…), 不再是旧大类「人物主体」。
+    # 这里只验证"未被触及的分类仍然存在" + 轴数量正确, 不写死具体轴名以外的东西。
+    cats_present = [c["name"] for c in merged["categories"]]
+    check("未触及分类保留 (轴数=12)", len(cats_present) == 12, str(cats_present))
+    check("外貌特征轴存在", "外貌特征" in cats_present, str(cats_present[:4]))
 
     # ---- 墓碑: 删掉的 8k 加回默认库也该保持删除
     save_json_back = library.load_user_raw()

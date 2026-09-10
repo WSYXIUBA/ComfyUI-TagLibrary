@@ -33,6 +33,23 @@ AXIS_ORDER = [
     "material",        # 材质特效
 ]
 
+# ---------------------------------------------------------------- 轴的中文显示名
+# S4 重构后, 库里 categories 的第一级**就是轴**, 用中文名做目录名 (md 镜像 = 轴/槽位/槽位.md)。
+# 这些名字与前端 AXES_ZH / 迁移前的部分大类名保持一致, 避免用户重新认路。
+AXIS_NAME_ZH: dict[str, str] = {
+    "meta": "画质规格", "count": "人数", "character": "角色身份",
+    "appearance": "外貌特征", "clothing": "服装", "prop": "道具武器",
+    "action": "动作姿态", "environment": "场景环境", "lighting": "光影氛围",
+    "camera": "构图镜头", "style": "风格媒介", "material": "材质特效",
+}
+AXIS_ZH_TO_ID: dict[str, str] = {v: k for k, v in AXIS_NAME_ZH.items()}
+
+# 迁移前的 9 个大类名 (仅用于 migrate_to_axes.py 识别旧路径; S4 之后不再出现于数据里)
+SUB_TO_AXIS_OLD_CATS: frozenset = frozenset({
+    "画质规格", "人物主体", "服装系统", "姿势动作", "构图镜头",
+    "光影氛围", "场景环境", "风格媒介", "材质特效",
+})
+
 # ---------------------------------------------------------------- 输出段位 (Anima tag order)
 # Anima 作者规定的六段拼接序 (三处独立来源一致, 见 docs/UI-REDESIGN-PLAN.md §2.2):
 #
@@ -155,9 +172,105 @@ SUB_TO_AXIS: dict[str, tuple[str, int]] = {
 }
 
 
+# S4 重构后的路径表: "轴中文名/槽位名" → (轴 id, 次序)。
+# 由 tools/migrate_to_axes.py 生成 —— 按 SUB_TO_AXIS 把 63 个槽位重挂到 12 条轴。
+SUB_TO_AXIS_V2: dict[str, tuple[str, int]] = {
+    # ---- 画质规格 (meta) ----
+    "画质规格/画质增强": ("meta", 0),
+    "画质规格/细节强化": ("meta", 1),
+    # ---- 人数 (count) ----
+    "人数/人数": ("count", 100),
+    # ---- 角色身份 (character) ----
+    "角色身份/年龄阶段": ("character", 200),
+    "角色身份/种族与幻想身份": ("character", 201),
+    # ---- 外貌特征 (appearance) ----
+    "外貌特征/发型": ("appearance", 300),
+    "外貌特征/发色": ("appearance", 301),
+    "外貌特征/眼部": ("appearance", 302),
+    "外貌特征/妆容与胡须": ("appearance", 303),
+    "外貌特征/体型": ("appearance", 304),
+    "外貌特征/表情": ("appearance", 305),
+    "外貌特征/嘴部动作": ("appearance", 306),
+    "外貌特征/情绪与状态": ("appearance", 307),
+    "外貌特征/皮肤与印记": ("appearance", 308),
+    "外貌特征/非人特征": ("appearance", 309),
+    # ---- 服装 (clothing) ----
+    "服装/裸露与暴露": ("clothing", 400),
+    "服装/上装": ("clothing", 401),
+    "服装/下装": ("clothing", 402),
+    "服装/裙装与礼服": ("clothing", 403),
+    "服装/职业与制服": ("clothing", 404),
+    "服装/传统与民族": ("clothing", 405),
+    "服装/特色与运动装": ("clothing", 406),
+    "服装/腿袜与内衣": ("clothing", 407),
+    "服装/鞋子": ("clothing", 408),
+    "服装/头部配饰": ("clothing", 409),
+    "服装/首饰珠宝": ("clothing", 410),
+    "服装/手套围巾与包袋": ("clothing", 411),
+    "服装/服装细节": ("clothing", 412),
+    # ---- 道具武器 (prop) ----
+    "道具武器/武器装备": ("prop", 500),
+    "道具武器/食物饮品": ("prop", 501),
+    "道具武器/日用道具": ("prop", 502),
+    "道具武器/乐器与运动": ("prop", 503),
+    "道具武器/动物伙伴": ("prop", 504),
+    # ---- 动作姿态 (action) ----
+    "动作姿态/站走与动态": ("action", 600),
+    "动作姿态/坐姿": ("action", 601),
+    "动作姿态/躺跪与趴伏": ("action", 602),
+    "动作姿态/互动与双人": ("action", 603),
+    "动作姿态/头颈与倚靠": ("action", 604),
+    "动作姿态/手部动作": ("action", 605),
+    "动作姿态/视线": ("action", 606),
+    # ---- 场景环境 (environment) ----
+    "场景环境/室内": ("environment", 700),
+    "场景环境/自然景观": ("environment", 701),
+    "场景环境/城镇人文": ("environment", 702),
+    "场景环境/幻想科幻": ("environment", 703),
+    "场景环境/时间时段": ("environment", 704),
+    "场景环境/天气现象": ("environment", 705),
+    "场景环境/月与星空": ("environment", 706),
+    "场景环境/节日与季节": ("environment", 707),
+    "场景环境/氛围粒子": ("environment", 708),
+    "场景环境/背景处理": ("environment", 709),
+    # ---- 光影氛围 (lighting) ----
+    "光影氛围/自然光": ("lighting", 800),
+    "光影氛围/人工光": ("lighting", 801),
+    "光影氛围/光影手法与效果": ("lighting", 802),
+    "光影氛围/氛围情绪": ("lighting", 803),
+    # ---- 构图镜头 (camera) ----
+    "构图镜头/取景范围": ("camera", 900),
+    "构图镜头/视角": ("camera", 901),
+    "构图镜头/镜头语言": ("camera", 902),
+    "构图镜头/构图": ("camera", 903),
+    # ---- 风格媒介 (style) ----
+    "风格媒介/写实摄影": ("style", 1000),
+    "风格媒介/二次元向": ("style", 1001),
+    "风格媒介/艺术媒介": ("style", 1002),
+    "风格媒介/题材风格": ("style", 1003),
+    "风格媒介/色彩调配": ("style", 1004),
+    # ---- 材质特效 (material) ----
+    "材质特效/材质": ("material", 1100),
+    "材质特效/视觉特效": ("material", 1101),
+}
+
+
 def axis_of(cat_name: str, sub_name: str) -> tuple[str, int]:
-    """子类 → (轴, 次序)。未映射的落 misc 排最后。"""
-    return SUB_TO_AXIS.get(f"{cat_name}/{sub_name}", ("misc", 9900))
+    """槽位 → (轴 id, 次序)。
+
+    两种结构都要能算:
+      · S4 之后: 第一级就是轴的中文名 → 查 SUB_TO_AXIS_V2, 命中即返回;
+      · S4 之前: 第一级是旧大类名 → 查 SUB_TO_AXIS (迁移工具依赖这条路径)。
+    两者都未命中时落 misc 排最后。
+    """
+    key = f"{cat_name}/{sub_name}"
+    hit = SUB_TO_AXIS_V2.get(key)
+    if hit is not None:
+        return hit
+    if cat_name in AXIS_ZH_TO_ID:          # 是轴名但槽位未登记 → 轴内默认序
+        ax = AXIS_ZH_TO_ID[cat_name]
+        return ax, AXIS_ORDER.index(ax) * 100 + 90
+    return SUB_TO_AXIS.get(key, ("misc", 9900))
 
 
 def is_action_axis(cat_name: str, sub_name: str) -> bool:

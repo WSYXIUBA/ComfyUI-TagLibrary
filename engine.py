@@ -135,6 +135,46 @@ def _norm(x) -> str:
     return str(x or "").strip().lower()
 
 
+# S4 分类重构前的 9 个大类名 → 现在对应的轴 (md 目录名)。
+# 注意"人物主体"跨 5 条轴, 整类排除只能展开成逐轴排除。
+_OLD_CAT_TO_AXES_ZH: dict[str, tuple[str, ...]] = {
+    "画质规格": ("画质规格",),
+    "服装系统": ("服装",),
+    "姿势动作": ("动作姿态",),
+    "构图镜头": ("构图镜头",),
+    "光影氛围": ("光影氛围",),
+    "场景环境": ("场景环境",),
+    "风格媒介": ("风格媒介",),
+    "材质特效": ("材质特效",),
+    "人物主体": ("人数", "角色身份", "外貌特征", "服装", "道具武器"),
+}
+
+
+def _migrate_excludes(raw, snap) -> list[str]:
+    """把旧工作流里存的「大类[/子类]」排除路径迁到新的「轴/槽位」路径 (幂等)。
+
+    S4 重构后第一级从大类换成了轴名, 旧路径在 `tag_ok` 里永远匹配不上 ——
+    表现为"排除了却照样抽"。这里在读取时一次性转换, 避免用户重开工作流才发现。
+    """
+    if not raw:
+        return []
+    # 槽位名 → 轴名 (由当前快照反查, 不写死)
+    slot_axis: dict[str, str] = {}
+    for si, sname in enumerate(snap.sub_names):
+        ci = snap.cat_of_sub[si]
+        slot_axis.setdefault(sname, snap.cat_names[ci])
+    out: list[str] = []
+    for e in raw:
+        e = str(e)
+        parts = e.split("/")
+        if len(parts) >= 2:
+            ax = slot_axis.get(parts[1])
+            out.append("/".join([ax] + parts[1:]) if ax else e)
+        else:
+            out.extend(_OLD_CAT_TO_AXES_ZH.get(parts[0], (parts[0],)))
+    return list(dict.fromkeys(out))
+
+
 def _trim_to_budget(picks: list, tmax: int, snap) -> list:
     """按**槽位贡献数**从多到少削词, 直到落进总预算。
 
@@ -183,8 +223,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     # ---------- 排除域 ----------
     excl_cats: set[str] = set()
     excl_keys: set[str] = set()
-    for e in state.get("exclude_categories") or []:
-        e = str(e)
+    for e in _migrate_excludes(state.get("exclude_categories"), snap):
         (excl_keys if "/" in e else excl_cats).add(e)
 
     gmode = str(state.get("gender") or "off").strip().lower()
