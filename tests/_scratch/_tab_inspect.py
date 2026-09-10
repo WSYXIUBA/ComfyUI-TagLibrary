@@ -30,7 +30,8 @@ print(ev("""(() => {
   return 'ok';
 })()"""))
 
-import time; time.sleep(1.5)
+import time
+time.sleep(1.5)
 
 TABS = [("挑标签", ".tp-picktab"), ("排除类目", ".tp-excludetab"),
         ("标签库管理", ".tp-mgrtab"), ("防冲突关系", ".tp-cftab"),

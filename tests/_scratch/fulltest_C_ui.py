@@ -8,7 +8,8 @@ ws = create_connection(tabs[0]["webSocketDebuggerUrl"], timeout=60, suppress_ori
 mid = [30000]
 
 def cmd(m, p=None, to=60):
-    mid[0] += 1; ws.settimeout(to)
+    mid[0] += 1
+    ws.settimeout(to)
     ws.send(json.dumps({"id": mid[0], "method": m, "params": p or {}}))
     dl = time.time() + to
     while time.time() < dl:

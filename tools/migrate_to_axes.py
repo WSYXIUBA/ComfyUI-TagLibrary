@@ -74,13 +74,15 @@ def main() -> int:
     apply = "--apply" in sys.argv
     targets = [p for p in (library.DEFAULT_PATH, library.USER_PATH) if os.path.isfile(p)]
     if not targets:
-        print("找不到库文件"); return 1
+        print("找不到库文件")
+        return 1
 
     ref = json.load(open(targets[0], encoding="utf-8"))
     try:
         v2, buckets = plan_mapping(ref)
     except SystemExit as e:
-        print(e); return 1
+        print(e)
+        return 1
 
     print("=== 新结构: 轴 → 槽位数 / 词数 ===")
     tot = 0
