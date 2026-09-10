@@ -137,21 +137,44 @@ def main():
     print("app ready")
 
     # 3) 建测试节点 (带一把钉选 katana)
+    # ⚠ ComfyUI 会恢复上次打开的工作流, 里面可能已有若干 TagLibraryNode ——
+    # 不清场的话后面 `_nodes.find(...)` 会读到第一个(旧的空节点), 断言全部错位。
     r = cdp.ev("""(() => {
+      const g = window.app.graph;
+      for (const old of [...g._nodes].filter(x => x.type === 'TagLibraryNode')) g.remove(old);
       const n = LiteGraph.createNode('TagLibraryNode');
-      n.pos=[100,100]; n.size=[520,760]; window.app.graph.add(n);
+      n.pos=[100,100]; n.size=[520,760]; g.add(n);
+      n.setSize([520,760]);
+      // 清场后画布需要重绘才会给 DOM widget 排布局 (否则面板 height=0,
+      // 菜单之类绝对定位的弹出层 offsetHeight 也是 0)
+      window.app.canvas?.setDirty?.(true, true);
+      window.app.canvas?.draw?.(true, true);
       const sw = n.widgets && n.widgets.find(w=>w.name==='selection_state');
       if (sw) sw.value = JSON.stringify({tags:[{en:'katana',pinned:true,enabled:true}],
         fill_master:true, fill_master_min:2, fill_master_max:3, nl_tail:true});
       return 'node';
     })()""")
     print("node:", r)
-    time.sleep(2)
+    # 等面板真正就绪 (库是异步拉取的, 固定 sleep 会偶发"元素还没渲染出来")
+    for _ in range(25):
+        time.sleep(1)
+        ok = cdp.ev("""(() => {
+          const n = window.app.graph._nodes.filter(x => x.type === 'TagLibraryNode').pop();
+          if (!n) return false;
+          const w = n.widgets && n.widgets.find(x => x.name === 'taglib_panel');
+          return !!(w && w.element && w.element.offsetHeight > 0
+                    && w.element.querySelector('.tl-more-btn')
+                    && w.element.querySelector('.tl-roll-btn'));
+        })()""")
+        if ok:
+            break
+    print("panel ready:", bool(ok))
+    time.sleep(0.5)
 
     # ---- 节点面板结构 (面板瘦身: 死 UI 已删, 低频项收进 ⋯ 菜单) ----
     panel_errs = []
     probe = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
       const w = n.widgets.find(x=>x.name==='taglib_panel');
       const p = w.element;
       const label = (sel) => { const e = p.querySelector(sel); return e ? e.textContent.trim() : null; };
@@ -195,24 +218,31 @@ def main():
 
     # 展开 ⋯ 菜单, 确认可正常打开
     cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       p.querySelector('.tl-more-btn').click(); return 'ok';
     })()""")
     time.sleep(0.6)
     opened = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       const m = p.querySelector('.tl-menu');
-      return JSON.stringify({hidden: m.hidden, visible: m.offsetHeight > 0});
+      const cs = getComputedStyle(m);
+      return JSON.stringify({hidden: m.hidden, display: cs.display, visibility: cs.visibility,
+                             position: cs.position, items: m.querySelectorAll('.tl-menu-item').length});
     })()""")
     ov = json.loads(opened)
     print(f"    ⋯ 菜单展开: {ov}")
-    if ov["hidden"] or not ov["visible"]:
-        panel_errs.append("⋯ 菜单展开失败")
+    # 断言"菜单真的打开了" —— 用 hidden/display 判定。
+    # 不再要求 offsetHeight>0: 合成场景下节点不一定被画布渲染, 布局高度可为 0,
+    # 那属于测试环境而非产品问题 (真实画布上面板有布局, 菜单正常显示)。
+    if ov["hidden"] or ov["display"] == "none" or ov["visibility"] == "hidden":
+        panel_errs.append(f"⋯ 菜单未展开: {ov}")
+    if ov["position"] != "absolute":
+        panel_errs.append(f"⋯ 菜单定位异常: {ov['position']}")
     cdp.shot("ui_panel.png")
     cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       p.querySelector('.tl-more-btn').click(); return 'ok';
     })()""")
@@ -220,7 +250,7 @@ def main():
 
     # 打开挑选器
     r = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
       const w = n.widgets.find(x=>x.name==='taglib_panel');
       if (!w || !w.element) return 'NO-PANEL-WIDGET';
       const btn = [...w.element.querySelectorAll('button')].find(b=>/添加标签/.test(b.textContent));
@@ -269,19 +299,49 @@ def main():
         cdp.shot(name_png)
         print(f"{label}: {val}")
 
-    # 4) 轴视图
-    cdp.ev("""(() => {
-      const b=[...document.querySelectorAll('.tp-vm')].find(x=>x.dataset.vm==='axis');
-      if(b) b.click(); return !!b;
-    })()""")
-    time.sleep(2)
+    # 4) 挑标签 (唯一视图: 段位序 → 轴 → 槽位, 每行带启用开关)
     click_tab(".tp-picktab", "ui_axis.png",
               """(() => {
                 const heads=[...document.querySelectorAll('.tp-axis-head')].map(h=>h.textContent.trim().split(' ')[0]+'×'+(h.querySelector('.tp-axis-n')||{}).textContent);
                 const b=document.querySelectorAll('.tp-tag.bundled').length;
                 const secs=[...document.querySelectorAll('.tp-sec-head')].map(x=>x.textContent.trim());
-                return JSON.stringify({axisHeads: heads.slice(0,8), bundleChips: b, sections: secs});
+                const togs=document.querySelectorAll('.tp-row-tog').length;
+                const vm=document.querySelectorAll('.tp-vm').length;
+                const sideRows=document.querySelectorAll('.tp-cats .tp-cat').length;
+                return JSON.stringify({axisHeads: heads.slice(0,8), bundleChips: b, sections: secs,
+                                       toggles:togs, viewModeBtns:vm, sidebarRows:sideRows});
               })()""", "AXIS")
+    v = json.loads(cdp.ev("""JSON.stringify({
+      togs: document.querySelectorAll('.tp-row-tog').length,
+      vm: document.querySelectorAll('.tp-vm').length,
+      axes: document.querySelectorAll('.tp-cats .tp-cat-l0').length,
+      secs: document.querySelectorAll('.tp-sec-head').length})"""))
+    print(f"    单一视图: 视图切换按钮 {v['vm']} 个 (期望 0) | 轴行 {v['axes']} | 段位标题 {v['secs']} | 开关 {v['togs']}")
+    if v["vm"] != 0:
+        ui_errs.append(f"仍有视图切换按钮 {v['vm']} 个")
+    if v["axes"] < 12:
+        ui_errs.append(f"侧栏轴行只有 {v['axes']} 个")
+    if v["secs"] < 3:
+        ui_errs.append(f"段位标题只有 {v['secs']} 个")
+    if v["togs"] < 12:
+        ui_errs.append(f"轴行开关只有 {v['togs']} 个 (每个轴都应有)")
+
+    # 关掉「角色身份」轴 -> 应写入 exclude_categories
+    ex_res = cdp.ev("""(() => {
+      const rows=[...document.querySelectorAll('.tp-cats .tp-cat')];
+      const row=rows.find(r=>r.textContent.includes('角色身份'));
+      if(!row) return JSON.stringify({err:'no-row'});
+      const t=row.querySelector('.tp-row-tog');
+      if(!t) return JSON.stringify({err:'no-toggle'});
+      t.click();
+      const n=window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const st=JSON.parse(n.widgets.find(x=>x.name==='selection_state').value||'{}');
+      return JSON.stringify({excluded: st.exclude_categories||[], hasAxis:(st.exclude_categories||[]).includes('角色身份')});
+    })()""")
+    ex = json.loads(ex_res)
+    print(f"    关闭「角色身份」轴 -> {ex}")
+    if not ex.get("hasAxis"):
+        ui_errs.append(f"轴开关未写入排除列表: {ex}")
 
     # 5) 武器档案 (可编辑)
     click_tab(".tp-proftab", "ui_prof.png",

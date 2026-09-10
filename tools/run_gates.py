@@ -44,6 +44,7 @@ OFFLINE = [
     ("parser_conflict_test", ".md 解析器"),
     ("perf_build_test", "性能门禁 (10k 库 p50<3ms)"),
     ("quality_gate_test", "输出质量门禁 (词数/配额/互斥/人数/畸形词/确定性)"),
+    ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
 ]
 
 # 在线门禁: 需要 127.0.0.1:8188 的 ComfyUI, ui_* 还需要 Edge 远程调试 (9222)

@@ -206,6 +206,51 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
                     out.append(fill(rng.choice(vs)))
                     break
 
+    # 6. 兜底: 保证尾段至少 2 句, 且**按有无人物分流**
+    #    实测(200 seed)原来 66% 只出 1 句 —— intro 只认 1girl/1boy, 动作句只认武器束,
+    #    环境/光线句又只认少数关键词。而 Anima 官方明确"纯自然语言至少 2 句, 太短会
+    #    给出意外结果"。另外 "no humans" 时不能再写人 (会产出 "She has ..." 这种矛盾)。
+    if len(out) < 2 and fam:
+        def _human(w) -> str:
+            return str(w).replace("_", " ")
+
+        def _agree(sent: str) -> str:
+            """主谓一致: {S} 可能是 She/He(单) 或 They(复)。"""
+            if not plural:
+                return sent
+            return sent.replace(" has ", " have ").replace(" is ", " are ")
+
+        no_human = any(str(p.en).strip().lower() == "no humans" for p in picks)
+        app = [_human(p.en) for p in picks
+               if p.axis == "appearance" and 0 < len(p.en.split()) <= 4][:2]
+        wear = [_human(p.en) for p in picks
+                if p.axis == "clothing" and 0 < len(p.en.split()) <= 4][:2]
+        env = [_human(p.en) for p in picks
+               if p.axis in ("environment", "material") and 0 < len(p.en.split()) <= 4][:2]
+
+        queue: list[tuple] = []
+        if no_human or (not app and not wear):
+            queue.append(("scene", "E1", env[0] if env else "the whole frame"))
+        if app:
+            queue.append(("describe", "A", " and ".join(app)))
+        if wear:
+            queue.append(("wear", "C", " and ".join(wear)))
+        if not queue:
+            queue.append(("describe", "A", "a striking presence"))
+        for family, ph, val in queue:
+            if len(out) >= 2:
+                break
+            tpl = rng.choice(fam.get(family) or ["{S} has {A}."])
+            out.append(_agree(fill(tpl).replace("{" + ph + "}", val)))
+        # 仍不足 (例如补完一句后素材用尽) -> 再补场景句, 有界
+        guard = 0
+        while len(out) < 2 and guard < 3:
+            guard += 1
+            tpl = rng.choice(fam.get("scene") or ["{E1} fills the frame."])
+            cand = tpl.replace("{E1}", env[guard % max(len(env), 1)] if env else "the whole frame")
+            if cand not in out:
+                out.append(cand)
+
     out = out[:max_sentences]
     # 句首强制大写
     out = [s[:1].upper() + s[1:] if s else s for s in out]

@@ -186,6 +186,18 @@ MULTI_COUNT_WORDS = frozenset({
 # 仅在多人场景成立的槽位
 MULTI_ONLY_SLOTS = frozenset({"动作姿态/互动与双人"})
 
+# --------------------------------------------------- 词 ↔ 槽位 双向屏蔽
+# 有些矛盾跨槽位, 配额(每槽上限)与互斥槽位组都拦不住。实测抓到的一例:
+#   `bare feet` (裸露与暴露槽) + `boots` (鞋子槽) 同现 —— "赤足" 与 "穿靴" 直接打架。
+# 两个方向都要写: 先抽到任一侧, 另一侧就不再出词。
+BLOCK_SLOTS_BY_WORD: dict[str, frozenset[str]] = {
+    "bare feet": frozenset({"服装/鞋子"}),
+    "barefoot": frozenset({"服装/鞋子"}),
+}
+BLOCK_WORDS_BY_SLOT: dict[str, frozenset[str]] = {
+    "服装/鞋子": frozenset({"bare feet", "barefoot"}),
+}
+
 # "画面里没有人"的人数词 —— 出现即抑制全部人物相关轴,
 # 否则会产出 "no humans + long hair" 这类直接矛盾的组合。
 NO_HUMAN_COUNT_WORDS = frozenset({"no humans"})

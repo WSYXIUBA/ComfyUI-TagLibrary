@@ -1051,6 +1051,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-exc-body .tp-exc-card .nm { font-size:11.5px; }
       .tp-exc-body .tp-exc-card .why { font-size:10px; }
       .tp-exc-body .tp-exc-card .tp-chev { cursor:pointer; }
+      /* 轴/槽位行首的启用开关 (关掉 = 加入排除列表, 抽取时整条跳过) */
+      .tp-row-tog { width:13px; height:13px; flex:0 0 auto; cursor:pointer;
+                    accent-color: var(--tl-accent); margin:0 1px 0 0; }
       /* 段位分隔标题 (Anima tag order 的六段) */
       .tp-sec-head { font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--tl-accent-text);
                      opacity:.85; padding:9px 4px 3px; margin-top:2px;
@@ -1117,7 +1120,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         padding:6px 18px; cursor:pointer; font-weight:600; font-size:12.5px; }
       .tp-cf-save:hover { filter:brightness(1.12); }
       .tp-glist { margin-bottom:6px; }
-      .tp-viewmode { display:flex; gap:4px; margin-bottom:8px; }
       .tp-vm { flex:1; padding:5px 0; font-size:11.5px; border-radius:7px; cursor:pointer;
                border:1px solid var(--tl-border); background:var(--tl-card); color:var(--tl-text-2); }
       .tp-vm:hover { background:var(--tl-hover); }
@@ -1239,6 +1241,13 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     1: "① 质量 · 元信息 · 风格", 2: "② 人数", 3: "③ 角色",
     4: "④ 作品", 5: "⑤ 画师", 6: "⑥ 通用", 9: "⑨ 未归类",
   };
+  // 轴的中文名 → 轴 id (与 py 侧 axes.AXIS_NAME_ZH 对应)
+  const AXIS_ZH_TO_ID = {
+    "画质规格": "meta", "人数": "count", "角色身份": "character",
+    "外貌特征": "appearance", "服装": "clothing", "道具武器": "prop",
+    "动作姿态": "action", "场景环境": "environment", "光影氛围": "lighting",
+    "构图镜头": "camera", "风格媒介": "style", "材质特效": "material",
+  };
   const AXIS_ORDER = ["meta", "style", "count", "character", "appearance",
                       "clothing", "prop", "action", "environment", "lighting",
                       "camera", "material", "misc"];
@@ -1248,36 +1257,31 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       for (const s of c.subcategories || [])
         for (const t of s.tags || []) fn(t, c, s);
   }
-
   function renderCatsInner() {
     catsBox.innerHTML = "";
-    if (!ui.openCats) ui.openCats = new Set();
-    // v1.6.0: 默认进"段位序"视图 —— 它就是引擎的真实结构 (轴按 Anima 六段分组),
-    // 分类树只是编辑层皮肤。旧默认是树视图, 导致段位分组"改了却看不见"。
-    if (!ui.viewMode) ui.viewMode = "axis";
-    // ---- 视图切换条 ----
-    const vmBox = document.createElement("div");
-    vmBox.className = "tp-viewmode";
-    vmBox.innerHTML = `
-      <button class="tp-vm ${ui.viewMode === "axis" ? "active" : ""}" data-vm="axis">🎯 段位序</button>
-      <button class="tp-vm ${ui.viewMode === "tree" ? "active" : ""}" data-vm="tree">🌲 分类树</button>`;
-    catsBox.appendChild(vmBox);
-    vmBox.querySelectorAll(".tp-vm").forEach((b) => {
-      b.onclick = () => {
-        ui.viewMode = b.dataset.vm;
-        ui.activeCat = null; ui.activeSub = ui.activeAxis = null;
-        renderCats(); renderChips();
-      };
-    });
-    const allCount = libCats().reduce((n, c) => n + countTags(c), 0);
-    // ---- 总控制开关 + 范围 (放在"全部"上面) ----
+    if (!ui.openAxes) ui.openAxes = new Set();
     const st = getState(node);
     const master = st.fill_master ?? true;
-    // v1.5.0: "自动配额"模式的语义已从「每个槽位抽 N 个」改为
-    // 「全库总共出 N 个 + 各槽位配额内置」(见 slotpolicy.py)。原先按每槽位
-    // 3~5 个 × 63 槽位会爆到 200+ 词且自相矛盾, 故这里改为总词数预算。
     const tmin = st.total_min ?? 40;
     const tmax = st.total_max ?? 60;
+    const excludedSet = new Set(getExcluded() || []);
+    const isEx = (k) => excludedSet.has(k);
+    // 开关 = 写 exclude_categories。轴/槽位/孙类三级同一套路径, 与引擎的 _migrate_excludes 对齐。
+    const toggleEx = (key, on, parentKey) => {
+      const cur = new Set(getExcluded() || []);
+      if (on) { cur.delete(key); }
+      else {
+        cur.add(key);
+        if (!parentKey) for (const k of [...cur]) if (k.startsWith(key + "/")) cur.delete(k);
+        else cur.delete(parentKey);        // 关子级时清掉父级整条排除
+      }
+      setExcluded([...cur]);
+      renderCats();
+    };
+
+    const allCount = libCats().reduce((n2, c) => n2 + countTags(c), 0);
+
+    // ---- 总预算 ----
     const masterBox = document.createElement("div");
     masterBox.className = "tp-master";
     masterBox.innerHTML = `
@@ -1292,7 +1296,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <input type="number" class="tp-total-max" min="0" max="300" value="${tmax}"/>
       </div>
       <div class="tp-range-hint">全库共出 ${tmin}~${tmax} 个词 · 各槽位配额已内置<br>
-        关掉此开关则改为下方逐条自定义</div>`;
+        关掉此开关则改为逐槽位自定义</div>`;
     catsBox.appendChild(masterBox);
     masterBox.querySelector(".tp-master-sw").onchange = (e) => {
       setState(node, { fill_master: e.target.checked });
@@ -1305,91 +1309,86 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       const hi = Math.min(300, Math.max(0, Math.max(mn, mx)));
       setState(node, { total_min: lo, total_max: hi });
       masterBox.querySelector(".tp-range-hint").innerHTML =
-        `全库共出 ${lo}~${hi} 个词 · 各槽位配额已内置<br>关掉此开关则改为下方逐条自定义`;
+        `全库共出 ${lo}~${hi} 个词 · 各槽位配额已内置<br>关掉此开关则改为逐槽位自定义`;
     };
     masterBox.querySelector(".tp-total-min").onchange = saveMaster;
     masterBox.querySelector(".tp-total-max").onchange = saveMaster;
-    // 排除的类目标注 0~0 (不填充)
-    const excludedSet = new Set(getExcluded() || []);
-    // ---- 轴视图模式: 侧栏 = 拼装轴列表 (引擎本体) ----
-    if (ui.viewMode === "axis") {
-      const lib = LIB_CACHE || { categories: [] };
-      const axisCount = {};
-      eachTag(lib, (t) => {
-        const a = t.axis || "misc";
-        axisCount[a] = (axisCount[a] || 0) + 1;
-      });
-      mkRow(catsBox, {
-        id: "__axisall__", icon: "🎯", name: "全部轴", count: allCount, depth: 0,
-        active: !ui.activeAxis,
-        onclick: () => { ui.activeAxis = null; renderCats(); renderChips(); },
-      });
-      let curSec = 0;
-      for (const a of AXIS_ORDER) {
-        if (!axisCount[a]) continue;
-        const sec = AXIS_SECTION[a] || 6;
-        if (sec !== curSec) {
-          // 段位分隔标题 —— 让"输出时这一轴落在第几段"一目了然
-          const h = document.createElement("div");
-          h.className = "tp-sec-head";
-          h.textContent = SECTION_ZH[sec] || `第 ${sec} 段`;
-          catsBox.appendChild(h);
-          curSec = sec;
-        }
-        mkRow(catsBox, {
-          id: "axis:" + a, icon: "", name: AXES_ZH[a] || a, count: axisCount[a],
-          depth: 1, active: ui.activeAxis === a,
-          onclick: () => { ui.activeAxis = a; renderCats(); renderChips(); },
-        });
-      }
-      return;
-    }
+
+    // ---- 全部 ----
     mkRow(catsBox, {
-      id: "__all__", icon: "🗂", name: "全部", count: allCount,
-      depth: 0, active: ui.activeCat === "__all__",
-      onclick: () => { ui.activeCat = "__all__"; ui.activeSub = null; renderCats(); renderChips(); },
+      id: "__all__", icon: "🎯", name: "全部", count: allCount, depth: 0,
+      active: !ui.activeAxis && !ui.activeSlot,
+      onclick: () => { ui.activeAxis = null; ui.activeSlot = null; renderCats(); renderChips(); },
     });
-    for (const c of libCats()) {
-      const open = ui.openCats.has(c.id);
-      const isExcluded = excludedSet.has(c.name);
+
+    // ---- 段位 → 轴 → 槽位 → 孙类 (单一视图) ----
+    // 库里的轴顺序是编辑顺序, 未必等于输出段位序 (例如 style 是第 1 段却排在库里最后),
+    // 不排序会让段位标题重复出现 (①…⑥…①…)。这里按 (段位, AXIS_ORDER) 排。
+    const axCats = libCats().slice().sort((x, y) => {
+      const sx = AXIS_SECTION[AXIS_ZH_TO_ID[x.name]] || 6;
+      const sy = AXIS_SECTION[AXIS_ZH_TO_ID[y.name]] || 6;
+      if (sx !== sy) return sx - sy;
+      return AXIS_ORDER.indexOf(AXIS_ZH_TO_ID[x.name]) - AXIS_ORDER.indexOf(AXIS_ZH_TO_ID[y.name]);
+    });
+    let curSec = 0;
+    for (const c of axCats) {
+      const aId = AXIS_ZH_TO_ID[c.name] || "";
+      const sec = AXIS_SECTION[aId] || 6;
+      if (sec !== curSec) {
+        const h = document.createElement("div");
+        h.className = "tp-sec-head";
+        h.textContent = SECTION_ZH[sec] || `第 ${sec} 段`;
+        catsBox.appendChild(h);
+        curSec = sec;
+      }
+      const cEx = isEx(c.name);
+      const open = ui.openAxes.has(c.name);
+      const axTotal = (c.subcategories || []).reduce((n2, s2) => n2 + (s2.tags || []).length, 0);
       mkRow(catsBox, {
-        id: c.id, icon: c.icon || "📁", name: c.name + (isExcluded ? " (0~0)" : ""), count: countTags(c),
+        id: c.id, icon: c.icon || "📁",
+        name: c.name + (cEx ? " · 已关" : ""), count: axTotal,
         depth: 0, color: c.color, chevron: true, open,
-        active: ui.activeCat === c.id && !ui.activeSub,
-        onclick: () => { ui.activeCat = c.id; ui.activeSub = null; renderCats(); renderChips(); },
-        onchevron: () => {
-          open ? ui.openCats.delete(c.id) : ui.openCats.add(c.id);
-          renderCats();
-        },
+        active: ui.activeAxis === aId && !ui.activeSlot,
+        toggle: { on: !cEx, title: cEx ? "整条轴已关闭 (抽取时跳过)" : "点击关闭整条轴",
+                  onToggle: (on) => toggleEx(c.name, on, null) },
+        onclick: () => { ui.activeAxis = aId; ui.activeSlot = null; renderCats(); renderChips(); },
+        onchevron: () => { open ? ui.openAxes.delete(c.name) : ui.openAxes.add(c.name); renderCats(); },
       });
       if (!open) continue;
       for (const sub of c.subcategories || []) {
-        // 子分类独立范围框 (总控制关时生效)
+        const key = `${c.name}/${sub.name}`;
+        const sEx = cEx || isEx(key);
         const subRange = (st.fill_sub_ranges || {})[sub.id] || { min: 1, max: 1 };
         mkRow(catsBox, {
-          id: sub.id, name: sub.name, count: (sub.tags || []).length,
-          depth: 1, active: ui.activeSub === sub.id,
-          range: isExcluded ? { min: 0, max: 0, locked: true } : subRange,
+          id: sub.id, name: sub.name + (sEx ? " · 已关" : ""), count: (sub.tags || []).length,
+          depth: 1, active: ui.activeSlot === sub.name,
+          toggle: { on: !sEx, title: cEx ? "所属轴已关闭" : (isEx(key) ? "该槽位已关闭" : "点击关闭该槽位"),
+                    onToggle: (on) => toggleEx(key, on, c.name) },
+          range: cEx ? { min: 0, max: 0, locked: true } : subRange,
           onRange: (mn, mx) => {
             const all = { ...(getState(node).fill_sub_ranges || {}) };
             all[sub.id] = { min: mn, max: mx };
             setState(node, { fill_sub_ranges: all });
           },
-          onclick: () => { ui.activeCat = c.id; ui.activeSub = sub.id; renderCats(); renderChips(); },
+          onclick: () => { ui.activeAxis = aId; ui.activeSlot = sub.name; renderCats(); renderChips(); },
         });
-        // 孙分类 (groups)
         for (const g of sub.groups || []) {
+          const gkey = `${c.name}/${sub.name}/${g.name}`;
+          const gEx = sEx || isEx(gkey);
           mkRow(catsBox, {
-            id: g.id, name: g.name, count: (g.tags || []).length,
-            depth: 2, active: ui.activeSub === g.id, leaf: true,
-            onclick: () => { ui.activeCat = c.id; ui.activeSub = g.id; renderCats(); renderChips(); },
+            id: g.id, name: g.name + (gEx ? " · 已关" : ""), count: (g.tags || []).length,
+            depth: 2, active: false,
+            toggle: { on: !gEx, title: sEx ? "所属槽位已关闭" : "点击关闭该孙分类",
+                      onToggle: (on) => toggleEx(gkey, on, null) },
+            onclick: () => { ui.activeAxis = aId; ui.activeSlot = sub.name; renderCats(); renderChips(); },
           });
         }
       }
     }
   }
 
-  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange }) {
+
+  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange, toggle, leaf }) {
     const el = document.createElement("div");
     el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
     // 分类自带色 (用户自定义) 才内联; 未配置时交给 CSS 变量 → 深浅主题自动适配
@@ -1403,9 +1402,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <input type="number" min="0" max="20" value="${range.max}" data-r="max" ${range.locked ? "disabled" : ""}/>
       </span>` : "";
     el.innerHTML =
+      (toggle ? `<input type="checkbox" class="tp-row-tog" ${toggle.on ? "checked" : ""}`
+                + ` title="${toggle.title || "启用/关闭"}" style="margin-right:2px"/>` : "") +
       `${chevron ? `<span class="tp-chev">${open ? "▾" : "▸"}</span>` : (depth > 0 ? '<span class="tp-chev">·</span>' : "")}` +
       `<span>${icon}</span><span class="nm">${name}</span><span class="ct">${count}</span>` +
       rangeHtml;
+    const togEl = el.querySelector(".tp-row-tog");
+    if (togEl) {
+      togEl.onclick = (e) => { e.stopPropagation(); };
+      togEl.onchange = (e) => { e.stopPropagation(); toggle.onToggle(!toggle.on); };
+    }
     el.onclick = onclick;
     if (onchevron) {
       el.querySelector(".tp-chev").onclick = (e) => { e.stopPropagation(); onchevron(); };
@@ -1482,7 +1488,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       let shown = 0;
       for (const a of AXIS_ORDER) {
         if (ui.activeAxis && ui.activeAxis !== a) continue;
-        const rows = (byAxis[a] || []).filter((r) => matches(r.t));
+        const rows = (byAxis[a] || []).filter((r) =>
+          matches(r.t) && (!ui.activeSlot || (r.s && r.s.name === ui.activeSlot)));
         if (!rows.length) continue;
         shown += rows.length;
         const head = document.createElement("div");
@@ -1515,7 +1522,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         + (t.nsfw ? "🔞 NSFW 标签"
           : t.gender === "female" ? "♀ 女性专属标签"
           : t.gender === "male" ? "♂ 男性专属标签" : "")
-        + `\n轴: ${AXES_ZH[t.axis || "misc"] || t.axis} · 树: ${c.name}/${s.name}`;
+        + `\n轴: ${AXES_ZH[t.axis || "misc"] || t.axis} · 槽位: ${s.name}`;
       el.onclick = () => {
         const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
         if (i >= 0) ui.picked.splice(i, 1);
@@ -1530,47 +1537,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       + `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
     return el;
   }
-
   function renderChips() {
-    if (ui.viewMode === "axis") { renderAxisChips(); return; }
-    chipsBox.innerHTML = "";
-    const existing = getExisting();
-    // activeSub 可以是子分类 id 或孙分类 id
-    const subFilter = ui.activeSub || null;
-    const cats = libCats().filter((c) => !ui.activeCat || ui.activeCat === "__all__" || c.id === ui.activeCat);
-    let shown = 0;
-    for (const cat of cats) {
-      const clr = cat.color || "#54a0ff";
-      for (const sub of cat.subcategories || []) {
-        if (subFilter && sub.id !== subFilter && !(sub.groups || []).some((g) => g.id === subFilter)) continue;
-        const groups = sub.groups && sub.groups.length ? sub.groups : null;
-        if (groups) {
-          // 三级: 按 孙分类 分小节
-          for (const g of groups) {
-            if (subFilter && subFilter !== sub.id && g.id !== subFilter) continue;
-            const hits = (g.tags || []).filter(matches);
-            if (!hits.length) continue;
-            shown += hits.length;
-            const head = document.createElement("div");
-            head.className = "tp-sub";
-            head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name} / ${g.name}`;
-            chipsBox.appendChild(head);
-            appendGrid(hits, clr, existing);
-          }
-        } else {
-          const hits = (sub.tags || []).filter(matches);
-          if (!hits.length) continue;
-          shown += hits.length;
-          const head = document.createElement("div");
-          head.className = "tp-sub";
-          head.textContent = `${cat.icon || ""} ${cat.name} / ${sub.name}`;
-          chipsBox.appendChild(head);
-          appendGrid(hits, clr, existing);
-        }
-      }
-    }
-    if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
+    // v1.6.2: 树视图已删除 —— 只有"段位序"一种显示方式 (轴=引擎真实结构)。
+    renderAxisChips();
   }
+
 
   function appendGrid(hits, clr, existing) {
     const grid = document.createElement("div");

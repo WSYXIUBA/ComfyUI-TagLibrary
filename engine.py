@@ -479,6 +479,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             return False, 0          # 单人场景不抽"仅多人成立"的槽位
         if count_no_human and snap.pool_axis.get(si) in slotpolicy.NO_HUMAN_SKIP_AXES:
             return False, 0          # "画面里没有人" -> 不抽身份/外貌/服装
+        # 词 -> 槽位屏蔽: 已抽到 "bare feet" 就不再抽鞋子槽 (跨槽位的矛盾, 配额拦不住)
+        for w, bad_slots in slotpolicy.BLOCK_SLOTS_BY_WORD.items():
+            if sub_key in bad_slots and w in led.used_lower:
+                return False, 0
         if master:
             cap = slotpolicy.caps_for(sub_key)[1]      # max_n
         else:
@@ -499,6 +503,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 continue
             if bundled_only and tid in bundled_only:
                 continue  # 束专属词: 只能经武器档案出生, 池中永不自抽
+            # 槽位 -> 词 屏蔽 (反向): 鞋子槽已出词就不再抽 "bare feet" / "barefoot"
+            _bw = slotpolicy.BLOCK_WORDS_BY_SLOT.get(sub_key)
+            if _bw and lo in _bw:
+                continue
             if not tag_ok(tid):
                 continue  # 动态闸门: 性别锁 (count 词入账后生效)
             if not tag_match(lo, tid):
