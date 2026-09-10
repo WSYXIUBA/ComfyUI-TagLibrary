@@ -1010,6 +1010,47 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                         border-radius:6px; color:var(--tl-text); padding:3px 5px; font-size:11.5px; text-align:center; }
       .tp-range-hint { font-size:10.5px; color:var(--tl-dim); margin-top:5px; }
       .tp-empty { color:var(--tl-muted); }
+      /* ---------- 行内编辑控件 (档案 / 互斥域 / NL 三视图共用) ---------- */
+      .tp-ecell { background:var(--tl-input-bg); border:1px solid var(--tl-border-2); border-radius:6px;
+                  color:var(--tl-text); font-size:11.5px; padding:3px 6px; outline:none; min-width:0; }
+      .tp-ecell:focus { border-color:color-mix(in srgb, var(--tl-accent) 60%, transparent); }
+      .tp-ecell.wide { flex:1 1 160px; min-width:160px; }
+      .tp-ecell.num { width:44px; text-align:center; }
+      .tp-echip { display:inline-flex; align-items:center; gap:5px; }
+      .tp-echip-x { cursor:pointer; opacity:.5; font-style:normal; font-size:10px; }
+      .tp-echip-x:hover { opacity:1; color:var(--tl-danger); }
+      .tp-echip-add { background:transparent; border:1px dashed var(--tl-border-2); border-radius:7px;
+                      color:var(--tl-text-2); font-size:11px; padding:3px 8px; outline:none; min-width:96px; }
+      .tp-echip-add:focus { border-color:var(--tl-accent); }
+      .tp-edel { background:transparent; border:1px solid var(--tl-border-2); color:var(--tl-muted);
+                 border-radius:6px; cursor:pointer; font-size:11px; padding:1px 7px; }
+      .tp-edel:hover { color:var(--tl-danger); border-color:var(--tl-danger); }
+      .tp-eadd { background:color-mix(in srgb, var(--tl-accent) 12%, transparent); cursor:pointer;
+                 border:1px solid color-mix(in srgb, var(--tl-accent) 45%, transparent);
+                 color:var(--tl-accent-text); border-radius:7px; padding:3px 11px; font-size:11.5px; }
+      .tp-eadd:hover { background:color-mix(in srgb, var(--tl-accent) 24%, transparent); }
+      .tp-erow { display:flex; gap:8px; margin-top:8px; }
+      .tp-savebox { margin:16px 0 4px; }
+      .tp-save { background:var(--tl-accent); border:0; color:#fff; border-radius:8px;
+                 padding:6px 20px; cursor:pointer; font-weight:600; font-size:12.5px; }
+      .tp-save:hover { filter:brightness(1.12); }
+      .tp-smsg { margin-left:10px; font-size:11.5px; }
+      .tp-gitem2 { border:1px solid var(--tl-border); border-radius:10px; padding:8px 12px; margin-bottom:6px;
+                   background:var(--tl-card-2); }
+      .tp-gitem2-h { display:flex; align-items:center; gap:8px; }
+      .tp-gitem2-h .tp-ecell { flex:0 0 auto; }
+      .tp-gitem2-h .tp-gn { margin-left:auto; color:var(--tl-muted); font-size:11px; }
+      .tp-fam-edit { display:flex; align-items:center; gap:6px; margin-bottom:3px; }
+      .tp-fam-edit .tp-ecell { flex:1; }
+      /* ---------- 排除抽屉 (侧栏内, 窄容器 -> 覆盖全宽视图的尺寸) ---------- */
+      .tp-exc { margin-top:10px; border-top:1px solid var(--tl-border); padding-top:6px; flex:0 0 auto; }
+      .tp-exc > summary { cursor:pointer; font-size:11.5px; font-weight:600; color:var(--tl-text-2); padding:3px 2px; }
+      .tp-exc-body { padding:4px 0; max-height:44vh; overflow-y:auto; }
+      .tp-exc-body .tp-exc-hint { font-size:10.5px; line-height:1.55; margin-bottom:6px; }
+      .tp-exc-body .tp-exc-card { gap:6px; padding:4px 6px; margin-bottom:0; font-size:11.5px; border-radius:6px; }
+      .tp-exc-body .tp-exc-card .nm { font-size:11.5px; }
+      .tp-exc-body .tp-exc-card .why { font-size:10px; }
+      .tp-exc-body .tp-exc-card .tp-chev { cursor:pointer; }
       /* 段位分隔标题 (Anima tag order 的六段) */
       .tp-sec-head { font-size:10px; font-weight:700; letter-spacing:.06em; color:var(--tl-accent-text);
                      opacity:.85; padding:9px 4px 3px; margin-top:2px;
@@ -1147,8 +1188,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <button class="tp-tabbtn tp-proftab">⚔ 武器档案</button>
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
         <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
-        <button class="tp-tabbtn tp-excludetab">🚫 排除类目</button>
-        <button class="tp-tabbtn tp-cftab">🧷 防冲突关系</button>
         <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
         <span style="flex:1"></span>
@@ -1159,8 +1198,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <section class="tp-profview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-nlview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
-        <section class="tp-excview" style="display:none;flex:1;overflow-y:auto;padding:16px 20px;"></section>
-        <section class="tp-cfview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-setview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
       </div>
       <div class="tp-foot">
@@ -1212,16 +1249,18 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         for (const t of s.tags || []) fn(t, c, s);
   }
 
-  function renderCats() {
+  function renderCatsInner() {
     catsBox.innerHTML = "";
     if (!ui.openCats) ui.openCats = new Set();
-    if (!ui.viewMode) ui.viewMode = "tree";
+    // v1.6.0: 默认进"段位序"视图 —— 它就是引擎的真实结构 (轴按 Anima 六段分组),
+    // 分类树只是编辑层皮肤。旧默认是树视图, 导致段位分组"改了却看不见"。
+    if (!ui.viewMode) ui.viewMode = "axis";
     // ---- 视图切换条 ----
     const vmBox = document.createElement("div");
     vmBox.className = "tp-viewmode";
     vmBox.innerHTML = `
-      <button class="tp-vm ${ui.viewMode === "tree" ? "active" : ""}" data-vm="tree">🌲 分类树</button>
-      <button class="tp-vm ${ui.viewMode === "axis" ? "active" : ""}" data-vm="axis">🎯 拼装轴</button>`;
+      <button class="tp-vm ${ui.viewMode === "axis" ? "active" : ""}" data-vm="axis">🎯 段位序</button>
+      <button class="tp-vm ${ui.viewMode === "tree" ? "active" : ""}" data-vm="tree">🌲 分类树</button>`;
     catsBox.appendChild(vmBox);
     vmBox.querySelectorAll(".tp-vm").forEach((b) => {
       b.onclick = () => {
@@ -1543,7 +1582,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   /* ---------- 排除类目视图 ---------- */
-  const excView = $(".tp-excview");
   const pickCols = [".tp-cats", ".tp-chips"].map((s) => rootEl.querySelector(s));
 
   function upstreamText() {
@@ -1584,6 +1622,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     return hints;
   }
 
+  /* v1.6.0: 排除抽屉接在侧栏末尾 —— renderCats 的两个分支都有 return, 故外层包一层 */
+  function renderCats() {
+    renderCatsInner();
+    renderExclude();
+  }
+
   /* ---------- 排除: 三级粒度 ----------
      exclude_categories 里可放:
        "大类名"          -> 整类排除
@@ -1616,7 +1660,18 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   function renderExclude() {
     const ex = excKeys();
     const hints = suggestExcludes();
-    excView.innerHTML = `
+    // 目标改为侧栏底部的可折叠抽屉 (原「🚫 排除类目」页签已删)
+    let host = catsBox.querySelector(".tp-exc");
+    if (!host) {
+      host = document.createElement("details");
+      host.className = "tp-exc";
+      catsBox.appendChild(host);
+    }
+    const excN = (getExcluded ? getExcluded().length : 0);
+    host.innerHTML = `<summary>🚫 排除类目 <span class="tp-gn">${excN ? excN + " 项" : "无"}</span></summary>
+      <div class="tp-exc-body"></div>`;
+    const body = host.querySelector(".tp-exc-body");
+    body.innerHTML = `
       <div class="tp-exc-hint">
         勾选要<b>排除</b>的层级: 可排除<b>整类</b>, 也可展开后只排除<b>子分类</b>或<b>孙分类</b>。<br/>
         排除后随机抽取与输出都会跳过对应标签。上游已有发色/眼睛等描述时 (如 <code>blue hair, blue eyes</code>),
@@ -1654,7 +1709,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         ui.excOpen.has(cat.id) ? ui.excOpen.delete(cat.id) : ui.excOpen.add(cat.id);
         renderExclude();
       };
-      excView.appendChild(card);
+      body.appendChild(card);
 
       // 子分类层 (展开时)
       if (ui.excOpen?.has(cat.id) && !isEx) {
@@ -1682,7 +1737,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
             setExcluded([...cur]);
             renderExclude();
           };
-          excView.appendChild(subCard);
+          body.appendChild(subCard);
           const t2 = subCard.querySelector(".tp-exc-toggle2");
           if (t2) t2.onclick = () => {
             if (!ui.excOpenSub) ui.excOpenSub = new Set();
@@ -1709,7 +1764,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                 setExcluded([...cur]);
                 renderExclude();
               };
-              excView.appendChild(gCard);
+              body.appendChild(gCard);
             }
           }
         }
@@ -1819,7 +1874,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   /* ---------- 🧷 防冲突关系页签 ---------- */
-  const cfView = $(".tp-cfview");
 
   /* ---------- 1.3.0 新视图: 武器档案 / 互斥域 / NL 句式 ---------- */
   const profView = $(".tp-profview");
@@ -1845,6 +1899,120 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       } catch (e) { msg.textContent = "❌ " + e.message; msg.style.color = "var(--tl-danger)"; }
       btn.disabled = false;
     };
+  }
+
+  /* ---------- 行内编辑原语 (档案 / 互斥域 / NL 三个视图共用) ----------
+     三个视图的共同点: 一个实体列表 + 每个实体若干字段 + 字段里可能嵌子列表。
+     统一在这里提供原语, 避免每个视图各写一套只读渲染 + JSON 兜底。
+     规则: 先改内存工作副本, 点保存才落盘; 结构性改动 (增删行) 立即重绘。 */
+
+  function tagDatalistHtml() {
+    const opts = [];
+    for (const c of libCats()) for (const s of c.subcategories || []) for (const t of s.tags || []) opts.push(t.en);
+    return `<datalist id="tp-tagdl">${opts.map((v) => `<option value="${esc(String(v))}"/>`).join("")}</datalist>`;
+  }
+
+  function subDatalistHtml() {
+    const opts = [];
+    for (const c of libCats()) for (const s of c.subcategories || []) opts.push(`${c.name}/${s.name}`);
+    return `<datalist id="tp-subdl">${opts.map((v) => `<option value="${esc(String(v))}"/>`).join("")}</datalist>`;
+  }
+
+  /** 可编辑 chip 列表: 每个 chip 带 ✕, 末尾一个回车即加的输入框。 */
+  function fillChips(container, arr, onChange, datalistId) {
+    container.innerHTML = "";
+    arr.forEach((v, i) => {
+      const c = document.createElement("span");
+      c.className = "tp-chip tp-echip";
+      c.innerHTML = `${bi(v)}<i class="tp-echip-x" title="移除">✕</i>`;
+      c.querySelector(".tp-echip-x").onclick = () => { arr.splice(i, 1); onChange(); };
+      container.appendChild(c);
+    });
+    const inp = document.createElement("input");
+    inp.className = "tp-echip-add";
+    inp.placeholder = "＋ 回车添加";
+    if (datalistId) inp.setAttribute("list", datalistId);
+    inp.onkeydown = (e) => {
+      if (e.key !== "Enter") return;
+      e.preventDefault();
+      const v = inp.value.trim();
+      if (!v) return;
+      if (!arr.some((x) => String(x).toLowerCase() === v.toLowerCase())) arr.push(v);
+      onChange();
+    };
+    container.appendChild(inp);
+  }
+
+  function saveBarHtml(label) {
+    return `<div class="tp-jrow"><button class="tp-save">💾 ${label}</button><span class="tp-smsg"></span></div>`;
+  }
+
+  async function postJson(apiUrl, payload, msgEl, okText) {
+    msgEl.textContent = "保存中…"; msgEl.style.color = "var(--tl-muted)";
+    try {
+      const r = await fetch(apiUrl, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const d = await r.json();
+      if (d.ok) {
+        msgEl.textContent = okText || "✅ 已保存, 引擎即时生效";
+        msgEl.style.color = "var(--tl-ok)";
+        WEAPON_POSES = null;
+        return true;
+      }
+      msgEl.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 200);
+      msgEl.style.color = "var(--tl-danger)";
+      return false;
+    } catch (e) {
+      msgEl.textContent = "❌ " + e.message; msgEl.style.color = "var(--tl-danger)";
+      return false;
+    }
+  }
+
+  /** 把一行 input 的值写回实体字段。data-f 指定字段名。 */
+  function applyFieldInput(t, f, el) {
+    let v = el.value;
+    if (f === "hands" || f === "gaze" || f === "weight") {
+      const n = parseFloat(v);
+      t[f] = Number.isFinite(n) ? n : (f === "weight" ? 1 : 0);
+      return;
+    }
+    v = String(v).trim();
+    if (f === "tags") {
+      t[f] = v ? v.split(/[,，]/).map((x) => x.trim()).filter(Boolean) : [];
+      return;
+    }
+    if (f === "state_slot") {
+      const o = {};
+      for (const kv of v.split(/[,，]/)) {
+        const m2 = kv.split("=");
+        if (m2.length >= 2) o[m2[0].trim()] = m2.slice(1).join("=").trim();
+      }
+      t[f] = Object.keys(o).length ? o : undefined;
+      if (!t[f]) delete t[f];
+      return;
+    }
+    if (v) t[f] = v; else delete t[f];
+  }
+
+  /** 在容器内统一绑定: 单元格变更 / 删除按钮 / 新增按钮。
+   *  getEntity(pi, k, xi) -> 要修改的对象; data-k 为空表示改档案本体。 */
+  function bindEditable(scope, { getEntity, onStructural }) {
+    scope.querySelectorAll("input[data-f]").forEach((el) => {
+      el.onchange = () => {
+        const pi = Number(el.dataset.p);
+        const xi = el.dataset.x === undefined ? null : Number(el.dataset.x);
+        const t = getEntity(pi, el.dataset.k || "", xi);
+        if (t) applyFieldInput(t, el.dataset.f, el);
+      };
+    });
+    scope.querySelectorAll(".tp-edel").forEach((b) => {
+      b.onclick = () => { onStructural("del", Number(b.dataset.p), b.dataset.k || "", b.dataset.x); };
+    });
+    scope.querySelectorAll(".tp-eadd").forEach((b) => {
+      b.onclick = () => { onStructural("add", Number(b.dataset.p), b.dataset.k || "", null); };
+    });
   }
 
   const esc = (x) => String(x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
@@ -1887,110 +2055,343 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     return (TP_LANG.en || !z) ? esc(en) : `${esc(en)}<span class="tp-zh">${esc(z)}</span>`;
   }
 
+  let profWork = null;      // 编辑中的档案工作副本 (点保存才落盘)
+  let profDiag = [];
+
   async function renderProfView() {
     profView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
     let d;
     try { d = await fetch("/taglib/api/profiles").then((r) => r.json()); }
     catch { profView.innerHTML = `<div class="tp-empty" style="padding:30px;color:#ff6b6b">档案接口加载失败</div>`; return; }
-    const profs = (d.data && d.data.profiles) || [];
+    LANG_MAP = Object.assign(LANG_MAP, d.lang || {});
+    _EN_ZH = null;
+    profDiag = d.diag || [];
+    const src = d.data && Array.isArray(d.data.profiles) ? d.data : { version: 1, profiles: [] };
+    profWork = JSON.parse(JSON.stringify(src));
+    drawProf();
+  }
+
+  function drawProf() {
+    const profs = (profWork.profiles = profWork.profiles || []);
+    const nPose = profs.reduce((n, p) => n + (p.poses || []).length + (p.extras || []).length, 0);
     let html = `
-      <div class="tp-h1">⚔ 武器档案 ${langBtnHtml()} <span class="tp-h1-sub">${profs.length} 份 · ${((d.weapon_poses || []).length)} 个束成员词</span></div>
-      <div class="tp-note">姿势不独立存在: 每条姿势挂在武器档案下, 抽中/钉选武器时按概率自动带出一条; 束成员词在随机池里永不单抽 (悬停标签看 ⚔ 标记)。资源列 = 吃几只手/视线, 引擎抽取时实时算账, 超预算组合出生前就被丢。</div>`;
-    for (const p of profs) {
-      const dg = (d.diag || []).find((x) => x.id === p.id) || {};
+      <div class="tp-h1">⚔ 武器 / 物品档案 ${langBtnHtml()}
+        <span class="tp-h1-sub">${profs.length} 份 · ${nPose} 条束</span>
+        <button class="tp-eadd tp-addprof" style="margin-left:auto">＋ 新增档案</button></div>
+      <div class="tp-note">全部字段可直接改: 档案 id / 中文名 / 挂载槽位 / 身份词, 以及每条束的 id、出词、手数、视线、权重、状态槽。改完点底部「💾 保存档案」写入 <code>profiles.json</code>。
+      姿势不独立存在 —— 每条束挂在档案下, 抽中/钉选身份词时按概率自动带出一条; 束成员词在随机池里永不单抽。</div>`;
+    if (!profs.length) html += `<div class="tp-empty" style="padding:24px">还没有档案, 点右上「＋ 新增档案」开始。</div>`;
+    profs.forEach((p, pi) => {
+      const dg = (profDiag || []).find((x) => x.id === p.id) || {};
+      const row = (x, xi, kind) => `
+        <tr>
+          <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="id" value="${esc(x.id || "")}" placeholder="束 id"/></td>
+          <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="zh" value="${esc(x.zh || "")}" placeholder="中文"/></td>
+          <td><input class="tp-ecell wide" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="tags" value="${esc((x.tags || []).join(", "))}" placeholder="出词, 逗号分隔"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="2" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="hands" value="${x.hands ?? 0}"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="1" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="gaze" value="${x.gaze ?? 0}"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="3" step="0.1" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="weight" value="${x.weight ?? 1}"/></td>
+          <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="state_slot" value="${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(", "))}" placeholder="drawn=yes"/></td>
+          <td><button class="tp-edel" data-p="${pi}" data-k="${kind}" data-x="${xi}" title="删除该条束">✕</button></td>
+        </tr>`;
       html += `
       <div class="tp-pcard">
-        <div class="tp-pcard-h"><b>${esc(p.zh || "")}</b> <code>${esc(p.id)}</code>
+        <div class="tp-pcard-h">
+          <input class="tp-ecell" data-p="${pi}" data-f="id" value="${esc(p.id || "")}" placeholder="档案 id" style="min-width:130px"/>
+          <input class="tp-ecell" data-p="${pi}" data-f="zh" value="${esc(p.zh || "")}" placeholder="中文名" style="min-width:90px"/>
+          <input class="tp-ecell wide" list="tp-subdl" data-p="${pi}" data-f="mount_sub" value="${esc(p.mount_sub || "")}" placeholder="挂载槽位 大类/子类" style="min-width:170px"/>
           <span class="tp-pbadges">
             <span class="tp-b">${(p.poses || []).length} 姿势</span>
             <span class="tp-b">${(p.extras || []).length} 配件</span>
-            ${dg.mount_ok !== undefined ? `<span class="tp-b ${dg.mount_ok === dg.mount_total ? "ok" : "warn"}">挂载 ${dg.mount_ok}/${dg.mount_total}${dg.missing && dg.missing.length ? " 缺:" + dg.missing.join(",") : ""}</span>` : ""}
-          </span></div>
-        <div class="tp-prow"><span class="tp-pl">身份词</span>${(p.tags || []).map((t) => `<span class="tp-chip">${bi(t)}</span>`).join("")}</div>
-        <table class="tp-ptab"><tr><th>姿势 (代号)</th><th>出词</th><th>手/视线</th><th>状态槽</th><th>排斥词</th></tr>
-        ${(p.poses || []).map((x) => `<tr><td><code>${esc(x.id)}</code>${x.zh ? `<span class="tp-zh">${esc(x.zh)}</span>` : ""}</td>
-          <td>${(x.tags || []).map((t) => bi(t)).join(" + ")}</td>
-          <td>${x.hands ?? 1} / ${x.gaze ?? 0}</td>
-          <td>${esc((Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",") || "—"))}</td>
-          <td class="dim">${(x.conflicts_with || []).slice(0, 4).map((t) => esc(t + (TP_LANG.en ? "" : (zhOf(t) ? " " + zhOf(t) : "")))).join(", ")}${(x.conflicts_with || []).length > 4 ? "…" : ""}</td></tr>`).join("")}
-        ${(p.extras || []).map((x) => `<tr class="extra"><td>🎒 <code>${esc(x.id)}</code>${x.zh ? `<span class="tp-zh">${esc(x.zh)}</span>` : ""}</td>
-          <td>${(x.tags || []).map((t) => bi(t)).join(" + ")}</td><td>—</td>
-          <td>${esc((Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(",") || "—"))}</td>
-          <td class="dim">${(x.conflicts_with || []).slice(0, 4).map((t) => esc(t + (TP_LANG.en ? "" : (zhOf(t) ? " " + zhOf(t) : "")))).join(", ")}</td></tr>`).join("")}
+            ${dg.mount_ok !== undefined ? `<span class="tp-b ${dg.mount_ok === dg.mount_total ? "ok" : "warn"}">挂载 ${dg.mount_ok}/${dg.mount_total}${dg.missing && dg.missing.length ? " 缺:" + esc(dg.missing.join(",")) : ""}</span>` : ""}
+          </span>
+          <button class="tp-edel tp-delprof" data-p="${pi}" title="删除该档案">✕</button>
+        </div>
+        <div class="tp-prow"><span class="tp-pl">身份词</span><span class="tp-echips" data-p="${pi}"></span></div>
+        <table class="tp-ptab">
+          <tr><th>束 id</th><th>中文</th><th>出词</th><th>手</th><th>视线</th><th>权重</th><th>状态槽</th><th></th></tr>
+          ${(p.poses || []).map((x, xi) => row(x, xi, "poses")).join("")}
+          ${(p.extras || []).map((x, xi) => row(x, xi, "extras")).join("")}
         </table>
+        <div class="tp-erow">
+          <button class="tp-eadd" data-p="${pi}" data-k="poses">＋ 姿势</button>
+          <button class="tp-eadd" data-p="${pi}" data-k="extras">＋ 配件</button>
+        </div>
       </div>`;
+    });
+    if ((profWork.profiles || []).some((p) => !(p.tags || []).length)) {
+      html += `<div class="tp-note" style="color:var(--tl-danger-soft)">⚠ 有档案没有身份词 —— 引擎无法在抽取时找到它, 请至少填一个。</div>`;
     }
-    if ((d.errors || []).length) {
-      html += `<div class="tp-pcard err"><b>⚠ 校验错误</b><pre>${esc(JSON.stringify(d.errors, null, 1))}</pre></div>`;
-    }
-    html += `
-      <details class="tp-jsonbox"><summary>✏ 编辑全部档案 (JSON, 保存前自动备份 .bak)</summary>
-        <textarea class="tp-json" rows="16" spellcheck="false">${esc(JSON.stringify(d.data, null, 1))}</textarea>
+    html += `${tagDatalistHtml()}${subDatalistHtml()}
+      <div class="tp-savebox">${saveBarHtml("保存档案")}</div>
+      <details class="tp-jsonbox"><summary>✏ 高级: 直接编辑 JSON (保存前自动备份 .bak)</summary>
+        <textarea class="tp-json" rows="14" spellcheck="false">${esc(JSON.stringify(profWork, null, 1))}</textarea>
         <div class="tp-jrow"><button class="tp-jsave">💾 保存档案</button><span class="tp-jmsg"></span></div>
       </details>`;
-    LANG_MAP = Object.assign(LANG_MAP, d.lang || {});
-    _EN_ZH = null;  // 档案保存后库可能变, 语言按钮重进视图时重建
     profView.innerHTML = html;
-    bindLang(profView, renderProfView);
+    bindLang(profView, drawProf);
+
+    // chip 列表 (身份词)
+    profView.querySelectorAll(".tp-echips").forEach((el) => {
+      const p = profWork.profiles[Number(el.dataset.p)];
+      p.tags = p.tags || [];
+      fillChips(el, p.tags, drawProf, "tp-tagdl");
+    });
+    bindEditable(profView, {
+      getEntity: (pi, k, xi) => (k ? (profWork.profiles[pi][k] || [])[xi] : profWork.profiles[pi]),
+      onStructural: (act, pi, k, xi) => {
+        if (act === "del") {
+          if (k) profWork.profiles[pi][k].splice(Number(xi), 1);
+          else profWork.profiles.splice(pi, 1);
+        } else if (act === "add" && k) {
+          (profWork.profiles[pi][k] = profWork.profiles[pi][k] || []).push(
+            k === "poses" ? { id: "new_pose", tags: [], hands: 1, gaze: 0, weight: 1 }
+                          : { id: "new_extra", tags: [], weight: 1 });
+        }
+        drawProf();
+      },
+    });
+    const addP = profView.querySelector(".tp-addprof");
+    addP.onclick = () => {
+      profWork.profiles.push({ id: "", zh: "", mount_sub: "", tags: [], poses: [], extras: [] });
+      drawProf();
+    };
+    const save = async () => {
+      const msg = profView.querySelector(".tp-smsg");
+      const ok = await postJson("/taglib/api/profiles", { data: profWork }, msg);
+      if (ok) renderProfView();
+      // 高级 JSON 保存沿用原逻辑
+    };
+    profView.querySelector(".tp-save").onclick = save;
     editorFoot(profView, "/taglib/api/profiles", (payload) => ({ data: payload }));
   }
+
+
+  let grpWork = null;
 
   async function renderGrpView() {
     grpView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
     let d;
     try { d = await fetch("/taglib/api/grouprules").then((r) => r.json()); }
     catch { grpView.innerHTML = `<div style="padding:30px;color:#ff6b6b">互斥域接口加载失败</div>`; return; }
-    const groups = d.groups || [];
+    grpWork = { groups: JSON.parse(JSON.stringify(d.groups || [])) };
+    drawGrp();
+  }
+
+  function drawGrp() {
+    const groups = grpWork.groups;
     let html = `
-      <div class="tp-h1">🧬 互斥域 ${langBtnHtml()} <span class="tp-h1-sub">${groups.length} 组</span></div>
-      <div class="tp-note">取代旧 81 条手写冲突规则: 同域内任意两词天然不可能同现 (抽取时查组名交集, O(1))。武器姿势的排斥关系不在这里 — 在档案的 conflicts_with 字段。</div>
+      <div class="tp-h1">🧬 互斥关系 ${langBtnHtml()}
+        <span class="tp-h1-sub">${groups.length} 个互斥域 + 跨池规则</span></div>
+      <div class="tp-note">两件事在这里统一: <b>互斥域</b>(同域内任意两词天然不可能同现, 抽取时查组名交集) 与 <b>跨池规则</b>(下方 A ⟂ {B,C} 的批量事实, 如 nude ⟂ 整个服装池)。
+      武器姿势的排斥不在这里 —— 在档案的 <code>conflicts_with</code> 字段。域 id 与成员都可直接改。</div>
       <input class="tp-gsearch" placeholder="🔍 过滤组名 / 成员…" style="width:100%;box-sizing:border-box;margin-bottom:10px" />
-      <div class="tp-glist">
-      ${groups.map((g) => `
-        <details class="tp-gitem" data-key="${esc(g.id + " " + g.members.join(" ") + " " + g.members.map((m) => zhOf(m)).join(" "))}">
-          <summary><code>${esc(g.id)}</code> <span class="tp-gn">${g.members.length} 词</span></summary>
-          <div class="tp-gmem">${g.members.map((m) => `<span class="tp-chip">${bi(m)}</span>`).join("")}</div>
-        </details>`).join("")}
-      </div>
-      <details class="tp-jsonbox"><summary>✏ 编辑互斥域 (JSON)</summary>
-        <textarea class="tp-json" rows="16" spellcheck="false">${esc(JSON.stringify({ groups }, null, 1))}</textarea>
+      <div class="tp-glist">`;
+    groups.forEach((g, gi) => {
+      html += `
+        <div class="tp-gitem2" data-key="${esc(String(g.id || "") + " " + (g.members || []).join(" "))}">
+          <div class="tp-gitem2-h">
+            <input class="tp-ecell" data-g="${gi}" data-f="id" value="${esc(g.id || "")}" placeholder="域 id"/>
+            <span class="tp-gn">${(g.members || []).length} 词</span>
+            <button class="tp-edel" data-g="${gi}" title="删除该域">✕</button>
+          </div>
+          <div class="tp-gmem tp-gchips" data-g="${gi}"></div>
+        </div>`;
+    });
+    html += `</div>
+      <div class="tp-erow"><button class="tp-eadd tp-addgrp">＋ 新增互斥域</button></div>
+      <div class="tp-cf-host"></div>
+      <div class="tp-savebox">${saveBarHtml("保存互斥域")}</div>
+      ${tagDatalistHtml()}
+      <details class="tp-jsonbox"><summary>✏ 高级: 直接编辑 JSON</summary>
+        <textarea class="tp-json" rows="14" spellcheck="false">${esc(JSON.stringify(grpWork, null, 1))}</textarea>
         <div class="tp-jrow"><button class="tp-jsave">💾 保存互斥域</button><span class="tp-jmsg"></span></div>
       </details>`;
     grpView.innerHTML = html;
-    bindLang(grpView, renderGrpView);
+    bindLang(grpView, drawGrp);
+    grpView.querySelectorAll(".tp-gchips").forEach((el) => {
+      const g = grpWork.groups[Number(el.dataset.g)];
+      g.members = g.members || [];
+      fillChips(el, g.members, drawGrp, "tp-tagdl");
+    });
+    grpView.querySelectorAll("input[data-g][data-f]").forEach((el) => {
+      el.onchange = () => {
+        const g = grpWork.groups[Number(el.dataset.g)];
+        const v = el.value.trim();
+        if (v) g.id = v; else delete g.id;
+      };
+    });
+    grpView.querySelectorAll(".tp-edel[data-g]").forEach((b) => {
+      b.onclick = () => { grpWork.groups.splice(Number(b.dataset.g), 1); drawGrp(); };
+    });
+    grpView.querySelector(".tp-addgrp").onclick = () => {
+      grpWork.groups.push({ id: "new_group", members: [] });
+      drawGrp();
+    };
     const gs = grpView.querySelector(".tp-gsearch");
     gs.oninput = () => {
       const q = gs.value.trim().toLowerCase();
-      grpView.querySelectorAll(".tp-gitem").forEach((el) => {
+      grpView.querySelectorAll(".tp-gitem2").forEach((el) => {
         el.style.display = !q || el.dataset.key.toLowerCase().includes(q) ? "" : "none";
       });
     };
+    grpView.querySelector(".tp-save").onclick = async () => {
+      const ok = await postJson("/taglib/api/grouprules", { groups: grpWork.groups },
+                               grpView.querySelector(".tp-smsg"));
+      if (ok) renderGrpView();
+    };
     editorFoot(grpView, "/taglib/api/grouprules", (payload) => ({ groups: payload.groups }));
+    renderCfView();   // 跨池互斥规则同属"互斥"语义, 与域规则并到一个页面
   }
+
+
+  let nlWork = null;
+  let nlUncovered = [];
 
   async function renderNlView() {
     nlView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
     let d;
     try { d = await fetch("/taglib/api/nl").then((r) => r.json()); }
     catch { nlView.innerHTML = `<div style="padding:30px;color:#ff6b6b">NL 接口加载失败</div>`; return; }
-    const F = d.data || {};
-    const fams = Object.entries(F.families || {});
+    nlUncovered = d.uncovered || [];
+    nlWork = JSON.parse(JSON.stringify(d.data || {}));
+    nlWork.families = nlWork.families || {};
+    nlWork.pose_map = nlWork.pose_map || {};
+    drawNl();
+  }
+
+  function _nlFams() {
+    return Object.entries(nlWork.families).map(([k, v]) => [k, v || []]);
+  }
+
+  function drawNl() {
+    const fams = _nlFams();
+    const total = fams.reduce((n, [, v]) => n + v.length, 0);
+    const pm = Object.entries(nlWork.pose_map).filter(([k]) => k !== "null");
     let html = `
-      <div class="tp-h1">✍ NL 句式素材 <span class="tp-h1-sub">${fams.length} 族 · ${fams.reduce((n, [, v]) => n + v.length, 0)} 句</span></div>
-      <div class="tp-note">末尾自然语言段的素材库。模板占位符: {S}=主语(She/He/They 随人数词自动) · {POS}=所有格 · {O}=宾语名词 (从档案 obj_kind→words 解析)。${(d.uncovered || []).length ? `<br><b style="color:#f0a35e">⚠ 档案姿势词未进 pose_map (${d.uncovered.length}): ${esc(d.uncovered.join(", "))}</b>` : "<br><b style=\"color:#7dd47d\">✓ 全部武器姿势词已有句式覆盖</b>"}</div>
-      ${fams.map(([fam, vs]) => `
-        <div class="tp-fam"><div class="tp-fam-h"><code>${esc(fam)}</code> <span class="tp-gn">${vs.length} 变体</span></div>
-          ${vs.map((v, i) => `<div class="tp-fam-s">${i + 1}. ${esc(v)}</div>`).join("")}</div>`).join("")}
-      <div class="tp-fam"><div class="tp-fam-h">动作词 → 句式族 <span class="tp-gn">${Object.keys(F.pose_map || {}).length} 项</span></div>
-        ${Object.entries(F.pose_map || {}).filter(([k]) => k !== "null").map(([k, v]) => `<div class="tp-fam-s">${bi(k)} <span class="tp-arrow">→</span> <code>${esc(v)}</code></div>`).join("")}</div>
-      <details class="tp-jsonbox"><summary>✏ 编辑全部句式 (JSON)</summary>
-        <textarea class="tp-json" rows="18" spellcheck="false">${esc(JSON.stringify(F, null, 1))}</textarea>
+      <div class="tp-h1">✍ NL 句式素材
+        <span class="tp-h1-sub">${fams.length} 族 · ${total} 句 · ${pm.length} 条动作映射</span>
+        <button class="tp-eadd tp-addfam" style="margin-left:auto">＋ 新增句式族</button></div>
+      <div class="tp-note">末尾自然语言段的素材库。占位符 <code>{S}</code> 主语 (随人数词自动 She/He/They) · <code>{POS}</code> 所有格 · <code>{O}</code> 宾语 (从档案 obj_kind→words 解析)。
+      ${nlUncovered.length ? `<br><b style="color:var(--tl-warn,#e0a35e)">⚠ 档案姿势词未进下方映射 (${nlUncovered.length}): ${esc(nlUncovered.join(", "))}</b>` : `<br><b style="color:var(--tl-ok)">✓ 全部武器姿势词已有句式覆盖</b>`}</div>`;
+    fams.forEach(([fam, vs], fi) => {
+      html += `
+        <div class="tp-fam">
+          <div class="tp-fam-h">
+            <input class="tp-ecell" data-fi="${fi}" data-nf="famname" value="${esc(fam)}"/>
+            <span class="tp-gn">${vs.length} 变体</span>
+            <button class="tp-edel tp-delfam" data-fi="${fi}" title="删除该族">✕</button>
+          </div>
+          ${vs.map((v, vi) => `
+            <div class="tp-fam-s tp-fam-edit">
+              <input class="tp-ecell wide" data-fi="${fi}" data-vi="${vi}" data-nf="variant" value="${esc(v)}"/>
+              <button class="tp-edel tp-delvar" data-fi="${fi}" data-vi="${vi}" title="删除">✕</button>
+            </div>`).join("")}
+          <button class="tp-eadd tp-addvar" data-fi="${fi}">＋ 变体</button>
+        </div>`;
+    });
+    html += `
+      <div class="tp-fam">
+        <div class="tp-fam-h">动作词 → 句式族 <span class="tp-gn">${pm.length} 项</span>
+          <button class="tp-eadd tp-addpm" style="margin-left:auto">＋ 映射</button></div>
+        ${pm.map(([k, v], mi) => `
+          <div class="tp-fam-s tp-fam-edit">
+            <input class="tp-ecell" data-mi="${mi}" data-nf="pmkey" value="${esc(k)}" list="tp-tagdl" placeholder="动作词"/>
+            <span class="tp-arrow">→</span>
+            <select class="tp-ecell" data-mi="${mi}" data-nf="pmval">
+              ${fams.map(([f2]) => `<option value="${esc(f2)}"${f2 === v ? " selected" : ""}>${esc(f2)}</option>`).join("")}
+            </select>
+            <button class="tp-edel tp-delpm" data-mi="${mi}" title="删除">✕</button>
+          </div>`).join("")}
+      </div>
+      <div class="tp-savebox">${saveBarHtml("保存句式")}</div>
+      ${tagDatalistHtml()}
+      <details class="tp-jsonbox"><summary>✏ 高级: 直接编辑 JSON (含 words / intro / env / light / obj_kind 等)</summary>
+        <textarea class="tp-json" rows="18" spellcheck="false">${esc(JSON.stringify(nlWork, null, 1))}</textarea>
         <div class="tp-jrow"><button class="tp-jsave">💾 保存句式</button><span class="tp-jmsg"></span></div>
       </details>`;
     nlView.innerHTML = html;
-    bindLang(nlView, renderNlView);
+    bindLang(nlView, drawNl);
+
+    // 族改名 (保序重建 + 同步 pose_map 指向)
+    nlView.querySelectorAll('input[data-nf="famname"]').forEach((el) => {
+      el.onchange = () => {
+        const arr = _nlFams();
+        const fi = Number(el.dataset.fi);
+        const oldName = arr[fi][0];
+        const nv = el.value.trim();
+        if (!nv || nv === oldName || nlWork.families[nv]) { drawNl(); return; }
+        const rebuilt = {};
+        for (const [k, v] of arr) rebuilt[k === oldName ? nv : k] = v;
+        nlWork.families = rebuilt;
+        for (const [k, v] of Object.entries(nlWork.pose_map)) {
+          if (v === oldName) nlWork.pose_map[k] = nv;
+        }
+        drawNl();
+      };
+    });
+    nlView.querySelectorAll('input[data-nf="variant"]').forEach((el) => {
+      el.onchange = () => {
+        const fam = _nlFams()[Number(el.dataset.fi)][0];
+        nlWork.families[fam][Number(el.dataset.vi)] = el.value;
+      };
+    });
+    nlView.querySelectorAll(".tp-delvar").forEach((b) => {
+      b.onclick = () => {
+        const fam = _nlFams()[Number(b.dataset.fi)][0];
+        nlWork.families[fam].splice(Number(b.dataset.vi), 1);
+        drawNl();
+      };
+    });
+    nlView.querySelectorAll(".tp-addvar").forEach((b) => {
+      b.onclick = () => { _nlFams()[Number(b.dataset.fi)][1].push(""); drawNl(); };
+    });
+    nlView.querySelectorAll(".tp-delfam").forEach((b) => {
+      b.onclick = () => { delete nlWork.families[_nlFams()[Number(b.dataset.fi)][0]]; drawNl(); };
+    });
+    nlView.querySelector(".tp-addfam").onclick = () => {
+      let name = "new_family", i = 2;
+      while (nlWork.families[name]) name = "new_family" + i++;
+      nlWork.families[name] = [""];
+      drawNl();
+    };
+    nlView.querySelectorAll('input[data-nf="pmkey"]').forEach((el) => {
+      el.onchange = () => {
+        const keys = Object.keys(nlWork.pose_map).filter((k) => k !== "null");
+        const old = keys[Number(el.dataset.mi)];
+        const nv = el.value.trim();
+        if (!nv || nv === old) { drawNl(); return; }
+        const rebuilt = {};
+        for (const k of Object.keys(nlWork.pose_map)) rebuilt[k === old ? nv : k] = nlWork.pose_map[k];
+        nlWork.pose_map = rebuilt;
+        drawNl();
+      };
+    });
+    nlView.querySelectorAll('select[data-nf="pmval"]').forEach((el) => {
+      el.onchange = () => {
+        const keys = Object.keys(nlWork.pose_map).filter((k) => k !== "null");
+        nlWork.pose_map[keys[Number(el.dataset.mi)]] = el.value;
+      };
+    });
+    nlView.querySelectorAll(".tp-delpm").forEach((b) => {
+      b.onclick = () => {
+        const keys = Object.keys(nlWork.pose_map).filter((k) => k !== "null");
+        delete nlWork.pose_map[keys[Number(b.dataset.mi)]];
+        drawNl();
+      };
+    });
+    nlView.querySelector(".tp-addpm").onclick = () => {
+      const f = _nlFams()[0];
+      nlWork.pose_map["new action"] = f ? f[0] : "new_family";
+      drawNl();
+    };
+    nlView.querySelector(".tp-save").onclick = async () => {
+      const ok = await postJson("/taglib/api/nl", { data: nlWork }, nlView.querySelector(".tp-smsg"));
+      if (ok) renderNlView();
+    };
     editorFoot(nlView, "/taglib/api/nl", (payload) => ({ data: payload }));
   }
+
   let cfRights = [];   // 新增规则的右侧引用 [{kind, value}]
 
   function cfKindName(kind) {
@@ -2012,7 +2413,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   async function renderCfView() {
-    cfView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
+    // v1.6.0: 原「🧷 防冲突关系」独立页签已删, 规则列表并入「🧬 互斥域」页
+    // (两者都是"两两互斥", 用户不该判断该去哪个页签加互斥)。
+    const cfView = grpView.querySelector(".tp-cf-host");
+    if (!cfView) return;
+    cfView.innerHTML = `<div style="padding:20px;text-align:center;color:#8b93a5">加载中…</div>`;
     let st;
     try {
       st = await fetch("/taglib/api/conflicts").then((r) => r.json());
@@ -2158,15 +2563,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   function switchTab(tab) {
     ui.tab = tab;
     rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
-    rootEl.querySelector(".tp-excludetab").classList.toggle("active", tab === "exclude");
-    rootEl.querySelector(".tp-cftab").classList.toggle("active", tab === "cf");
     rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
     rootEl.querySelector(".tp-proftab")?.classList.toggle("active", tab === "prof");
     rootEl.querySelector(".tp-grptab")?.classList.toggle("active", tab === "grp");
     rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
-    excView.style.display = tab === "exclude" ? "block" : "none";
-    cfView.style.display = tab === "cf" ? "block" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     profView.style.display = tab === "prof" ? "block" : "none";
     grpView.style.display = tab === "grp" ? "block" : "none";
@@ -2175,13 +2576,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const info = $(".tp-footinfo");
     if (tab === "pick") {
       info.innerHTML = `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`;
-    } else if (tab === "exclude") {
-      const n = (getExcluded ? getExcluded().length : 0);
-      info.innerHTML = `已排除 <b style="color:#ff6b6b">${n}</b> 个分类`;
-    } else if (tab === "manager") {
-      info.innerHTML = `管理页改动保存后全局生效`;
-    } else if (tab === "cf") {
-      info.innerHTML = `反冲突规则双向互斥 · 填充/自动模式生效`;
     } else if (tab === "prof") {
       info.innerHTML = `⚔ 姿势只能随武器出生 · 改档案保存即生效`;
     } else if (tab === "grp") {
@@ -2192,20 +2586,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       info.innerHTML = `节点参数即改即存 · 全局偏好双向同步`;
     }
     // 底部按钮: 挑选/排除 -> 取消+确定; 管理/防冲突/设置 -> 仅关闭
-    const pickLike = tab === "pick" || tab === "exclude";
+    const pickLike = tab === "pick";
     $(".tp-cancel").style.display = pickLike ? "" : "none";
     $(".tp-ok").style.display = pickLike ? "" : "none";
     $(".tp-close2").style.display = pickLike ? "none" : "";
-    if (tab === "exclude") renderExclude();
     if (tab === "settings") renderSettingsView();
-    if (tab === "cf") renderCfView();
     if (tab === "prof") renderProfView();
     if (tab === "grp") renderGrpView();
     if (tab === "nl") renderNlView();
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
-  rootEl.querySelector(".tp-excludetab").onclick = () => switchTab("exclude");
-  rootEl.querySelector(".tp-cftab").onclick = () => switchTab("cf");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
   rootEl.querySelector(".tp-proftab")?.addEventListener("click", () => switchTab("prof"));
   rootEl.querySelector(".tp-grptab")?.addEventListener("click", () => switchTab("grp"));

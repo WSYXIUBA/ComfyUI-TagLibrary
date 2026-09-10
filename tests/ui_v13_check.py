@@ -1,4 +1,11 @@
-"""1.3.0 UI 验收 (一次成型版): 面板结构 → 开 picker → 逐 tab 截图+断言。
+"""UI 验收: 面板结构 → 开 picker → 逐 tab 截图+断言 → 编辑能力断言。
+
+v1.6.0 起额外断言 (失败即退出码非 0):
+  · 页签收敛为 5 个 (挑标签/武器档案/互斥域/NL句式/设置), 排除类目与防冲突已合并
+  · 排除类目出现在侧栏抽屉里
+  · 武器档案 / 互斥域 / NL 三个视图是**可编辑**的 (存在 input.tp-ecell / 增删按钮 / 保存按钮)
+  · 跨池互斥规则已并入互斥域页
+
 
 python tests/ui_v13_check.py
 产出: tests/ui_panel.png, ui_axis.png, ui_prof.png, ui_grp.png, ui_nl.png, ui_set.png
@@ -227,6 +234,34 @@ def main():
     tabs = cdp.ev("[...document.querySelectorAll('.tp-tabbtn')].map(b=>b.textContent.trim()).join(' | ')")
     print("TABS:", tabs)
 
+    # ---- 页签收敛 + 排除抽屉 (v1.6.0) ----
+    ui_errs = []
+    want_tabs = ["挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "⚙ 设置"]
+    for t in want_tabs:
+        ok = t in tabs
+        print(f"    {'✓' if ok else '✗'} 页签存在: {t}")
+        if not ok:
+            ui_errs.append(f"缺页签 {t}")
+    for bad in ("排除类目", "防冲突关系", "标签库管理"):
+        ok = bad not in tabs
+        print(f"    {'✓' if ok else '✗'} 页签已合并/删除: {bad}")
+        if not ok:
+            ui_errs.append(f"未删除页签 {bad}")
+    n_tabs = len([x for x in tabs.split(" | ") if x.strip()])
+    print(f"    {'✓' if n_tabs == 5 else '✗'} 页签总数 = {n_tabs} (期望 5)")
+    if n_tabs != 5:
+        ui_errs.append(f"页签数 {n_tabs} != 5")
+
+    drawer = cdp.ev("""(() => {
+      const d = document.querySelector('.tp-exc');
+      const hasTab = !!document.querySelector('.tp-excludetab');
+      return JSON.stringify({drawer: !!d, inSidebar: !!(d && d.closest('.tp-cats')), oldTab: hasTab});
+    })()""")
+    dv = json.loads(drawer)
+    print(f"    {'✓' if dv['drawer'] and dv['inSidebar'] else '✗'} 排除类目已并入侧栏抽屉: {dv}")
+    if not (dv["drawer"] and dv["inSidebar"]):
+        ui_errs.append("排除抽屉未出现在侧栏")
+
     def click_tab(sel, name_png, assert_js, label):
         cdp.ev(f"document.querySelector('{sel}').click()")
         time.sleep(2.0)
@@ -248,28 +283,57 @@ def main():
                 return JSON.stringify({axisHeads: heads.slice(0,8), bundleChips: b, sections: secs});
               })()""", "AXIS")
 
-    # 5) 武器档案
+    # 5) 武器档案 (可编辑)
     click_tab(".tp-proftab", "ui_prof.png",
               """(() => {
                 const cards=document.querySelectorAll('.tp-pcard').length;
                 const rows=document.querySelectorAll('.tp-ptab tr').length;
                 const h1=(document.querySelector('.tp-h1')||{}).textContent;
-                return JSON.stringify({h1:h1, cards, poseRows:rows});
+                const cells=document.querySelectorAll('.tp-ecell').length;
+                const chips=document.querySelectorAll('.tp-echip').length;
+                const adds=document.querySelectorAll('.tp-eadd').length;
+                const saves=document.querySelectorAll('.tp-save').length;
+                return JSON.stringify({h1:h1, cards, poseRows:rows, editableCells:cells,
+                                       editableChips:chips, addBtns:adds, saveBtns:saves});
               })()""", "PROF")
+    prof_v = json.loads(cdp.ev("""JSON.stringify({
+      cells: document.querySelectorAll('.tp-ecell').length,
+      add: document.querySelectorAll('.tp-eadd').length,
+      save: document.querySelectorAll('.tp-save').length})"""))
+    if not (prof_v["cells"] > 50 and prof_v["add"] >= 3 and prof_v["save"] >= 1):
+        ui_errs.append(f"武器档案未完全可编辑: {prof_v}")
 
-    # 6) 互斥域
+    # 6) 互斥域 (可编辑) + 跨池规则已并入
     click_tab(".tp-grptab", "ui_grp.png",
               """(() => {
-                const items=document.querySelectorAll('.tp-gitem').length;
-                return JSON.stringify({groups:items});
+                const items=document.querySelectorAll('.tp-gitem2').length;
+                const cells=document.querySelectorAll('.tp-ecell').length;
+                const chips=document.querySelectorAll('.tp-echip').length;
+                const cfRules=document.querySelectorAll('.tp-cf-rule').length;
+                const cfHost=!!document.querySelector('.tp-cf-host');
+                return JSON.stringify({groups:items, editableCells:cells, editableChips:chips,
+                                       cfHost:cfHost, cfRules:cfRules});
               })()""", "GRP")
+    grp_v = json.loads(cdp.ev("""JSON.stringify({
+      groups: document.querySelectorAll('.tp-gitem2').length,
+      cells: document.querySelectorAll('.tp-ecell').length,
+      cfRules: document.querySelectorAll('.tp-cf-rule').length})"""))
+    if not (grp_v["groups"] == 50 and grp_v["cells"] >= 50 and grp_v["cfRules"] >= 1):
+        ui_errs.append(f"互斥域可编辑/规则并入不完整: {grp_v}")
 
-    # 7) NL 句式
+    # 7) NL 句式 (可编辑)
     click_tab(".tp-nltab", "ui_nl.png",
               """(() => {
                 const fams=document.querySelectorAll('.tp-fam').length;
-                return JSON.stringify({families:fams});
+                const cells=document.querySelectorAll('.tp-ecell').length;
+                const sels=document.querySelectorAll('select.tp-ecell').length;
+                return JSON.stringify({families:fams, editableCells:cells, selects:sels});
               })()""", "NL")
+    nl_v = json.loads(cdp.ev("""JSON.stringify({
+      cells: document.querySelectorAll('.tp-ecell').length,
+      sels: document.querySelectorAll('select.tp-ecell').length})"""))
+    if not (nl_v["cells"] >= 30 and nl_v["sels"] >= 10):
+        ui_errs.append(f"NL 句式未完全可编辑: {nl_v}")
 
     # 8) 设置新块
     click_tab(".tp-settab", "ui_set.png",
@@ -280,12 +344,13 @@ def main():
 
     print("\n截图在 tests/ 下: ui_panel ui_axis ui_prof ui_grp ui_nl ui_set")
 
-    if panel_errs:
-        print(f"\n❌ 面板结构巡检失败 ({len(panel_errs)} 项):")
-        for e in panel_errs:
+    all_errs = panel_errs + ui_errs
+    if all_errs:
+        print(f"\n❌ UI 巡检失败 ({len(all_errs)} 项):")
+        for e in all_errs:
             print("   -", e)
         sys.exit(1)
-    print("✅ 面板结构巡检通过 (死 UI 已删 / 低频项收进 ⋯ 菜单)")
+    print("✅ UI 巡检通过 (面板瘦身 / 页签 8→5 / 三个数据视图可编辑)")
 
 
 if __name__ == "__main__":
