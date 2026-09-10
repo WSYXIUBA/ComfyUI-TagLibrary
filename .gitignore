@@ -28,3 +28,5 @@ data/备份库/.升级待确认
 
 # 数据修复脚本的自动备份 (tools/*.py 生成, 不入库)
 data/default/*.bak-*
+# data 脚本的自动备份 (含子目录)
+data/**/*.bak-*
