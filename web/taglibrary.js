@@ -15,6 +15,35 @@ const NODE_NAME = "TagLibraryNode";
 function escapeHtml(s) {
   return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
+
+/* 轻量提示条。
+   注意: 本模块原先有 13 处 toast() 调用但从无定义 (manager.js 里那个是 IIFE 内
+   局部函数, 不是全局) —— 每次调用都会抛 ReferenceError。后果不止提示不显示:
+   `toast(...)` 之后的语句会被中断, 例如保存冲突规则后紧跟的 renderCfView()
+   不会执行, 列表要重开页签才更新。这里补上模块级实现。 */
+let _toastTimer = null;
+function toast(msg, isErr = false) {
+  let el = document.getElementById("taglib-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "taglib-toast";
+    el.className = "tl-scope";   // 复用面板主题变量
+    el.style.cssText =
+      "position:fixed;left:50%;bottom:56px;transform:translateX(-50%);z-index:100000;" +
+      "padding:8px 18px;border-radius:10px;font-size:13px;pointer-events:none;" +
+      "border:1px solid var(--tl-border-2);background:var(--tl-bg-solid);" +
+      "box-shadow:0 6px 24px rgba(0,0,0,.35);opacity:0;transition:opacity .2s;";
+    document.body.appendChild(el);
+  }
+  const { pid, isLight } = currentTheme();
+  el.dataset.theme = pid;
+  el.classList.toggle("tl-light", isLight);
+  el.textContent = msg;
+  el.style.color = isErr ? "var(--tl-danger)" : "var(--tl-text)";
+  el.style.opacity = "1";
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => { el.style.opacity = "0"; }, 2400);
+}
 const MANAGER_URL = "/taglib?embed=1";
 const SETTING_PREFIX = "TagLibrary.";
 
@@ -24,32 +53,32 @@ const SET_DEFAULT_NSFW = SETTING_PREFIX + "default_nsfw";
 const SET_SCALE = SETTING_PREFIX + "chip_scale";
 const SET_LANG = SETTING_PREFIX + "display_lang";
 
-let LIB_CACHE = null;
+/* 两级缓存 ——
+   面板级 (轻量, 启动即拉): 分类名/图标 + en→树路径 + 性别/NSFW 标记。
+     /taglib/api/panel-index 只有索引, 无标签正文 (实测约为全量库的 1/5)。
+   挑选器级 (全量, 懒加载): 含标签正文的完整库, 只在打开挑选器时拉。 */
+let LIB_CACHE = null;        // 全量库 (仅挑选器用)
 let LIB_FETCHING = null;
-let LIB_PATH = new Map();  // en_l -> [大类名, 子分类名, 孙分类名|null]
-let LIB_GENDER = new Map();  // en_l -> "female"|"male" (库里的性别标记)
+let PANEL_CATS = [];         // [{name, icon, color}] 面板分组标题与类目排序
+let PANEL_NSFW = new Set();  // NSFW 词表 (executed 回显反查)
+let LIB_PATH = new Map();    // en_l -> [大类名, 子分类名, 孙分类名|null]
+let LIB_GENDER = new Map();  // en_l -> "female"|"male"
+let INDEX_FETCHING = null;
 
-function buildLibPath(lib) {
+function applyPanelIndex(d) {
+  PANEL_CATS = d.cats || [];
+  // 路径是 (子分类下标, 孙分类下标) 二元组 -> 还原成 [大类名, 子类名, 孙类名|null]
+  const subs = d.subs || [];
+  const groups = d.groups || [];
   const m = new Map();
-  const gm = new Map();
-  for (const c of lib.categories || []) {
-    for (const s of c.subcategories || []) {
-      if (s.groups && s.groups.length) {
-        for (const g of s.groups) {
-          for (const t of g.tags || []) {
-            m.set(t.en.toLowerCase(), [c.name, s.name, g.name]);
-            if (t.gender) gm.set(t.en.toLowerCase(), t.gender);
-          }
-        }
-      }
-      for (const t of s.tags || []) {
-        if (!m.has(t.en.toLowerCase())) m.set(t.en.toLowerCase(), [c.name, s.name, null]);
-        if (t.gender) gm.set(t.en.toLowerCase(), t.gender);
-      }
-    }
+  for (const [en, idxPair] of Object.entries(d.paths || {})) {
+    const pair = subs[idxPair[0]] || ["", ""];
+    const gi = idxPair[1];
+    m.set(en, [pair[0], pair[1], gi >= 0 ? (groups[gi] ?? null) : null]);
   }
-  LIB_GENDER = gm;
-  return m;
+  LIB_PATH = m;
+  LIB_GENDER = new Map(Object.entries(d.gender || {}));
+  PANEL_NSFW = new Set(d.nsfw || []);
 }
 
 // 标签有效性别: state 里带的 gender 优先; 旧选择数据缺字段时回查库
@@ -59,6 +88,17 @@ function tagGender(t) {
   return LIB_GENDER.get(String(t.en).toLowerCase()) || "";
 }
 
+/* 面板索引 (轻量): 面板初始化 / 库变更后刷新时调用 */
+async function fetchPanelIndex() {
+  if (INDEX_FETCHING) return INDEX_FETCHING;
+  INDEX_FETCHING = fetch("/taglib/api/panel-index")
+    .then((r) => r.json())
+    .then((d) => { applyPanelIndex(d || {}); return d; })
+    .finally(() => { INDEX_FETCHING = null; });
+  return INDEX_FETCHING;
+}
+
+/* 全量库 (含标签正文): 仅挑选器需要, 打开时才加载 */
 async function fetchLibrary() {
   if (LIB_CACHE) return LIB_CACHE;
   if (!LIB_FETCHING) {
@@ -66,7 +106,6 @@ async function fetchLibrary() {
       .then((r) => r.json())
       .then((data) => {
         LIB_CACHE = data.library || { categories: [] };
-        LIB_PATH = buildLibPath(LIB_CACHE);
         return LIB_CACHE;
       })
       .finally(() => { LIB_FETCHING = null; });
@@ -76,6 +115,8 @@ async function fetchLibrary() {
 
 function invalidateLibraryCache() {
   LIB_CACHE = null;
+  PANEL_CATS = [];
+  PANEL_NSFW = new Set();
   LIB_PATH = new Map();
   LIB_GENDER = new Map();
 }
@@ -100,6 +141,109 @@ function setSetting(id, value) {
     return;
   } catch {}
   try { localStorage.setItem("taglib." + id, JSON.stringify(value)); } catch {}
+}
+
+/* 当前主题: ComfyUI 用 html.dark-theme 类区分明暗, 具体配色 id 在设置里。
+   面板/挑选器/管理弹窗共用同一份判断, 保证三处配色一致。 */
+function currentTheme() {
+  let pid = getSetting("Comfy.ColorPalette", "dark");
+  if (typeof pid !== "string") pid = pid?.id || "dark";
+  const isLight = !document.documentElement.classList.contains("dark-theme");
+  return { pid, isLight };
+}
+
+/* 管理页 URL: 带上主题参数, 让 iframe 内独立文档也能拿到当前配色
+   (iframe 不继承父页面的 html 类, 必须显式传)。 */
+function managerUrl() {
+  const { pid, isLight } = currentTheme();
+  return `${MANAGER_URL}&theme=${encodeURIComponent(pid)}&light=${isLight ? 1 : 0}`;
+}
+
+/* 把主题同步给已打开弹窗内的 iframe (URL 参数只覆盖首次加载) */
+function pushThemeToFrames(root) {
+  const { pid, isLight } = currentTheme();
+  for (const fr of root.querySelectorAll("iframe")) {
+    try { fr.contentWindow?.postMessage({ type: "taglib-theme", theme: pid, light: isLight }, "*"); } catch {}
+  }
+}
+
+/* ---------------------------------------------------- 全局偏好同步 (单例轮询)
+   本版本前端没有可用的 settings change 事件面, 只能轮询兜底。
+   做成模块级单例: 无论画布上有几个标签库节点, 只有一个 2s 定时器在跑;
+   比对到变化才回调各面板 —— 旧实现是每个节点各起一个定时器。 */
+const SYNC_KEYS = [
+  SET_DEFAULT_MODE, SET_DEFAULT_NSFW, SET_SCALE, SET_LANG,
+  SETTING_PREFIX + "chip_font_size", SETTING_PREFIX + "chip_radius",
+];
+const _panelSyncers = new Set();
+let _syncTimer = null;
+let _syncLast = new Map(SYNC_KEYS.map((k) => [k, getSetting(k, null)]));
+
+function _tickPanelSync() {
+  let changed = false;
+  for (const k of SYNC_KEYS) {
+    const v = getSetting(k, null);
+    if (v !== _syncLast.get(k)) { _syncLast.set(k, v); changed = true; }
+  }
+  if (!changed) return;
+  for (const fn of [..._panelSyncers]) {
+    try { fn(); } catch {}
+  }
+}
+
+function registerPanelSync(fn) {
+  _panelSyncers.add(fn);
+  if (!_syncTimer) _syncTimer = setInterval(_tickPanelSync, 2000);
+  return () => {
+    _panelSyncers.delete(fn);
+    if (!_panelSyncers.size && _syncTimer) {
+      clearInterval(_syncTimer);
+      _syncTimer = null;
+    }
+  };
+}
+
+/* chip 右键菜单 —— 单例复用。
+   旧实现每次右键都 createElement + appendChild + 挂 document 监听,
+   频繁右键会在 body 上反复增删节点。这里只建一次, 之后改内容与位置。 */
+let _chipMenuEl = null;
+let _chipMenuOff = null;
+
+function closeChipMenu() {
+  if (_chipMenuEl) _chipMenuEl.style.display = "none";
+  if (_chipMenuOff) {
+    document.removeEventListener("click", _chipMenuOff);
+    _chipMenuOff = null;
+  }
+}
+
+function openChipMenu(x, y, { pinned, onPin, onRemove }) {
+  closeChipMenu();
+  if (!_chipMenuEl) {
+    _chipMenuEl = document.createElement("div");
+    _chipMenuEl.className = "tl-chip-menu tl-scope";
+    _chipMenuEl.style.display = "none";
+    document.body.appendChild(_chipMenuEl);
+  }
+  const menu = _chipMenuEl;
+  const { pid, isLight } = currentTheme();
+  menu.dataset.theme = pid;
+  menu.classList.toggle("tl-light", isLight);
+  menu.innerHTML =
+    `<button data-a="pin">${pinned ? "📍 取消钉选" : "📌 钉选 (自动/填充不覆盖)"}</button>` +
+    `<button data-a="del" class="danger">✕ 移除标签</button>`;
+  menu.style.display = "flex";
+  const r = menu.getBoundingClientRect();
+  menu.style.left = Math.min(x, innerWidth - r.width - 8) + "px";
+  menu.style.top = Math.min(y, innerHeight - r.height - 8) + "px";
+  menu.querySelector('[data-a="pin"]').onclick = (ev) => {
+    ev.stopPropagation(); closeChipMenu(); onPin();
+  };
+  menu.querySelector('[data-a="del"]').onclick = (ev) => {
+    ev.stopPropagation(); closeChipMenu(); onRemove();
+  };
+  _chipMenuOff = closeChipMenu;
+  setTimeout(() => document.addEventListener("click", _chipMenuOff), 0);
 }
 
 /* ---------------------------------------------------- state */
@@ -158,7 +302,8 @@ function setState(node, patch) {
 
 export function buildPanelWidget(node, container) {
   injectPanelStyle();
-  container.classList.add("taglib-panel");
+  // tl-scope = 共享主题变量作用域 (tagpanel-css.js); taglib-panel = 面板自身布局
+  container.classList.add("taglib-panel", "tl-scope");
   // 翻译扩展免疫: ComfyUI-DD-Translation 等会按字典把 chip 英文实时改写成中文
   // (night→夜晚), 造成"雨靴雨靴"式重复与观感发灰。p-inputtext 在其 shouldSkipNode
   // 的容器排除链里, 整个面板因此跳过翻译; translate=no/notranslate 约束守规矩的翻译器。
@@ -369,7 +514,7 @@ export function buildPanelWidget(node, container) {
           lastGroup = grp;
           const head = document.createElement("div");
           head.className = "tl-fill-group";
-          const catIcon = ((LIB_CACHE?.categories) || []).find((c) => c.name === grp)?.icon || "";
+          const catIcon = PANEL_CATS.find((c) => c.name === grp)?.icon || "";
           head.textContent = `── ${catIcon ? catIcon + " " : ""}${grp} ──`;
           chipzoneEl.appendChild(head);
         }
@@ -401,20 +546,12 @@ export function buildPanelWidget(node, container) {
       el.oncontextmenu = (e) => {
         e.preventDefault();
         e.stopPropagation();
-        // 右键菜单: 📌 钉选 (自动/填充不覆盖) / ✕ 移除
-        const menu = document.createElement("div");
-        menu.className = "tl-chip-menu";
-        menu.innerHTML = `
-          <button data-a="pin">${t.pinned ? "📍 取消钉选" : "📌 钉选 (自动/填充不覆盖)"}</button>
-          <button data-a="del" class="danger">✕ 移除标签</button>`;
-        document.body.appendChild(menu);
-        const r = menu.getBoundingClientRect();
-        menu.style.left = Math.min(e.clientX, innerWidth - r.width - 8) + "px";
-        menu.style.top = Math.min(e.clientY, innerHeight - r.height - 8) + "px";
-        const close = () => { menu.remove(); document.removeEventListener("click", close); };
-        setTimeout(() => document.addEventListener("click", close), 0);
-        menu.querySelector('[data-a="pin"]').onclick = (ev) => { ev.stopPropagation(); togglePinIdx(idx); close(); };
-        menu.querySelector('[data-a="del"]').onclick = (ev) => { ev.stopPropagation(); removeTagIdx(idx); close(); };
+        // 右键菜单: 📌 钉选 (自动/填充不覆盖) / ✕ 移除 —— 单例复用, 不每次建 DOM
+        openChipMenu(e.clientX, e.clientY, {
+          pinned: !!t.pinned,
+          onPin: () => togglePinIdx(idx),
+          onRemove: () => removeTagIdx(idx),
+        });
       };
       el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", String(idx)); el.classList.add("dragging"); };
       el.ondragend = () => { el.classList.remove("dragging"); chipzoneEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); };
@@ -516,118 +653,9 @@ export function buildPanelWidget(node, container) {
     renderTags();
   }
 
-  /* ---------- 🎲 填充: 子分类粒度抽取, 排除类目=0~0 ---------- */
-  function getFillRange(st, subId) {
-    if (st.fill_master ?? true) {
-      const lo = st.fill_master_min ?? 1, hi = st.fill_master_max ?? 1;
-      return [Math.min(lo, hi), Math.max(lo, hi)];
-    }
-    const r = (st.fill_sub_ranges || {})[subId] || { min: 1, max: 1 };
-    return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
-  }
-
-  async function fetchConflicts() {
-    try {
-      const r = await fetch("/taglib/api/conflicts");
-      const d = await r.json();
-      // 引用解析: sub/cat → LIB_CACHE 里的标签集合
-      const idxSrc = {};
-      for (const cat of (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || []) {
-        const subs = idxSrc[cat.name] = {};
-        for (const sub of cat.subcategories || []) {
-          subs[sub.name] = (sub.tags || []).map((t) => String(t.en).toLowerCase());
-        }
-      }
-      const resolve = (ref) => {
-        if (!ref) return [];
-        if (ref.kind === "tag") return [String(ref.value).toLowerCase()];
-        if (ref.kind === "tags") return (ref.value || []).map((v) => String(v).toLowerCase());
-        if (ref.kind === "cat") {
-          const out = [];
-          Object.values(idxSrc[String(ref.value)] || {}).forEach((arr) => out.push(...arr));
-          return out;
-        }
-        if (ref.kind === "sub") {
-          const [c, s] = String(ref.value).split("/");
-          return [...((idxSrc[c] || {})[s] || [])];
-        }
-        return [];
-      };
-      const map = new Map();
-      const link = (a, b) => {
-        if (!a || !b || a === b) return;
-        if (!map.has(a)) map.set(a, new Set());
-        map.get(a).add(b);
-      };
-      for (const rule of d.rules || []) {
-        const Ls = resolve(rule.left);
-        const Rs = (rule.right || []).flatMap(resolve);
-        for (const a of Ls) for (const b of Rs) { link(a, b); link(b, a); }
-      }
-      return map;
-    } catch { return new Map(); }
-  }
-
-  function pickFrom(list, n, usedEn, conflictMap) {
-    const bag = [...list];
-    const out = [];
-    const banned = new Set();
-    const grow = () => {
-      if (!conflictMap) return;
-      for (const e of usedEn) {
-        for (const b of conflictMap.get(e) || []) banned.add(b);
-      }
-    };
-    grow();
-    for (let i = 0; i < n && bag.length; i++) {
-      const idx = Math.floor(Math.random() * bag.length);
-      const tag = bag.splice(idx, 1)[0];
-      const plo = tag.en.toLowerCase();
-      if (usedEn.has(plo)) { i--; continue; }
-      // 反冲突: 与已抽中的任一标签互斥 → 让位
-      if (conflictMap && banned.has(plo)) { i--; continue; }
-      usedEn.add(plo);
-      grow();
-      out.push(tag);
-    }
-    return out;
-  }
-
-  function buildSubPools(nsfwOn) {
-    // [{catName, subId, subName, tags:[...]}]  排除类目跳过 (一级"大类" 或 二级"大类/子分类")
-    // 性别过滤与后端随机同规则: ♀ 剔除男性专属 / ♂ 剔除女性专属
-    const excluded = new Set(getState(node).exclude_categories || []);
-    const g = getGender(node);
-    const cats = (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || [];
-    const subs = [];
-    for (const cat of cats) {
-      if (excluded.has(cat.name)) continue;
-      for (const sub of cat.subcategories || []) {
-        if (excluded.has(`${cat.name}/${sub.name}`)) continue; // 二级排除同样不填充
-        const tags = (sub.tags || []).filter((t) =>
-          t.enabled !== false && (nsfwOn || !t.nsfw)
-          && !(g === "female" && tagGender(t) === "male")
-          && !(g === "male" && tagGender(t) === "female"));
-        if (tags.length) subs.push({ catName: cat.name, subId: sub.id, subName: sub.name, tags });
-      }
-    }
-    return subs;
-  }
-
-  /* ---------- 🎲 填充: 子分类粒度抽取, 排除类目=0~0 ---------- */
-  function getFillRange(st, subId) {
-    if (st.fill_master ?? true) {
-      const lo = st.fill_master_min ?? 1, hi = st.fill_master_max ?? 1;
-      return [Math.min(lo, hi), Math.max(lo, hi)];
-    }
-    const r = (st.fill_sub_ranges || {})[subId] || { min: 1, max: 1 };
-    return [Math.min(r.min, r.max), Math.max(r.min, r.max)];
-  }
-
   /* 按库类目顺序稳定排序 (无类目/手动添加的排最前) — 钉选词不顶置, 随类目走 */
   function catOrderIdx(catName) {
-    const cats = LIB_CACHE && Array.isArray(LIB_CACHE.categories) ? LIB_CACHE.categories : [];
-    const i = cats.findIndex((c) => c.name === catName);
+    const i = PANEL_CATS.findIndex((c) => c.name === catName);
     return i === -1 ? 999 : i;
   }
   function tagCatOf(t) {
@@ -760,34 +788,30 @@ export function buildPanelWidget(node, container) {
 
   // 全局偏好变更 -> 本节点面板实时跟随。
   // 本版本前端 extensionManager 没有 settings change 事件面 (setting/setting.settings
-  // 均非 EventTarget, Pinia $subscribe 也不触发), 所以: 设置页写入路径走 onGlobalChange
-  // 即时刷新; 其余来源 (ComfyUI 设置面板等) 用 2s 轻量轮询兜底。
-  const SYNC_KEYS = [
-    SET_DEFAULT_MODE, SET_DEFAULT_NSFW, SET_SCALE, SET_LANG,
-    SETTING_PREFIX + "chip_font_size", SETTING_PREFIX + "chip_radius",
-  ];
-  const lastVals = new Map(SYNC_KEYS.map((k) => [k, getSetting(k, null)]));
-  function pollSettingsSync() {
-    let changed = false;
-    for (const k of SYNC_KEYS) {
-      const v = getSetting(k, null);
-      if (v !== lastVals.get(k)) { lastVals.set(k, v); changed = true; }
-    }
-    if (changed) { applyScale(); renderAll(); }
-  }
-  setInterval(pollSettingsSync, 2000);
+  // 均非 EventTarget, Pinia $subscribe 也不触发), 所以用轻量轮询兜底。
+  // ⚠ 轮询是模块级单例: 一个定时器驱动所有面板, 不再是每个节点各起一个
+  //   (旧实现多节点画布下开销线性叠加)。面板脱离 DOM 后自动注销。
+  const unregisterSync = registerPanelSync(() => {
+    if (!container.isConnected) { unregisterSync(); return; }
+    applyScale(); renderAll();
+  });
 
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
-  function openTagPicker() {
+  async function openTagPicker() {
+    // 挑选器需要标签正文 (全量库) -> 首次打开才拉; 面板本身只用轻量索引
+    if (!LIB_CACHE) {
+      toast("正在加载标签库…");
+      try { await fetchLibrary(); } catch (e) { toast(`标签库加载失败: ${e.message}`, true); return; }
+    }
     let dlg = document.getElementById("taglib-picker-dialog");
     if (dlg) { dlg.close(); dlg.remove(); }
     dlg = document.createElement("dialog");
     dlg.id = "taglib-picker-dialog";
     dlg.style.cssText =
       "width:min(92vw,1200px);height:min(90vh,860px);border:none;border-radius:14px;" +
-      "padding:0;background:#15171d;color:#e3e7ee;max-width:none;max-height:none;";
+      "padding:0;background:var(--tl-bg-solid);color:var(--tl-text);max-width:none;max-height:none;";
     // 翻译免疫 (同面板): 防止挑选器里的标签英文被翻译扩展改写
-    dlg.classList.add("p-inputtext", "notranslate");
+    dlg.classList.add("p-inputtext", "notranslate", "tl-scope");
     dlg.setAttribute("translate", "no");
     dlg.innerHTML = `<div id="taglib-picker-root" style="width:100%;height:100%;overflow:hidden"></div>`;
     document.body.appendChild(dlg);
@@ -823,7 +847,7 @@ export function buildPanelWidget(node, container) {
       if (handle.libTouched()) {
         // 内嵌管理页可能改过库 -> 刷新缓存, 全部节点面板跟随
         invalidateLibraryCache();
-        fetchLibrary().then(renderAll);
+        fetchPanelIndex().then(renderAll);
         window.dispatchEvent(new CustomEvent("taglib-updated"));
       }
     });
@@ -846,7 +870,8 @@ export function buildPanelWidget(node, container) {
   /* ---------- init ---------- */
   applyScale();
   syncModeWidgets();
-  fetchLibrary()
+  // 面板只拉轻量索引 (分类/路径/标记); 含正文的全量库留给挑选器懒加载
+  fetchPanelIndex()
     .then(renderAll)
     .catch((err) => { container.innerHTML = `<div class="tl-empty">标签库加载失败: ${err}</div>`; });
 
@@ -854,10 +879,10 @@ export function buildPanelWidget(node, container) {
     syncMode: syncModeWidgets,  // 工作流加载/外部改 mode 后, 面板按钮与 widget 重新对齐
     refresh: async (opts = {}) => {
       // reloadLib 仅在库真的变了时用 (管理页保存/热同步导入);
-      // 每轮队列的自动回显刷新不重拉, 避免无谓的 200KB 请求
+      // 每轮队列的自动回显刷新不重拉, 避免无谓的请求
       if (opts.reloadLib) {
         invalidateLibraryCache();
-        await fetchLibrary();
+        await fetchPanelIndex();
       }
       applyScale();
       // executed 回显预存的分组数据 → 应用到 ui.fillGroups
@@ -877,176 +902,199 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   rootEl.innerHTML = `
     <style>
-      .tp-wrap { display:flex; flex-direction:column; height:100%; font:12.5px/1.5 "Segoe UI","Microsoft YaHei",sans-serif; }
-      .tp-head { display:flex; align-items:center; gap:10px; padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.09); }
-      .tp-head h2 { margin:0; font-size:15px; }
-      .tp-search { flex:1; max-width:420px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.12);
-                   border-radius:8px; color:#e3e7ee; padding:6px 12px; outline:none; font-size:12.5px; }
+      /* 颜色全部走 .tl-scope 主题变量 (tagpanel-css.js) —— 深浅主题同一份样式 */
+      .tp-wrap { display:flex; flex-direction:column; height:100%; color:var(--tl-text);
+                 font:12.5px/1.5 "Segoe UI","Microsoft YaHei",sans-serif; }
+      .tp-head { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--tl-border); }
+      .tp-head h2 { margin:0; font-size:15px; white-space:nowrap; }
+      .tp-search { flex:1; min-width:150px; max-width:420px; background:var(--tl-input-bg);
+                   border:1px solid var(--tl-border-2); border-radius:8px; color:var(--tl-text);
+                   padding:6px 12px; outline:none; font-size:12.5px; }
+      .tp-search:focus { border-color:color-mix(in srgb, var(--tl-accent) 60%, transparent); }
       .tp-cols { flex:1; display:flex; min-height:0; }
-      .tp-cats { width:200px; border-right:1px solid rgba(255,255,255,.08); overflow-y:auto; padding:10px; display:flex; flex-direction:column; gap:4px; }
-      .tp-cat {
-        display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:9px;
-        cursor:pointer; border:1px solid transparent; transition:.12s;
-      }
-      .tp-cat:hover { background:rgba(255,255,255,.05); }
+      .tp-cats { width:200px; border-right:1px solid var(--tl-border); overflow-y:auto;
+                 padding:10px; display:flex; flex-direction:column; gap:4px; }
+      .tp-cat { display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:9px;
+                cursor:pointer; border:1px solid transparent; transition:.12s; color:var(--tl-text-2); }
+      .tp-cat.tp-cat-l0 { color:var(--tl-text); }
+      .tp-cat:focus-visible { outline:2px solid color-mix(in srgb, var(--tl-accent) 70%, transparent); outline-offset:1px; }
+      .tp-cat:hover { background:var(--tl-hover); }
       .tp-cat.active { background:color-mix(in srgb, currentColor 14%, transparent); border-color:currentColor; }
       .tp-cat .nm { flex:1; }
-      .tp-cat .ct { font-size:11px; color:#8b93a5; }
+      .tp-cat .ct { font-size:11px; color:var(--tl-muted); }
+      .tp-chev { cursor:pointer; opacity:.7; }
+      .tp-chev:hover { opacity:1; }
       .tp-chips { flex:1; overflow-y:auto; padding:14px 16px; }
-      .tp-sub { font-size:11px; color:#8b93a5; margin:10px 0 6px; letter-spacing:.03em; }
+      .tp-sub { font-size:11px; color:var(--tl-muted); margin:10px 0 6px; letter-spacing:.03em; }
       .tp-grid { display:flex; flex-wrap:wrap; gap:5px; }
-      .tp-tag {
-        --c:#54a0ff;
-        border:1px solid color-mix(in srgb, var(--c) 30%, rgba(255,255,255,.13));
-        background:color-mix(in srgb, var(--c) 8%, rgba(255,255,255,.04));
-        border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px; transition:.12s;
-      }
+      .tp-tag { --c:var(--tl-accent);
+        border:1px solid color-mix(in srgb, var(--c) 30%, var(--tl-border-2));
+        background:color-mix(in srgb, var(--c) 8%, var(--tl-card));
+        border-radius:8px; padding:3px 10px; cursor:pointer; font-size:12px;
+        transition:.12s; color:var(--tl-text); }
       .tp-tag:hover { background:color-mix(in srgb, var(--c) 20%, transparent); transform:translateY(-1px); }
+      .tp-tag:focus-visible { outline:2px solid color-mix(in srgb, var(--c) 70%, transparent); outline-offset:1px; }
       .tp-tag.picked { background:var(--c); color:#fff; box-shadow:0 0 8px -2px var(--c); }
       .tp-tag.picked::before { content:"✓ "; }
+      .tp-tag.dim { opacity:.38; }
       .tp-tag.nsfw { --c:#e5484d; }
-      .tp-tag.gender { border-style: dashed; }
-      .tp-tag .tl-gsym { font-weight: 700; margin-right: 2px; }
-      .tp-tag .tl-gsym.g-f { color: #ff6b9d; }
-      .tp-tag .tl-gsym.g-m { color: #54a0ff; }   /* NSFW = 红色 (与管理页一致) */
-      .tp-foot { display:flex; align-items:center; gap:10px; padding:11px 16px; border-top:1px solid rgba(255,255,255,.09); }
-      .tp-count { font-size:13px; font-weight:600; color:#54a0ff; }
-      .tp-btn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:inherit;
+      .tp-tag.gender { border-style:dashed; }
+      .tp-tag .tl-gsym { font-weight:700; margin-right:2px; }
+      .tp-tag .tl-gsym.g-f { color:#ff6b9d; }
+      .tp-tag .tl-gsym.g-m { color:var(--tl-accent); }
+      .tp-foot { display:flex; align-items:center; gap:10px; padding:11px 16px; border-top:1px solid var(--tl-border); }
+      .tp-count { font-size:13px; font-weight:600; color:var(--tl-accent); }
+      .tp-btn { border:1px solid var(--tl-border-2); background:var(--tl-card); color:inherit;
                 border-radius:8px; padding:7px 18px; cursor:pointer; font-size:13px; }
-      .tp-btn.primary { background:linear-gradient(135deg,rgba(84,160,255,.35),rgba(84,160,255,.2));
-                        border-color:rgba(84,160,255,.55); font-weight:600; }
-      .tp-btn:hover { filter:brightness(1.25); }
-      .tp-tabbtn {
-        border:1px solid rgba(255,255,255,.14); background:transparent; color:#aab3c5;
-        border-radius:8px; padding:5px 12px; cursor:pointer; font-size:12.5px;
-      }
-      .tp-tabbtn.active { background:rgba(84,160,255,.18); border-color:rgba(84,160,255,.5); color:#cfe4ff; }
-      .tp-exc-card {
-        display:flex; align-items:center; gap:10px; padding:9px 13px; margin-bottom:6px;
-        border:1px solid rgba(255,255,255,.10); border-radius:10px; background:rgba(255,255,255,.03);
-      }
-      .tp-exc-card.excluded { border-color: rgba(255,107,107,.55); background: rgba(255,71,87,.10); }
+      .tp-btn:hover { background:var(--tl-hover); }
+      .tp-btn:focus-visible { outline:2px solid color-mix(in srgb, var(--tl-accent) 70%, transparent); outline-offset:1px; }
+      .tp-btn.primary { background:color-mix(in srgb, var(--tl-accent) 22%, transparent);
+                        border-color:color-mix(in srgb, var(--tl-accent) 55%, transparent); font-weight:600; }
+      .tp-btn.primary:hover { background:color-mix(in srgb, var(--tl-accent) 32%, transparent); }
+      .tp-tabbtn { border:1px solid var(--tl-border-2); background:transparent; color:var(--tl-text-2);
+                   border-radius:8px; padding:5px 12px; cursor:pointer; font-size:12.5px; white-space:nowrap; }
+      .tp-tabbtn:hover { background:var(--tl-hover); }
+      .tp-tabbtn.active { background:color-mix(in srgb, var(--tl-accent) 18%, transparent);
+                          border-color:color-mix(in srgb, var(--tl-accent) 50%, transparent);
+                          color:var(--tl-accent-text); }
+      .tp-exc-card { display:flex; align-items:center; gap:10px; padding:9px 13px; margin-bottom:6px;
+                     border:1px solid var(--tl-border); border-radius:10px; background:var(--tl-card-2); }
+      .tp-exc-card.excluded { border-color:rgba(255,107,107,.55); background:rgba(255,71,87,.10); }
       .tp-exc-card .nm { flex:1; font-size:13px; }
-      .tp-exc-card .why { font-size:11px; color:#f7a4b1; }
-      .tp-exc-hint { font-size:12px; color:#8b93a5; margin-bottom:12px; line-height:1.6; }
-      .tp-master { border:1px solid rgba(84,160,255,.35); background:rgba(84,160,255,.08);
+      .tp-exc-card .why { font-size:11px; color:var(--tl-danger-soft); }
+      .tp-exc-hint { font-size:12px; color:var(--tl-muted); margin-bottom:12px; line-height:1.6; }
+      .tp-master { border:1px solid color-mix(in srgb, var(--tl-accent) 35%, transparent);
+                   background:color-mix(in srgb, var(--tl-accent) 8%, transparent);
                    border-radius:10px; padding:10px; margin-bottom:8px; }
       .tp-range { display:inline-flex; align-items:center; gap:4px; }
-      .tp-range input { width:44px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14);
-                        border-radius:6px; color:#e3e7ee; padding:3px 5px; font-size:11.5px; text-align:center; }
-      .tp-range-hint { font-size:10.5px; color:#6b7385; margin-top:5px; }
-      .tp-set-h { font-size:12px; font-weight:700; color:#8fb8ff; letter-spacing:.05em; margin:20px 0 10px; }
-      .tp-set-h:first-child { margin-top:0; }
-      .tp-set-h .sub { color:#6b7385; font-weight:400; font-size:11px; }
-      .tp-set-card { max-width:560px; border:1px solid rgba(255,255,255,.09); border-radius:12px;
-                     background:rgba(255,255,255,.03); padding:14px 16px; margin-bottom:6px; }
+      .tp-range input { width:44px; background:var(--tl-input-bg); border:1px solid var(--tl-border-2);
+                        border-radius:6px; color:var(--tl-text); padding:3px 5px; font-size:11.5px; text-align:center; }
+      .tp-range-hint { font-size:10.5px; color:var(--tl-dim); margin-top:5px; }
+      .tp-empty { color:var(--tl-muted); }
+      /* ---- 设置页 (可折叠分区) ---- */
+      .tp-set-sec { margin:0 0 10px; }
+      .tp-set-sec > summary { cursor:pointer; font-size:12px; font-weight:700; color:var(--tl-accent-text);
+                              letter-spacing:.05em; padding:6px 0; list-style:none; user-select:none; }
+      .tp-set-sec > summary::-webkit-details-marker { display:none; }
+      .tp-set-sec > summary::before { content:"▸ "; color:var(--tl-muted); font-weight:400; }
+      .tp-set-sec[open] > summary::before { content:"▾ "; }
+      .tp-set-sec > summary:hover { filter:brightness(1.15); }
+      .tp-set-sec .sub { color:var(--tl-dim); font-weight:400; font-size:11px; }
+      .tp-set-card { max-width:560px; border:1px solid var(--tl-border); border-radius:12px;
+                     background:var(--tl-card-2); padding:14px 16px; margin-bottom:6px; }
       .tp-set-row { margin-bottom:13px; }
       .tp-set-row:last-child { margin-bottom:0; }
-      .tp-set-lab { font-size:12px; color:#aab3c5; margin-bottom:4px; }
-      .tp-set-hint { font-size:11px; color:#6b7385; margin-top:3px; line-height:1.5; }
+      .tp-set-lab { font-size:12px; color:var(--tl-text-2); margin-bottom:4px; }
+      .tp-set-hint { font-size:11px; color:var(--tl-dim); margin-top:3px; line-height:1.5; }
       .tp-set-row select, .tp-set-row input[type="text"], .tp-set-row input[type="number"] {
-        background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); border-radius:8px;
-        color:#e3e7ee; padding:6px 9px; font-size:12.5px; outline:none;
+        background:var(--tl-input-bg); border:1px solid var(--tl-border-2); border-radius:8px;
+        color:var(--tl-text); padding:6px 9px; font-size:12.5px; outline:none;
       }
-      .tp-set-row select:focus, .tp-set-row input:focus { border-color:rgba(84,160,255,.55); }
-      .tp-set-row input[type="checkbox"] { width:15px; height:15px; accent-color:#54a0ff; }
-      .tp-sync-note { font-size:11px; color:#6b7385; margin-top:14px; line-height:1.6; max-width:560px; }
-      .tp-cf-stats { font-size:12px; color:#aab3c5; margin-bottom:12px; }
+      .tp-set-row select:focus, .tp-set-row input:focus { border-color:color-mix(in srgb, var(--tl-accent) 55%, transparent); }
+      .tp-set-row input[type="checkbox"] { width:15px; height:15px; accent-color:var(--tl-accent); }
+      .tp-sync-note { font-size:11px; color:var(--tl-dim); margin-top:14px; line-height:1.6; max-width:560px; }
+      /* ---- 防冲突关系页 ---- */
+      .tp-cf-stats { font-size:12px; color:var(--tl-text-2); margin-bottom:12px; }
       .tp-cf-list { display:flex; flex-direction:column; gap:6px; margin-bottom:20px; }
       .tp-cf-rule { display:flex; align-items:center; gap:8px; flex-wrap:wrap;
-        border:1px solid rgba(255,255,255,.09); border-radius:10px;
-        background:rgba(255,255,255,.03); padding:8px 12px; font-size:12.5px; }
-      .tp-cf-rule .cf-l { font-weight:600; color:#cfe4ff; }
-      .tp-cf-rule .cf-vs { color:#8b93a5; }
-      .tp-cf-rule .cf-rt { border:1px solid rgba(255,255,255,.16); border-radius:6px;
-        padding:1px 7px; font-size:11.5px; color:#cfd6e4; }
-      .tp-cf-rule .cf-note { color:#6b7385; font-size:11px; }
-      .tp-cf-rule .cf-warn { color:#ff6b6b; font-size:11px; }
+        border:1px solid var(--tl-border); border-radius:10px;
+        background:var(--tl-card-2); padding:8px 12px; font-size:12.5px; }
+      .tp-cf-rule .cf-l { font-weight:600; color:var(--tl-accent-text); }
+      .tp-cf-rule .cf-vs { color:var(--tl-muted); }
+      .tp-cf-rule .cf-rt { border:1px solid var(--tl-border-2); border-radius:6px;
+        padding:1px 7px; font-size:11.5px; color:var(--tl-text-2); }
+      .tp-cf-rule .cf-note { color:var(--tl-dim); font-size:11px; }
+      .tp-cf-rule .cf-warn { color:var(--tl-danger); font-size:11px; }
       .tp-cf-rule .cf-del { margin-left:auto; background:transparent; cursor:pointer;
-        border:1px solid rgba(255,107,107,.4); color:#ff9d9d; border-radius:6px;
+        border:1px solid rgba(255,107,107,.4); color:var(--tl-danger-soft); border-radius:6px;
         padding:2px 8px; font-size:11px; }
       .tp-cf-rule .cf-del:hover { background:rgba(255,71,87,.15); }
-      .tp-cf-h { font-size:12px; font-weight:700; color:#8fb8ff; margin:16px 0 10px; }
-      .tp-cf-form { border:1px solid rgba(255,255,255,.09); border-radius:12px;
-        background:rgba(255,255,255,.03); padding:14px 16px; max-width:640px; }
+      .tp-cf-h { font-size:12px; font-weight:700; color:var(--tl-accent-text); margin:16px 0 10px; }
+      .tp-cf-form { border:1px solid var(--tl-border); border-radius:12px;
+        background:var(--tl-card-2); padding:14px 16px; max-width:640px; }
       .tp-cf-frow { display:flex; align-items:center; gap:8px; margin-bottom:10px; flex-wrap:wrap; }
-      .tp-cf-frow .cf-klab { font-size:11.5px; color:#8b93a5; width:52px; }
+      .tp-cf-frow .cf-klab { font-size:11.5px; color:var(--tl-muted); width:52px; }
       .tp-cf-frow select, .tp-cf-frow input {
-        background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); border-radius:8px;
-        color:#e3e7ee; padding:5px 9px; font-size:12px; outline:none; }
-      .tp-cf-frow input:focus { border-color:rgba(84,160,255,.55); }
-      .tp-cf-add { border:1px solid rgba(84,160,255,.5); background:rgba(84,160,255,.12);
-        color:#9ecbff; border-radius:7px; padding:4px 12px; cursor:pointer; font-size:12px; }
-      .tp-cf-add:hover { background:rgba(84,160,255,.22); }
+        background:var(--tl-input-bg); border:1px solid var(--tl-border-2); border-radius:8px;
+        color:var(--tl-text); padding:5px 9px; font-size:12px; outline:none; }
+      .tp-cf-frow input:focus { border-color:color-mix(in srgb, var(--tl-accent) 55%, transparent); }
+      .tp-cf-add { border:1px solid color-mix(in srgb, var(--tl-accent) 50%, transparent);
+        background:color-mix(in srgb, var(--tl-accent) 12%, transparent);
+        color:var(--tl-accent-text); border-radius:7px; padding:4px 12px; cursor:pointer; font-size:12px; }
+      .tp-cf-add:hover { background:color-mix(in srgb, var(--tl-accent) 22%, transparent); }
       .tp-cf-rights { display:flex; flex-wrap:wrap; gap:5px; margin:4px 0 10px 60px; min-height:24px; }
       .tp-cf-rights .cf-rt-chip { display:inline-flex; align-items:center; gap:5px;
         border:1px solid rgba(46,204,113,.45); background:rgba(46,204,113,.08);
         border-radius:6px; padding:1px 7px; font-size:11.5px; }
       .tp-cf-rights .cf-rt-chip .x { cursor:pointer; opacity:.6; }
-      .tp-cf-rights .cf-rt-chip .x:hover { opacity:1; color:#ff6b6b; }
-      .tp-cf-save { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
-        border-radius:8px; padding:6px 18px; cursor:pointer; font-weight:600; font-size:12.5px; }
-      /* ---- 1.3.0: 视图切换条 / 轴视图 / 档案·互斥域·NL 视图 ---- */
+      .tp-cf-rights .cf-rt-chip .x:hover { opacity:1; color:var(--tl-danger); }
+      .tp-cf-save { background:var(--tl-accent); border:0; color:#fff; border-radius:8px;
+        padding:6px 18px; cursor:pointer; font-weight:600; font-size:12.5px; }
+      .tp-cf-save:hover { filter:brightness(1.12); }
+      .tp-glist { margin-bottom:6px; }
       .tp-viewmode { display:flex; gap:4px; margin-bottom:8px; }
       .tp-vm { flex:1; padding:5px 0; font-size:11.5px; border-radius:7px; cursor:pointer;
-        border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04); color:#aab3c5; }
-      .tp-vm.active { background:rgba(84,160,255,.18); border-color:rgba(84,160,255,.5); color:#cfe4ff; }
-      .tp-axis-head { font-size:12.5px; color:#cfe4ff; font-weight:600; }
+               border:1px solid var(--tl-border); background:var(--tl-card); color:var(--tl-text-2); }
+      .tp-vm:hover { background:var(--tl-hover); }
+      .tp-vm.active { background:color-mix(in srgb, var(--tl-accent) 18%, transparent);
+                      border-color:color-mix(in srgb, var(--tl-accent) 50%, transparent); color:var(--tl-accent-text); }
+      .tp-axis-head { font-size:12.5px; color:var(--tl-accent-text); font-weight:600; }
       .tp-axis-n { opacity:.55; font-weight:400; }
-      .tp-axis-hint { font-size:10px; color:#f0a35e; font-weight:400; margin-left:8px; }
-      .tp-tag.bundled { border-style:dashed; border-color:rgba(240,163,94,.55); }
-      .tp-h1 { font-size:15px; font-weight:700; color:#e3e7ee; margin-bottom:6px; }
-      .tp-h1-sub { font-size:11px; color:#8b93a5; font-weight:400; margin-left:8px; }
-      .tp-note { font-size:11.5px; color:#98a1b3; line-height:1.65; margin-bottom:12px;
-        background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.07);
-        border-radius:8px; padding:8px 12px; }
-      .tp-pcard { background:rgba(255,255,255,.035); border:1px solid rgba(255,255,255,.09);
-        border-radius:10px; padding:12px 14px; margin-bottom:12px; }
+      .tp-axis-hint { font-size:10px; color:var(--tl-warn); font-weight:400; margin-left:8px; }
+      .tp-tag.bundled { border-style:dashed; border-color:color-mix(in srgb, var(--tl-warn) 55%, transparent); }
+      .tp-h1 { font-size:15px; font-weight:700; color:var(--tl-text); margin-bottom:6px; }
+      .tp-h1-sub { font-size:11px; color:var(--tl-muted); font-weight:400; margin-left:8px; }
+      .tp-note { font-size:11.5px; color:var(--tl-text-3); line-height:1.65; margin-bottom:12px;
+                 background:var(--tl-card-2); border:1px solid var(--tl-border);
+                 border-radius:8px; padding:8px 12px; }
+      .tp-pcard { background:var(--tl-card); border:1px solid var(--tl-border);
+                  border-radius:10px; padding:12px 14px; margin-bottom:12px; }
       .tp-pcard.err { border-color:rgba(255,107,107,.5); }
       .tp-pcard-h { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:6px; }
-      .tp-pcard-h code { color:#8fbaff; font-size:11px; }
+      .tp-pcard-h code { color:var(--tl-accent-text); font-size:11px; }
       .tp-pbadges { margin-left:auto; display:flex; gap:5px; }
-      .tp-b { font-size:10px; padding:2px 7px; border-radius:99px;
-        background:rgba(255,255,255,.07); color:#aab3c5; }
-      .tp-b.ok { background:rgba(125,212,125,.14); color:#7dd47d; }
-      .tp-b.warn { background:rgba(240,163,94,.16); color:#f0a35e; }
+      .tp-b { font-size:10px; padding:2px 7px; border-radius:99px; background:var(--tl-card); color:var(--tl-text-2); }
+      .tp-b.ok { background:rgba(125,212,125,.14); color:var(--tl-ok); }
+      .tp-b.warn { background:rgba(240,163,94,.16); color:var(--tl-warn); }
       .tp-prow { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:4px 0; }
-      .tp-pl { font-size:10.5px; color:#8b93a5; min-width:44px; }
+      .tp-pl { font-size:10.5px; color:var(--tl-muted); min-width:44px; }
       .tp-chip { font-size:10.5px; padding:2px 8px; border-radius:6px;
-        background:rgba(84,160,255,.12); color:#cfe4ff; }
+                 background:color-mix(in srgb, var(--tl-accent) 12%, transparent); color:var(--tl-accent-text); }
       .tp-ptab { width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; }
-      .tp-ptab th { text-align:left; color:#8b93a5; font-weight:500; padding:4px 8px;
-        border-bottom:1px solid rgba(255,255,255,.1); }
-      .tp-ptab td { padding:4px 8px; border-bottom:1px solid rgba(255,255,255,.05); color:#c3cbdb; }
-      .tp-ptab code { color:#8fbaff; }
-      .tp-ptab tr.extra td { background:rgba(240,163,94,.05); }
-      .tp-ptab .dim { color:#8b93a5; font-size:10px; }
-      .tp-gitem { border:1px solid rgba(255,255,255,.08); border-radius:8px;
-        margin-bottom:6px; background:rgba(255,255,255,.025); }
-      .tp-gitem summary { cursor:pointer; padding:7px 12px; font-size:11.5px; color:#c3cbdb; }
-      .tp-gitem summary code { color:#8fbaff; }
-      .tp-gn { color:#8b93a5; font-size:10.5px; margin-left:8px; }
+      .tp-ptab th { text-align:left; color:var(--tl-muted); font-weight:500; padding:4px 8px;
+                    border-bottom:1px solid var(--tl-border); }
+      .tp-ptab td { padding:4px 8px; border-bottom:1px solid var(--tl-border); color:var(--tl-text-2); }
+      .tp-ptab code { color:var(--tl-accent-text); }
+      .tp-ptab tr.extra td { background:color-mix(in srgb, var(--tl-warn) 5%, transparent); }
+      .tp-ptab .dim { color:var(--tl-muted); font-size:10px; }
+      .tp-gitem { border:1px solid var(--tl-border); border-radius:8px; margin-bottom:6px; background:var(--tl-card-2); }
+      .tp-gitem summary { cursor:pointer; padding:7px 12px; font-size:11.5px; color:var(--tl-text-2); }
+      .tp-gitem summary code { color:var(--tl-accent-text); }
+      .tp-gn { color:var(--tl-muted); font-size:10.5px; margin-left:8px; }
       .tp-gmem { padding:6px 14px 10px; display:flex; flex-wrap:wrap; gap:5px; }
-      .tp-gmem .tp-chip { background:rgba(255,255,255,.06); color:#c3cbdb; }
+      .tp-gmem .tp-chip { background:var(--tl-card); color:var(--tl-text-2); }
+      .tp-gsearch { background:var(--tl-input-bg); border:1px solid var(--tl-border-2); border-radius:8px;
+                    color:var(--tl-text); padding:6px 10px; font-size:12px; outline:none; }
       .tp-fam { margin-bottom:10px; }
-      .tp-fam-h { font-size:12px; color:#cfe4ff; margin-bottom:3px; }
-      .tp-fam-s { font-size:11.5px; color:#aab3c5; padding:2px 0 2px 16px; }
-      .tp-jsonbox { margin-top:14px; border:1px solid rgba(255,255,255,.09); border-radius:8px; }
-      .tp-jsonbox summary { padding:8px 12px; font-size:12px; color:#aab3c5; cursor:pointer; }
-      .tp-jsonbox textarea { width:calc(100% - 24px); margin:0 12px; background:#12141a;
-        color:#c3cbdb; border:1px solid rgba(255,255,255,.1); border-radius:6px;
-        font-family:Consolas,monospace; font-size:11px; padding:8px; box-sizing:border-box; }
+      .tp-fam-h { font-size:12px; color:var(--tl-accent-text); margin-bottom:3px; }
+      .tp-fam-s { font-size:11.5px; color:var(--tl-text-2); padding:2px 0 2px 16px; }
+      .tp-jsonbox { margin-top:14px; border:1px solid var(--tl-border); border-radius:8px; }
+      .tp-jsonbox summary { padding:8px 12px; font-size:12px; color:var(--tl-text-2); cursor:pointer; }
+      .tp-jsonbox textarea { width:calc(100% - 24px); margin:0 12px; background:var(--tl-code-bg);
+                             color:var(--tl-text-2); border:1px solid var(--tl-border); border-radius:6px;
+                             font-family:Consolas,monospace; font-size:11px; padding:8px; box-sizing:border-box; }
       .tp-jrow { padding:8px 12px 12px; display:flex; align-items:center; gap:10px; }
-      .tp-jsave { background:linear-gradient(135deg,#0071e3,#54a0ff); border:0; color:#fff;
-        border-radius:8px; padding:6px 16px; cursor:pointer; font-weight:600; font-size:12px; }
+      .tp-jsave { background:var(--tl-accent); border:0; color:#fff; border-radius:8px;
+                  padding:6px 16px; cursor:pointer; font-weight:600; font-size:12px; }
+      .tp-jsave:hover { filter:brightness(1.12); }
       .tp-jmsg { font-size:11.5px; }
       .tp-zh { opacity:.55; font-size:10px; margin-left:3px; }
       .tp-chip .tp-zh { margin-left:2px; }
-      .tp-langbtn { border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.05);
-        color:#aab3c5; border-radius:6px; font-size:10.5px; padding:1px 7px; cursor:pointer;
-        margin-left:8px; vertical-align:2px; }
-      .tp-langbtn.en { color:#f0a35e; border-color:rgba(240,163,94,.5); }
-      .tp-arrow { color:#54a0ff; margin:0 4px; }
+      .tp-langbtn { border:1px solid var(--tl-border-2); background:var(--tl-card); color:var(--tl-text-2);
+                    border-radius:6px; font-size:10.5px; padding:1px 7px; cursor:pointer;
+                    margin-left:8px; vertical-align:2px; }
+      .tp-langbtn.en { color:var(--tl-warn); border-color:color-mix(in srgb, var(--tl-warn) 50%, transparent); }
+      .tp-arrow { color:var(--tl-accent); margin:0 4px; }
     </style>
     <div class="tp-wrap">
       <div class="tp-head">
@@ -1237,7 +1285,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange }) {
     const el = document.createElement("div");
     el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
-    el.style.color = color || (depth === 0 ? "#cfd6e4" : "#aab3c5");
+    // 分类自带色 (用户自定义) 才内联; 未配置时交给 CSS 变量 → 深浅主题自动适配
+    if (color) el.style.color = color;
     if (depth === 1) el.style.paddingLeft = "22px";
     if (depth === 2) el.style.paddingLeft = "38px";
     const rangeHtml = range ? `
@@ -1301,15 +1350,27 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     } catch { WEAPON_POSES = new Set(); }
   }
 
-  function renderAxisChips() {
-    chipsBox.innerHTML = "";
-    const existing = getExisting();
-    const lib = LIB_CACHE || { categories: [] };
+  /* 按轴分桶 —— 全库遍历一次后缓存 (库对象变了才重建)。
+     旧实现每次渲染轴视图都重新遍历 4300+ 词。 */
+  let _axisBuckets = null;
+  let _axisBucketSrc = null;
+  function axisBucketsOf(lib) {
+    if (_axisBuckets && _axisBucketSrc === lib) return _axisBuckets;
     const byAxis = {};
     eachTag(lib, (t, c, s) => {
       const a = t.axis || "misc";
       (byAxis[a] = byAxis[a] || []).push({ t, c, s });
     });
+    _axisBuckets = byAxis;
+    _axisBucketSrc = lib;
+    return byAxis;
+  }
+
+  function renderAxisChips() {
+    chipsBox.innerHTML = "";
+    const existing = getExisting();
+    const lib = LIB_CACHE || { categories: [] };
+    const byAxis = axisBucketsOf(lib);
     fetchWeaponPoses().finally(() => {
       let shown = 0;
       for (const a of AXIS_ORDER) {
@@ -1597,15 +1658,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     ui.libTouched = true;
     if (!mgrView.querySelector("iframe")) {
       mgrView.innerHTML =
-        `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;display:block;background:#17191f"></iframe>`;
+        `<iframe src="${managerUrl()}" style="width:100%;height:100%;border:0;display:block;background:var(--tl-bg-solid)"></iframe>`;
     }
   }
 
   function refreshLibIfTouched() {
     if (!ui.libTouched) return;
     ui.libTouched = false;
-    invalidateLibraryCache();
-    fetchLibrary().then(() => { renderCats(); renderChips(); });
+    invalidateLibraryCache();   // 两级缓存一起清: 面板索引 + 挑选器全量库
+    Promise.all([fetchLibrary(), fetchPanelIndex()])
+      .then(() => { renderCats(); renderChips(); });
   }
 
   /* ---------- 设置页: 节点参数(原⚙弹窗) + 全局偏好(与 ComfyUI 设置双向同步) ---------- */
@@ -1626,7 +1688,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         ${hint ? `<div class="tp-set-hint">${hint}</div>` : ""}
       </div>`;
     setView.innerHTML = `
-      <div class="tp-set-h">节点参数 <span class="sub">· 存入当前节点, 随工作流保存</span></div>
+      <details class="tp-set-sec" open>
+      <summary>节点参数 <span class="sub">· 存入当前节点, 随工作流保存</span></summary>
       <div class="tp-set-card">
         ${row("输出分隔符", `<select class="sv-sep">
             <option value="comma" ${(st.separator ?? "comma") === "comma" ? "selected" : ""}>逗号 , (推荐)</option>
@@ -1639,7 +1702,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         ${row("组合随机过滤词", `<input type="text" class="sv-search" value="${(st.search_text || "").replace(/"/g, "&quot;")}" placeholder="留空 = 全库抽取"/>`,
           "只从匹配的标签里随机 (支持中文/英文/别名)")}
       </div>
-      <div class="tp-set-h">1.3.0 引擎 <span class="sub">· 组互斥/资源算账/武器束/NL 尾段</span></div>
+      </details>
+      <details class="tp-set-sec" open>
+      <summary>1.3.0 引擎 <span class="sub">· 组互斥/资源算账/武器束/NL 尾段</span></summary>
       <div class="tp-set-card">
         ${row("自然语言尾段", `<input type="checkbox" class="sv-nltail" ${st.nl_tail !== false ? "checked" : ""}/>`,
           "输出末尾追加 2~4 句连贯英文描述 (句式随 seed 变, 关掉=纯标签)")}
@@ -1650,7 +1715,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         ${row("配件出生概率", `<input type="number" class="sv-extrprob" min="0" max="100" step="5" value="${Math.round((st.extra_prob ?? 0.35) * 100)}"/>`,
           "% · 武器档案的配件 (刀鞘/箭袋/镜) 随武器出现的概率")}
       </div>
-      <div class="tp-set-h">全局偏好 <span class="sub">· 与 ComfyUI 设置面板「标签库」双向同步</span></div>
+      </details>
+      <details class="tp-set-sec" open>
+      <summary>全局偏好 <span class="sub">· 与 ComfyUI 设置面板「标签库」双向同步</span></summary>
       <div class="tp-set-card">
         ${row("新节点的默认模式", `<select class="sv-gmode">
             <option value="manual" ${gMode === "manual" ? "selected" : ""}>手动</option>
@@ -1669,6 +1736,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           </select>`,
           "输出永远只有英文; 这里只控制面板里标签按钮的显示文字")}
       </div>
+      </details>
       <div class="tp-sync-note">💡 节点参数即改即存; 全局偏好写入 ComfyUI 设置 (设置面板搜「标签库」是同一批值, 两边改都生效)。</div>
     `;
     // 节点参数: 即改即存 + 让节点面板实时跟随
@@ -1707,16 +1775,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (btn) btn.onclick = async () => {
       let payload;
       try { payload = JSON.parse(ta.value); }
-      catch (e) { msg.textContent = "❌ JSON 解析失败: " + e.message; msg.style.color = "#ff6b6b"; return; }
-      btn.disabled = true; msg.textContent = "保存中…"; msg.style.color = "#8b93a5";
+      catch (e) { msg.textContent = "❌ JSON 解析失败: " + e.message; msg.style.color = "var(--tl-danger)"; return; }
+      btn.disabled = true; msg.textContent = "保存中…"; msg.style.color = "var(--tl-muted)";
       try {
         const r = await fetch(apiUrl, { method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(getData(payload)) });
         const d = await r.json();
-        if (d.ok) { msg.textContent = "✅ 已保存, 引擎即时生效"; msg.style.color = "#7dd47d"; WEAPON_POSES = null; }
-        else { msg.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 160); msg.style.color = "#ff6b6b"; }
-      } catch (e) { msg.textContent = "❌ " + e.message; msg.style.color = "#ff6b6b"; }
+        if (d.ok) { msg.textContent = "✅ 已保存, 引擎即时生效"; msg.style.color = "var(--tl-ok)"; WEAPON_POSES = null; }
+        else { msg.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 160); msg.style.color = "var(--tl-danger)"; }
+      } catch (e) { msg.textContent = "❌ " + e.message; msg.style.color = "var(--tl-danger)"; }
       btn.disabled = false;
     };
   }
@@ -2111,12 +2179,12 @@ function openManagerDialog() {
   dlg.id = "taglib-manager-dialog";
   dlg.style.cssText =
     "width:min(96vw,1400px);height:min(94vh,980px);border:none;border-radius:14px;" +
-    "padding:0;background:#17191f;color:#dfe3ea;max-width:none;max-height:none;";
-  dlg.classList.add("p-inputtext", "notranslate");
+    "padding:0;background:var(--tl-bg-solid);color:var(--tl-text);max-width:none;max-height:none;";
+  dlg.classList.add("p-inputtext", "notranslate", "tl-scope");
   dlg.setAttribute("translate", "no");
   // 不设 ✕ 按钮 —— 会与管理页顶栏「恢复默认库」重叠; 关闭 = 点遮罩 / Esc
   dlg.innerHTML =
-    `<iframe src="${MANAGER_URL}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
+    `<iframe src="${managerUrl()}" style="width:100%;height:100%;border:0;border-radius:14px;display:block"></iframe>`;
   document.body.appendChild(dlg);
   dlg.showModal();
   dlg.addEventListener("click", (e) => {
@@ -2445,21 +2513,19 @@ app.registerExtension({
       const applyTheme = () => {
         try {
           // 官方主题切换机制: html.dark-theme 类 (light 主题移除, 其余添加)。
-          // getSetting 只能拿到 id, 但部分主题 (github/nord/solarized) 都是深色,
-          // 用类存在性区分明暗最可靠; 具体配色差异再用 data-theme 细分。
-          let pid = getSetting("Comfy.ColorPalette", "dark");
-          if (typeof pid !== "string") pid = pid?.id || "dark";
-          const isLightTheme = !document.documentElement.classList.contains("dark-theme");
+          // 具体配色 id 走 data-theme, 明暗走 .tl-light —— 与 tagpanel-css.js 的
+          // .tl-scope 变量表对应; 面板/挑选器/管理弹窗三处同步同一份值。
+          const { pid, isLight } = currentTheme();
           // holder 自身就是 .taglib-panel (buildPanelWidget 在 container 上加类)
           const panel = holder.classList.contains("taglib-panel") ? holder : holder.querySelector(".taglib-panel");
           if (panel) {
             panel.dataset.theme = pid;
-            panel.classList.toggle("tl-light", isLightTheme);
-            // 同步面板内弹窗 (挑选器/设置) 的主题
-            for (const dlg of document.querySelectorAll("dialog.taglib-dialog, #taglib-picker-dialog")) {
-              dlg.dataset.theme = pid;
-              dlg.classList.toggle("tl-light", isLightTheme);
-            }
+            panel.classList.toggle("tl-light", isLight);
+          }
+          for (const dlg of document.querySelectorAll("#taglib-picker-dialog, #taglib-manager-dialog")) {
+            dlg.dataset.theme = pid;
+            dlg.classList.toggle("tl-light", isLight);
+            pushThemeToFrames(dlg);   // 内嵌管理页是独立文档, 只能 postMessage
           }
         } catch {}
       };
@@ -2556,10 +2622,23 @@ app.registerExtension({
         btn.id = "taglib-topbar-btn";
         btn.textContent = "🏷";
         btn.title = "标签库管理页";
+        // tl-scope: 复用面板主题变量 → 顶栏按钮在深浅主题下都不违和
+        btn.className = "tl-scope";
         btn.style.cssText =
           "position:fixed;z-index:99999;top:10px;right:64px;padding:4px 10px;" +
-          "border-radius:8px;border:1px solid rgba(128,140,160,.4);" +
-          "background:rgba(28,30,38,.92);color:#e3e7ee;cursor:pointer;font-size:13px;";
+          "border-radius:8px;border:1px solid var(--tl-border-2);" +
+          "background:var(--tl-bg-solid);color:var(--tl-text);cursor:pointer;font-size:13px;";
+        const syncTheme = () => {
+          const { pid, isLight } = currentTheme();
+          btn.dataset.theme = pid;
+          btn.classList.toggle("tl-light", isLight);
+        };
+        syncTheme();
+        try {
+          new MutationObserver(syncTheme).observe(document.documentElement, {
+            attributes: true, attributeFilter: ["class"],
+          });
+        } catch {}
         btn.onclick = openManagerDialog;
         document.body.appendChild(btn);
         return true;
@@ -2598,17 +2677,9 @@ app.registerExtension({
             return p && excluded.has(p[0]);
           });
           const have = new Set(kept.map((t) => t.en.toLowerCase()));
-          // NSFW 反查集: 回显数据没带 nsfw 时从库补 (旧后端兼容)
-          const nsfwSet = new Set();
-          const genderSet = new Map();
-          for (const c of (typeof LIB_CACHE?.categories === "object" ? LIB_CACHE.categories : []) || []) {
-            for (const s of c.subcategories || []) {
-              for (const t of s.tags || []) {
-                if (t.nsfw) nsfwSet.add(String(t.en).toLowerCase());
-                if (t.gender) genderSet.set(String(t.en).toLowerCase(), t.gender);
-              }
-            }
-          }
+          // NSFW / 性别反查: 直接用面板索引带来的标记表 (无需全量库)
+          const nsfwSet = PANEL_NSFW;
+          const genderSet = LIB_GENDER;
           const fresh = [];
           for (const t of parsed) {
             if (!t.en || have.has(t.en.toLowerCase())) continue;
@@ -2651,8 +2722,7 @@ app.registerExtension({
           // 按库类目顺序合并 (钉选不顶置, 随类目走)
           const catIdx = (t) => {
             const c = t._cat || "";
-            const arr = LIB_CACHE && Array.isArray(LIB_CACHE.categories) ? LIB_CACHE.categories : [];
-            const i = arr.findIndex((x) => x.name === c);
+            const i = PANEL_CATS.findIndex((x) => x.name === c);
             return c ? (i === -1 ? 999 : i) : -1;
           };
           const merged = [...keptWithCat, ...fresh].map((t, i) => [t, i])

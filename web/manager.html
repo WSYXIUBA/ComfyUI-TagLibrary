@@ -6,10 +6,30 @@
 <title>🏷 标签库管理</title>
 <link rel="stylesheet" href="/taglib/static/manager.css" />
 <script>
-  // embed 模式 (iframe 内嵌): 去掉外边距
-  if (new URLSearchParams(location.search).get("embed") === "1") {
-    document.documentElement.classList.add("embed");
-  }
+  /* 主题与 embed:
+     - embed=1    iframe 内嵌时去掉外边距
+     - theme/light 父页 (节点面板) 下发主题 —— iframe 是独立文档, 不继承
+                   父页的 html 类, 必须显式传; 主题切换时父页用 postMessage
+                   实时通知, 避免重载 iframe。
+     - 直接访问 /taglib (无参数) 时跟随系统深浅色偏好。 */
+  (function () {
+    var q = new URLSearchParams(location.search);
+    if (q.get("embed") === "1") document.documentElement.classList.add("embed");
+    function apply(theme, light) {
+      document.documentElement.classList.toggle("tl-light", !!light);
+      if (theme) document.documentElement.dataset.theme = theme;
+    }
+    var lightParam = q.get("light");
+    var isLight = lightParam === null
+      ? !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches)
+      : lightParam === "1";
+    apply(q.get("theme"), isLight);
+    window.addEventListener("message", function (e) {
+      var d = e.data;
+      if (!d || d.type !== "taglib-theme") return;
+      apply(d.theme, d.light);
+    });
+  })();
 </script>
 </head>
 <body>
