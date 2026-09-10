@@ -21,11 +21,13 @@ import random as _random
 
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
     from .profiles import BODY_RESOURCES
+    from . import slotpolicy
 except ImportError:  # pragma: no cover
     from profiles import BODY_RESOURCES
+    import slotpolicy
 
 MAX_REROLL = 3
-DEFAULT_CONFIG = {"total_min": None, "total_max": None, "bundle_pose_prob": 0.85,
+DEFAULT_CONFIG = {"total_min": 40, "total_max": 60, "bundle_pose_prob": 0.85,
                   "extra_prob": 0.35}
 
 # count 轴"混合宣言词": 出现即锁 mixed (=3), 两性都放行且不再被单词重锁。
@@ -131,6 +133,40 @@ class _Ledger:
 
 def _norm(x) -> str:
     return str(x or "").strip().lower()
+
+
+def _trim_to_budget(picks: list, tmax: int, snap) -> list:
+    """按**槽位贡献数**从多到少削词, 直到落进总预算。
+
+    不能做朴素截断 (`(keep + rest)[:tmax]`): `rest` 是按轴序排的, 靠后的
+    style / material / camera 会被**系统性砍光** —— 修一个缺陷引入另一个。
+    这里改为按槽位削, 并保证每个槽位不少于其配额下限; pinned/bundle/implied 永不削。
+    """
+    fixed_sources = ("pinned", "bundle", "implied")
+    fixed = [p for p in picks if p.source in fixed_sources]
+    free = [p for p in picks if p.source not in fixed_sources]
+    room = max(0, tmax - len(fixed))
+    if len(free) <= room:
+        return picks
+
+    by_slot: dict[int, list] = {}
+    for p in free:
+        si = snap.sub_of[p.id] if p.id is not None else -1
+        by_slot.setdefault(si, []).append(p)
+
+    drop: set[int] = set()
+    need = len(free) - room
+    for si in sorted(by_slot, key=lambda k: -len(by_slot[k])):
+        if need <= 0:
+            break
+        lst = by_slot[si]
+        keep_min = 0 if si < 0 else slotpolicy.caps_for(snap.sub_keys[si])[0]  # min_n
+        for p in lst[keep_min:]:
+            if need <= 0:
+                break
+            drop.add(id(p))
+            need -= 1
+    return [p for p in picks if id(p) not in drop]
 
 
 def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
@@ -375,24 +411,43 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     # ---------- 1+2. 逐池抽取 (prop 池抽完立即配束) ----------
     stats = {"bundle_attached": 0, "dropped_mutex": 0, "dropped_resource": 0}
-    for si in pool_ids:
+
+    # 槽位配额 / 互斥槽位组 / 人数语义 —— 见 slotpolicy.py 模块头部的实测说明。
+    # 钉选词已入账, 先据此判定人数语义 (单人场景不该抽"互动与双人")。
+    excl_used: set[str] = set()
+    count_single: bool | None = None
+    for _p in picks:
+        _low = _norm(_p.en)
+        if _low in slotpolicy.SINGLE_COUNT_WORDS:
+            count_single = True
+        elif _low in slotpolicy.MULTI_COUNT_WORDS:
+            count_single = False
+
+    slot_filled: dict[int, int] = {si: pinned_sub_count.get(si, 0) for si in pool_ids}
+
+    def _slot_available(si: int) -> tuple:
+        """该槽位此刻能否抽 + 剩余容量 (已考虑 排除/互斥槽位组/人数语义/配额)。"""
+        sub_key = snap.sub_keys[si]
         cname = snap.cat_names[snap.cat_of_sub[si]]
-        if cname in excl_cats or snap.sub_keys[si] in excl_keys:
-            continue
+        if cname in excl_cats or sub_key in excl_keys:
+            return False, 0
+        if slotpolicy.exclusive_group(sub_key) in excl_used:
+            return False, 0          # 互斥槽位组: 同组已有槽位出过词
+        if count_single is True and sub_key in slotpolicy.MULTI_ONLY_SLOTS:
+            return False, 0          # 单人场景不抽"仅多人成立"的槽位
         if master:
-            mn, mx = min(mlo, mhi), max(mlo, mhi)
+            cap = slotpolicy.caps_for(sub_key)[1]      # max_n
         else:
             r = (sub_ranges.get(sub_ids_str[si]) or {})
-            a = _int_or(r.get("min"), 1)
-            b = _int_or(r.get("max"), 1)
-            mn, mx = min(a, b), max(a, b)
-        if si in pinned_sub_count:
-            used_n = pinned_sub_count[si]
-            mn, mx = max(0, mn - used_n), max(0, mx - used_n)
-        if mx <= 0:
-            continue
-        want = rng.randint(mn, mx)
+            cap = max(_int_or(r.get("min"), 1), _int_or(r.get("max"), 1))
+        return (cap - slot_filled.get(si, 0)) > 0, max(cap - slot_filled.get(si, 0), 0)
 
+    def _pool_fill(si: int, want: int) -> int:
+        """从槽位 si 抽至多 want 个词, 返回实际抽出数。两遍共用。"""
+        nonlocal count_single
+        sub_key = snap.sub_keys[si]
+        cname = snap.cat_names[snap.cat_of_sub[si]]
+        excl_gid = slotpolicy.exclusive_group(sub_key)
         cands = []
         for tid in pools.get(si, ()):
             lo = snap.tag_lower[tid]
@@ -415,7 +470,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         for _key, tid in cands:
             if got >= want:
                 break
-            if led.used_ids.__contains__(tid):
+            if tid in led.used_ids:
                 continue
             lo = snap.tag_lower[tid]
             if lo in led.used_lower:
@@ -433,26 +488,80 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                     continue
             commit_tag(tid)
             got += 1
+            if excl_gid:
+                excl_used.add(excl_gid)
+            if snap.axis_arr[tid] == "count":
+                _low = snap.tag_lower[tid]
+                if _low in slotpolicy.SINGLE_COUNT_WORDS:
+                    count_single = True
+                elif _low in slotpolicy.MULTI_COUNT_WORDS:
+                    count_single = False
             if mount_of_tag.get(tid):
-                n = attach_bundle(tid, picks[-1].order, cname,
-                                  snap.axis_arr[tid])
+                n = attach_bundle(tid, picks[-1].order, cname, snap.axis_arr[tid])
                 if n:
                     stats["bundle_attached"] += 1
-        # 池内无候选可满足配额时静默少出 (不硬凑)
+            slot_filled[si] = slot_filled.get(si, 0) + 1
+        return got
+
+    # ---- 第 1 遍: 按逐槽位配额抽 (取代原先"每槽位都抽 mlo~mhi 个") ----
+    for si in pool_ids:
+        ok, room = _slot_available(si)
+        if not ok:
+            continue
+        sub_key = snap.sub_keys[si]
+        if master:
+            mn, mx = slotpolicy.caps_for(sub_key)      # (min_n, max_n)
+        else:
+            r = (sub_ranges.get(sub_ids_str[si]) or {})
+            a = _int_or(r.get("min"), 1)
+            b = _int_or(r.get("max"), 1)
+            mn, mx = min(a, b), max(a, b)
+        used_n = pinned_sub_count.get(si, 0)
+        mn, mx = max(0, mn - used_n), max(0, mx - used_n)
+        mx = min(mx, room)
+        if mx <= 0:
+            continue
+        lo_, hi_ = min(mn, mx), max(mn, mx)
+        # 偏向配额上限: 逐槽位全取 randint 会让总量偏低 (实测均值 36 词),
+        # 多数情况直接取满, 落进目标带。
+        want = hi_ if (hi_ > lo_ and rng.random() < 0.65) else rng.randint(lo_, hi_)
+        _pool_fill(si, want)
+
+    # ---- 第 2 遍 (补底): 总量不足 total_min 时, 从仍有余量的槽位各补 1 个 ----
+    # 只补到下限为止, 不改变"哪些槽位能出"的判定 (排除/互斥组/人数语义照旧生效)。
+    tmin = _int_or(state.get("total_min") or cfg.get("total_min"), 0)
+    if tmin and len(picks) < tmin:
+        # 多轮补: 单轮每槽只补 1 个, 而部分槽位首轮候选全被互斥/性别闸门挡掉;
+        # 再跑一轮时 rng 已推进、已选集合也变了, 能拿到别的候选。
+        # 上限 3 轮且"无进展即停" —— 有界, 不会为了凑数硬塞。
+        for _round in range(3):
+            if len(picks) >= tmin:
+                break
+            progressed = False
+            for si in pool_ids:
+                if len(picks) >= tmin:
+                    break
+                ok, _room = _slot_available(si)
+                if not ok:
+                    continue
+                if _pool_fill(si, 1):
+                    progressed = True
+            if not progressed:
+                break
+
+    # 池内无候选可满足配额时静默少出 (不硬凑)
 
     # ---------- 3. 输出排序: 轴次序, 束成员紧贴挂载词 ----------
     picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
 
-    total_max = cfg.get("total_max")
+    total_max = state.get("total_max") or cfg.get("total_max")
     if total_max:
         try:
             tmax = int(total_max)
         except (TypeError, ValueError):
             tmax = 0
         if tmax and len(picks) > tmax:
-            keep = [p for p in picks if p.source in ("pinned", "bundle", "implied")]
-            rest = [p for p in picks if p.source not in ("pinned", "bundle", "implied")]
-            picks = (keep + rest)[:tmax]
+            picks = _trim_to_budget(picks, tmax, snap)
             picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
 
     return AutoResult(picks, dropped, stats)

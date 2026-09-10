@@ -2269,30 +2269,6 @@
        "meta": {},
        "gender": "",
        "axis": "count"
-      },
-      {
-       "en": "1other(单人(其他))",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "id": "imported.c2.sub.1other-2",
-       "type": "content",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "count"
-      },
-      {
-       "en": "multiple others(多人(其他))",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "id": "imported.c2.sub.multiple-others-2"
       }
      ],
      "random_quota": null,
@@ -26821,7 +26797,7 @@
        "axis": "character"
       },
       {
-       "en": "jiangshi(僵尸(跳尸))",
+       "en": "jiangshi",
        "aliases": [],
        "weight": 1.0,
        "enabled": true,
@@ -26835,7 +26811,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "character"
+       "axis": "character",
+       "zh": "僵尸(跳尸)"
       },
       {
        "en": "dragon person",
@@ -46934,23 +46911,6 @@
        "enabled": true,
        "zh": "靠在肩上",
        "id": "reorg.s26.leaning-on-shoulder",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
-       "en": "lap pillow(膝枕(被枕))",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "id": "reorg.s26.lap-pillow-2",
        "type": "pose",
        "priority": 50,
        "rarity": "common",
@@ -74233,40 +74193,6 @@
        "meta": {},
        "gender": "",
        "axis": "style"
-      },
-      {
-       "en": "oil painting (medium)(油画(媒介))",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "id": "imported.c8.sub-2-3.oil-painting-medium-2",
-       "type": "style",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "style"
-      },
-      {
-       "en": "watercolor (medium)(水彩(媒介))",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "id": "imported.c8.sub-2-3.watercolor-medium-2",
-       "type": "style",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "style"
       }
      ],
      "random_quota": null,
@@ -82854,6 +82780,5 @@
   "subject.s3.yawning",
   "subject.s3.yelling"
  ],
- "settings": {},
- "schema_version": 2
+ "settings": {}
 }
