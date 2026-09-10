@@ -416,12 +416,15 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     # 钉选词已入账, 先据此判定人数语义 (单人场景不该抽"互动与双人")。
     excl_used: set[str] = set()
     count_single: bool | None = None
+    count_no_human = False
     for _p in picks:
         _low = _norm(_p.en)
         if _low in slotpolicy.SINGLE_COUNT_WORDS:
             count_single = True
         elif _low in slotpolicy.MULTI_COUNT_WORDS:
             count_single = False
+        if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
+            count_no_human = True
 
     slot_filled: dict[int, int] = {si: pinned_sub_count.get(si, 0) for si in pool_ids}
 
@@ -435,6 +438,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             return False, 0          # 互斥槽位组: 同组已有槽位出过词
         if count_single is True and sub_key in slotpolicy.MULTI_ONLY_SLOTS:
             return False, 0          # 单人场景不抽"仅多人成立"的槽位
+        if count_no_human and snap.pool_axis.get(si) in slotpolicy.NO_HUMAN_SKIP_AXES:
+            return False, 0          # "画面里没有人" -> 不抽身份/外貌/服装
         if master:
             cap = slotpolicy.caps_for(sub_key)[1]      # max_n
         else:
@@ -444,7 +449,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     def _pool_fill(si: int, want: int) -> int:
         """从槽位 si 抽至多 want 个词, 返回实际抽出数。两遍共用。"""
-        nonlocal count_single
+        nonlocal count_single, count_no_human
         sub_key = snap.sub_keys[si]
         cname = snap.cat_names[snap.cat_of_sub[si]]
         excl_gid = slotpolicy.exclusive_group(sub_key)
@@ -496,6 +501,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                     count_single = True
                 elif _low in slotpolicy.MULTI_COUNT_WORDS:
                     count_single = False
+                if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
+                    count_no_human = True
             if mount_of_tag.get(tid):
                 n = attach_bundle(tid, picks[-1].order, cname, snap.axis_arr[tid])
                 if n:

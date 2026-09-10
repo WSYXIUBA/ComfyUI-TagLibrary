@@ -1978,7 +1978,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "female",
+       "gender": "",
        "zh": "单人(其他)",
        "axis": "count"
       },
@@ -2033,7 +2033,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "female",
+       "gender": "",
        "axis": "count"
       },
       {
@@ -54112,6 +54112,7 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "无面",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54120,8 +54121,7 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.faceless"
       },
       {
@@ -54131,6 +54131,7 @@
        "enabled": true,
        "zh": "无面女性",
        "gender": "female",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54138,8 +54139,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.faceless-female"
       },
       {
@@ -54149,6 +54149,7 @@
        "enabled": true,
        "zh": "无面男性",
        "gender": "male",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54156,8 +54157,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.faceless-male"
       },
       {
@@ -54166,6 +54166,7 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "出画",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54174,8 +54175,7 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.out-of-frame"
       },
       {
@@ -54184,6 +54184,7 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "暗示上半身",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54192,8 +54193,7 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.upper-body-only-implied"
       },
       {
@@ -54202,6 +54202,7 @@
        "weight": 1.0,
        "enabled": true,
        "zh": "单人聚焦",
+       "type": "content",
        "priority": 50,
        "rarity": "common",
        "groups": [],
@@ -54210,8 +54211,7 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "type": "composition",
-       "axis": "camera",
+       "axis": "count",
        "id": "imported.c5.sub-2-3-4.solo-focus"
       }
      ],

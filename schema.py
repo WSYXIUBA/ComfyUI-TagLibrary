@@ -102,7 +102,15 @@ def migrate_tag(tag: dict, cat_name: str, sub_name: str) -> dict:
     # 出厂库 tag_library.json 不带 axis; 若只靠用户库携带, 一旦用户库被清空后
     # 由 md 模板重建, 挑选器「🎯 拼装轴」视图会把全部词塌进「📦 未归类」。
     # 已有 axis 的词 (migrate_axes.py 迁移结果) 由 setdefault 原样保留。
-    tag.setdefault("axis", axes.axis_of(cat_name, sub_name)[0])
+    # 陈旧 axis 自愈: axis 是从"大类/子类路径"推导的, 词一旦换槽位 (如
+    # tools/add_base_vocab.py 的 MOVES) 旧值就会变成错的, 而 runtime_snapshot
+    # 优先用存储值 -> 会被当成原槽位的词写进输出 (实测 "out of frame" 搬到构图槽后
+    # axis 仍是 count, 于是成了第二个人数词, 段位序也回退)。
+    _want_axis = axes.axis_of(cat_name, sub_name)[0]
+    if tag.get("axis") and tag["axis"] != _want_axis:
+        tag["axis"] = _want_axis
+        tag.pop("type", None)      # type 同样由路径推导, 一并重算
+    tag.setdefault("axis", _want_axis)
     tag.setdefault("priority", 50)
     tag.setdefault("rarity", DEFAULT_RARITY)
     tag.setdefault("groups", [])

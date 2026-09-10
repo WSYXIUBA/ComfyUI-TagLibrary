@@ -254,7 +254,10 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
                 tag_aliases.append(tuple(_al) if _al else None)
                 # 1.3.0: 轴 + 全局互斥组名
                 snap.axis_arr.append(str(t.get("axis") or axis))
-                snap.order_arr.append(order)
+                # 输出次序 = Anima 段位优先 (style 回到第 1 段); 抽取次序用上面的
+                # pool_order(=轴次序) 保持不变, 否则人数词会晚于外貌词出生、
+                # 性别锁失效。
+                snap.order_arr.append(axes.output_order(axis, order))
                 gs = t.get("groups") or []
                 snap.group_sets.append(frozenset(str(x) for x in gs if x))
                 stags.append(i)

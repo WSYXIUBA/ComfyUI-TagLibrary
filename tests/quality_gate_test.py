@@ -10,6 +10,8 @@ python tests/quality_gate_test.py --long    # 10,000 个种子 (发布前跑)
   Q4 人数唯一    count 轴有且只有 1 个词
   Q5 无畸形词    输出不得含 "xxx(yyy(zzz))" 形式的双重括号标签
   Q6 确定性      同 seed 同配置 → 逐词完全相同
+  Q7 段位序      输出必须符合 Anima 六段序 (段位不递减) —— §8.3 T3
+  Q8 人数语义    "no humans" 时不得出现身份/外貌/服装词
 
 为什么需要它: 2026-09-10 实测发现默认配置下插件吐出 200+ 个互相矛盾的词
 (daytime + starry night sky / toddler + middle-aged + elderly / 四双鞋 …)。
@@ -28,6 +30,7 @@ from collections import Counter
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+import axes  # noqa: E402
 import engine  # noqa: E402
 import library  # noqa: E402
 import runtime_snapshot  # noqa: E402
@@ -107,6 +110,28 @@ def main() -> int:
                     fails.append(f"Q5 seed{seed}: 畸形标签 {p.en!r}")
                 break
 
+        # Q7 段位序: Anima tag order —— 段位号不得回退
+        secs = [axes.section_of(p.axis) for p in picks]
+        prev_sec = 0
+        for sec, p in zip(secs, picks):
+            if sec < prev_sec:
+                stat["Q7"] += 1
+                if len(fails) < 12:
+                    fails.append(f"Q7 seed{seed}: 段位回退 {prev_sec}->{sec} "
+                                 f"({p.en} [{p.axis}])")
+                break
+            prev_sec = sec
+
+        # Q8 "no humans" 不得与人物属性同现
+        cw = [p for p in picks if p.axis == "count"]
+        if cw and cw[0].en.strip().lower() in slotpolicy.NO_HUMAN_COUNT_WORDS:
+            bad = [p.en for p in picks
+                   if p.axis in slotpolicy.NO_HUMAN_SKIP_AXES]
+            if bad:
+                stat["Q8"] += 1
+                if len(fails) < 12:
+                    fails.append(f"Q8 seed{seed}: no humans + {bad[:3]}")
+
     # Q6 确定性
     a = [p.en for p in engine.run_auto(snap, state, 4242, nsfw_on=False, config=cfg).picks]
     b = [p.en for p in engine.run_auto(snap, state, 4242, nsfw_on=False, config=cfg).picks]
@@ -120,7 +145,8 @@ def main() -> int:
     print(f"  落进 {MIN_WORDS}~{MAX_WORDS} 带内: {sum(1 for c in counts if MIN_WORDS <= c <= MAX_WORDS)}/{n_seeds}")
     print()
     for tag, desc in [("Q1", "词数带"), ("Q2", "槽位配额"), ("Q3", "互斥槽位组"),
-                      ("Q4", "人数唯一"), ("Q5", "无畸形词"), ("Q6", "确定性")]:
+                      ("Q4", "人数唯一"), ("Q5", "无畸形词"), ("Q6", "确定性"),
+                      ("Q7", "段位序"), ("Q8", "no humans 语义")]:
         print(f"  {'✓' if not stat[tag] else '✗'} {tag} {desc}: {stat[tag]} 次违规")
     if fails:
         print("\n前几条失败:")

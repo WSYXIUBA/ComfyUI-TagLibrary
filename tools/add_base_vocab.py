@@ -20,6 +20,8 @@
 按"槽位 → 词表"的显式清单补齐（**只用 Danbooru 真实标签，不生成组合**），
 幂等：已存在的词跳过。落盘前自动备份，写完重建 .md 镜像。
 
+同时支持**归位**（`MOVES`）：把放错槽位导致语义失效的词搬到正确槽位。
+
 用法:
     python tools/add_base_vocab.py            # 报告
     python tools/add_base_vocab.py --apply    # 落盘
@@ -173,6 +175,40 @@ ADDITIONS: dict[str, list[tuple[str, str]]] = {
 # 需要打 NSFW 标记的词 (否则关了 NSFW 也会被抽出来)
 _NSFW_WORDS = {"implied masturbation"}
 
+# ---------------------------------------------------------------- 性别标记 (gender)
+# 引擎靠"带性别标记的人数词"置位 led.gender_lock, 之后拦截异性专属词。
+# 实测只有 33% 的轮次能锁上 —— 因为 2girls / multiple girls / 2boys 这些
+# **本身已声明性别**的人数词全都没有 gender 标记, 于是外貌与服装槽照样混抽,
+# 重新出现 "1boy + faceless female" 那类矛盾。
+# （`1girl and 1boy` / `couple` 等属混合宣言, 由 engine.MIXED_COUNT_WORDS 处理, 不在此列。）
+GENDER_FIXES: dict[str, str] = {
+    "1girl": "female", "1other": "female",
+    "2girls": "female", "3girls": "female", "4girls": "female",
+    "5girls": "female", "6+girls": "female",
+    "multiple girls": "female", "group of girls": "female",
+    "1boy": "male", "2boys": "male", "3boys": "male",
+    "multiple boys": "male", "group of boys": "male",
+}
+
+# ---------------------------------------------------------------- 归位 (move)
+# 从 (源槽位) 搬到 (目标槽位)。用于修正"放错槽位导致语义失效"的词。
+#
+# 实测发现「人物主体/人数」槽 36 个词里混了 6 个**非人数词**:
+#   faceless / faceless female / faceless male / out of frame /
+#   upper body only implied / solo focus
+# 人数据配额是 (1,1) —— 全库只出 1 个词, 若被这类词占掉, 就没有
+# `1girl`/`1boy` 出场 → 引擎的性别锁 (led.gender_lock) 永远不会置位,
+# 于是重新出现 "1boy + faceless female" 这类自相矛盾的输出。
+# 它们本质是"主体可见度 / 构图"词, 归到构图镜头。
+MOVES: list[tuple[str, str, str]] = [
+    ("人物主体/人数", "构图镜头/构图", "faceless"),
+    ("人物主体/人数", "构图镜头/构图", "faceless female"),
+    ("人物主体/人数", "构图镜头/构图", "faceless male"),
+    ("人物主体/人数", "构图镜头/构图", "out of frame"),
+    ("人物主体/人数", "构图镜头/构图", "upper body only implied"),
+    ("人物主体/人数", "构图镜头/构图", "solo focus"),
+]
+
 
 def _index(lib: dict) -> dict:
     """"大类/子类" -> sub dict (键与 ADDITIONS 保持同一形式, 避免元组/字符串混用)"""
@@ -217,7 +253,29 @@ def main() -> int:
         total_new += len(planned)
         print(f"{os.path.basename(path)}: 待新增 {len(planned)} 词")
 
-    if total_new == 0:
+    # MOVES 也计入改动 (否则只剩归位可做时会误判"无改动")
+    move_count = 0
+    for path in targets:
+        raw = json.load(open(path, encoding="utf-8"))
+        idxm = _index(raw)
+        for src, dst, en in MOVES:
+            s_sub = idxm.get(src)
+            if s_sub and any(str(t.get("en", "")).strip().lower() == en
+                             for t in (s_sub.get("tags") or [])):
+                move_count += 1
+    if move_count:
+        print(f"归位 {move_count} 词 (跨库合计)")
+    gfix_count = 0
+    for path in targets:
+        raw = json.load(open(path, encoding="utf-8"))
+        for sub in _index(raw).values():
+            for t in sub.get("tags") or []:
+                en = str(t.get("en", "")).strip().lower()
+                if en in GENDER_FIXES and t.get("gender") != GENDER_FIXES[en]:
+                    gfix_count += 1
+    if gfix_count:
+        print(f"性别标记 {gfix_count} 词 (跨库合计)")
+    if total_new == 0 and move_count == 0 and gfix_count == 0:
         print("(无改动; 幂等)")
         return 0
     from collections import Counter
@@ -229,10 +287,35 @@ def main() -> int:
         return 0
 
     for path, (planned, idx) in plans.items():
-        if not planned:
-            continue
         raw = json.load(open(path, encoding="utf-8"))
         idx2 = _index(raw)
+        moved = 0
+        for src, dst, en in MOVES:
+            s_sub, d_sub = idx2.get(src), idx2.get(dst)
+            if s_sub is None or d_sub is None:
+                continue
+            hit = next((t for t in (s_sub.get("tags") or [])
+                        if str(t.get("en", "")).strip().lower() == en), None)
+            if hit is None:
+                continue
+            s_sub["tags"] = [t for t in (s_sub.get("tags") or []) if t is not hit]
+            # 换槽位后必须把 id / axis / type 一起清掉: 这三个都是从"大类/子类路径"
+            # 推导或分配的, 留着旧值会让 runtime_snapshot 优先用陈旧 axis
+            # (实测 "out of frame" 搬到构图槽后 axis 仍是 count, 于是它被当成
+            #  第二个人数词写进输出, 段位序也跟着回退)。
+            for _k in ("id", "axis", "type"):
+                hit.pop(_k, None)
+            d_sub.setdefault("tags", []).append(hit)
+            moved += 1
+        gfixed = 0
+        for en, g in GENDER_FIXES.items():
+            for sub in idx2.values():
+                for t in sub.get("tags") or []:
+                    if str(t.get("en", "")).strip().lower() == en and t.get("gender") != g:
+                        t["gender"] = g
+                        gfixed += 1
+        if not planned and not moved and not gfixed:
+            continue
         for slot, en, zh in planned:
             entry = {"en": en, "zh": zh, "weight": 1.0}
             if en.strip().lower() in _NSFW_WORDS:
@@ -244,7 +327,8 @@ def main() -> int:
         shutil.copy2(path, bak)
         with open(path, "w", encoding="utf-8", newline="\n") as f:
             json.dump(raw, f, ensure_ascii=False, indent=1)
-        print(f"✅ {os.path.basename(path)}: +{len(planned)} 词 (备份 {os.path.basename(bak)})")
+        print(f"✅ {os.path.basename(path)}: +{len(planned)} 词, 归位 {moved} 词, "
+              f"性别标记 {gfixed} 词 (备份 {os.path.basename(bak)})")
 
     library.invalidate_cache()
     try:

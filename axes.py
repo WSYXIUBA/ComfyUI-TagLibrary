@@ -33,7 +33,45 @@ AXIS_ORDER = [
     "material",        # 材质特效
 ]
 
-# 每轴一个百位区间, 轴内按语义排次序 (输出顺序 = Anima 拼接序)。
+# ---------------------------------------------------------------- 输出段位 (Anima tag order)
+# Anima 作者规定的六段拼接序 (三处独立来源一致, 见 docs/UI-REDESIGN-PLAN.md §2.2):
+#
+#   [quality / meta / year / safety + style slot] [1girl/1boy] [character] [series] [artist @] [general]
+#   「每段内部顺序无所谓」
+#
+# 关键点: **style 必须在第 1 段** (它是"换一个词就换整体观感"的控制点),
+# 而原先 AXIS_ORDER 把 style 排在第 11 位 —— 这是与目标模型口径的直接冲突。
+#
+# ⚠ 段位只决定**输出**次序; **抽取**次序 (pool_order) 仍走下面的轴次序 ——
+#   人数词必须先抽到才能锁性别 (见 run_auto 的 led.gender_lock),
+#   若让 style 先于 count 出生, 性别锁会失效、重新出现
+#   "1boy + faceless female" 这类矛盾。
+AXIS_SECTION: dict[str, int] = {
+    "meta": 1, "style": 1,            # 质量/元信息 + 风格槽
+    "count": 2,                        # 1girl / 1boy / 1other
+    "character": 3,                    # 具名角色
+    # 4 = series(copyright) / 5 = artist(@) —— 暂无对应轴, 词表补齐后接入
+    "appearance": 6, "clothing": 6, "prop": 6, "action": 6,
+    "environment": 6, "lighting": 6, "camera": 6, "material": 6,
+    "misc": 9,
+}
+
+SECTION_NAMES: dict[int, str] = {
+    1: "质量·元信息·风格", 2: "人数", 3: "角色",
+    4: "作品", 5: "画师", 6: "通用", 9: "未归类",
+}
+
+
+def section_of(axis: str) -> int:
+    return AXIS_SECTION.get(axis, 6)
+
+
+def output_order(axis: str, axis_order: int) -> int:
+    """段位优先, 段内沿用轴次序 → Anima 拼接序。"""
+    return section_of(axis) * 10000 + int(axis_order)
+
+
+# 每轴一个百位区间, 轴内按语义排次序 (抽取次序 = 约束生效序)。
 # "大类/子类" 路径名 → (轴, 次序)。路径名是稳定键 (同 slots.json 约定,
 # 免疫库重建导致的 id 变化); 未命中的子类落入 ("misc", 9900) 排在最后。
 SUB_TO_AXIS: dict[str, tuple[str, int]] = {
