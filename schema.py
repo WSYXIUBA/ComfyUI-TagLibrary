@@ -10,11 +10,17 @@
   - `rarity` 表示生成频率: common=1.0 / uncommon=0.6 / rare=0.3 / exclusive=0.1
     (编辑层字段名保留 rarity 方便理解, 编译时转 spawn_rate 乘数)。
   - `groups` 是属性标签 (如 "hair"/"length"), 不是第三级分类。
+  - `axis` 由 大类/子类 路径推断 (axes.axis_of), 与运行时快照的兜底同源。
 """
 
 from __future__ import annotations
 
 import re
+
+try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
+    from . import axes
+except ImportError:  # pragma: no cover
+    import axes
 
 # ---------------------------------------------------------------- 常量
 
@@ -81,6 +87,11 @@ def spawn_rate_of(rarity: str) -> float:
 def migrate_tag(tag: dict, cat_name: str, sub_name: str) -> dict:
     """编辑层标签升级 v1→v2 (就地补默认, 不删字段)。"""
     tag.setdefault("type", infer_type(cat_name, sub_name))
+    # axis 兜底注入 —— 与 runtime_snapshot 的取法同源 (t.get("axis") or axis_of(...)[0])。
+    # 出厂库 tag_library.json 不带 axis; 若只靠用户库携带, 一旦用户库被清空后
+    # 由 md 模板重建, 挑选器「🎯 拼装轴」视图会把全部词塌进「📦 未归类」。
+    # 已有 axis 的词 (migrate_axes.py 迁移结果) 由 setdefault 原样保留。
+    tag.setdefault("axis", axes.axis_of(cat_name, sub_name)[0])
     tag.setdefault("priority", 50)
     tag.setdefault("rarity", DEFAULT_RARITY)
     tag.setdefault("groups", [])
@@ -120,7 +131,14 @@ def migrate_category(cat: dict) -> dict:
 
 
 def migrate_library(lib: dict) -> dict:
-    """整库只读迁移 (内存中): version→2, 逐级补默认。不碰磁盘。"""
+    """整库只读迁移 (内存中): version→2, 逐级补默认。不碰磁盘。
+
+    ⚠ 前提: 只对 `library.get_merged()` 新建的合并库调用。该 dict 由
+    `deep_merge` 的 `{**default, ...}` 构建, 而出厂库 tag_library.json 顶层
+    不含 schema_version —— 因此这里每次都会完整跑一遍 (axis/type/groups 等
+    兜底注入不会被下面的提前返回跳过)。若日后给出厂库补上 schema_version,
+    必须同步提高 SCHEMA_VERSION, 否则新字段兜底会静默失效。
+    """
     if lib.get("schema_version") == SCHEMA_VERSION:
         return lib
     for c in lib.get("categories", []) or []:

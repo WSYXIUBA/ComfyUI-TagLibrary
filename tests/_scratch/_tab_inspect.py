@@ -1,6 +1,6 @@
 """逐个 tab 巡检详细界面: 挑标签/排除类目/标签库管理/防冲突关系/设置 (+新加的3个)。"""
 import json, sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), ".."))
 from cdp_eval import find_tab  # noqa
 from websocket import create_connection
 

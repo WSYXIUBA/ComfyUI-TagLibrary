@@ -1,0 +1,36 @@
+name: gates
+
+# 只跑离线门禁 (不依赖运行中的 ComfyUI)。
+# 在线门禁 real_http_test / ui_v13_check / ui_theme_check 需要真机实例 + Edge 远程调试,
+# 请本地用 `python tools/run_gates.py --with-online` 执行。
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  offline-gates:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # 插件本身无 pip 依赖; aiohttp 由 ComfyUI 运行时提供, 这里显式装上以便
+      # 导入 api 包 (smoke_test 会走到路由层)。
+      - name: Install runtime deps
+        run: python -m pip install --upgrade pip aiohttp
+
+      - name: Show available gates
+        run: python tools/run_gates.py --list
+
+      - name: Run offline gates
+        run: python tools/run_gates.py

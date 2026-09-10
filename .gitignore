@@ -22,3 +22,6 @@ data/备份库/
 data/备份库/tag_library.用户.backup.json
 data/备份库/_trash/
 data/备份库/.升级待确认
+
+# 智能体工作区 (项目记忆/日志, 非插件代码)
+.workbuddy/

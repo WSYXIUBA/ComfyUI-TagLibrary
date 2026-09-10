@@ -1,6 +1,6 @@
 """诊断 seed 12/21/31: weapon.gun 的 hold+store 同现。"""
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), ".."))
 import library, runtime_snapshot, engine
 
 lib = library.get_merged()

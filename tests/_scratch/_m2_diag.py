@@ -1,6 +1,6 @@
 """诊断: attach_bundle fitted 候选为何常空。"""
 import sys, os, collections
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), ".."))
 import library, runtime_snapshot, engine
 
 lib = library.get_merged()
