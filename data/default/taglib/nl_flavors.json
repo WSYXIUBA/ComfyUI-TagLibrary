@@ -247,6 +247,24 @@
   "write": [
    "{O} scratching lines across whatever {S} can reach.",
    "Head down, the pen moving in small quick strokes."
+  ],
+  "describe": [
+   "{S} has {A}.",
+   "{S} features {A}.",
+   "{S} has {A}, which defines the whole look.",
+   "{S} has {A} and a very distinctive silhouette."
+  ],
+  "wear": [
+   "{S} is wearing {C}.",
+   "{S} is dressed in {C}.",
+   "{S} wears {C}.",
+   "{S} is outfitted in {C}."
+  ],
+  "scene": [
+   "{E1} fills the frame.",
+   "The composition centres on {E1}.",
+   "{E1} dominates the scene.",
+   "Everything in frame is built around {E1}."
   ]
  },
  "pose_map": {
