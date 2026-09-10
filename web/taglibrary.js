@@ -284,7 +284,7 @@ function getGender(node) {
 }
 
 const GENDER_SEQ = ["off", "female", "male"];
-const GENDER_LABEL = { off: "⚥", female: "♀", male: "♂" };
+const GENDER_LABEL = { off: "⚥ 双性", female: "♀ 仅女性", male: "♂ 仅男性" };
 const GENDER_TITLE = {
   off: "性别过滤: 关闭 (男女性专属标签都保留)",
   female: "性别过滤: 女性 (剔除男性专属标签, 如 1boy/multiple boys)",
@@ -321,9 +321,7 @@ export function buildPanelWidget(node, container) {
       <span class="tl-title">标签库</span>
       <span class="tl-head-spacer"></span>
       <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
-      <button class="tl-btn tl-gender-btn" data-act="gender" title="性别过滤: ⚧双性=不剔除 / ♀女性=剔除男性专属 / ♂男性=剔除女性专属">⚥</button>
-      <button class="tl-btn icon tl-lang-btn" data-act="lang" title="标签显示语言 (双语/英文/中文)">文A</button>
-      <button class="tl-btn icon tl-conflict-btn" data-act="conflict" title="防冲突开关 (随机时同组互斥)">🚫</button>
+      <button class="tl-btn icon tl-more-btn" data-act="more" title="更多设置 (性别过滤 / 防冲突 / 显示语言 / 预览模式 / 清空)">⋯<i class="tl-more-dot"></i></button>
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
     </div>
     <div class="tl-toolbar">
@@ -332,17 +330,18 @@ export function buildPanelWidget(node, container) {
         <button data-mode="manual">手动</button>
         <button data-mode="auto">自动</button>
       </div>
-      <div class="tl-seg tl-eng-seg" title="自动模式引擎: Fast=极速 / Smart=依赖+权重+多样性" style="display:none">
-        <button data-eng="default_fast">Fast</button>
-        <button data-eng="default_smart">Smart</button>
-      </div>
     </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
-      <button class="tl-btn icon tl-clear-btn" data-act="clear" title="清空当前节点显示的标签">🗑</button>
-      <button class="tl-btn icon tl-pv-btn" data-act="pv" title="预览模式: 简洁 → 带权重 → 调试">👁</button>
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
+    </div>
+    <div class="tl-menu" hidden>
+      <button class="tl-menu-item" data-act="gender"><span class="tl-mi-k">性别过滤</span><span class="tl-mi-v tl-gender-val">⚥ 双性</span></button>
+      <button class="tl-menu-item" data-act="conflict"><span class="tl-mi-k">防冲突</span><span class="tl-mi-v tl-conflict-val">已开启</span></button>
+      <button class="tl-menu-item" data-act="lang"><span class="tl-mi-k">显示语言</span><span class="tl-mi-v tl-lang-val">双语</span></button>
+      <button class="tl-menu-item" data-act="pv"><span class="tl-mi-k">预览模式</span><span class="tl-mi-v tl-pv-val">简洁</span></button>
+      <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
     </div>
   `;
 
@@ -352,7 +351,12 @@ export function buildPanelWidget(node, container) {
   const previewEl = $(".tl-preview");
   const modeSeg = $(".tl-mode-seg");
   const nsfwBtn = $(".tl-nsfw-btn");
-  const genderBtn = $(".tl-gender-btn");
+  const genderVal = $(".tl-gender-val");
+  const genderItem = $('.tl-menu-item[data-act="gender"]');
+  const conflictVal = $(".tl-conflict-val");
+  const conflictItem = $('.tl-menu-item[data-act="conflict"]');
+  const moreBtn = $(".tl-more-btn");
+  const moreMenu = $(".tl-menu");
 
   /* ---------- mode (二态: 手动 / 自动) — 两模式界面相同, 自动=queue 时引擎填充 ---------- */
   // modeSyncedVal: 上次同步过的 widget 原始值。工作流加载/粘贴/撤销会在面板构建之后
@@ -368,7 +372,6 @@ export function buildPanelWidget(node, container) {
     }
     modeSeg.querySelectorAll("button").forEach((b) =>
       b.classList.toggle("active", b.dataset.mode === ui.mode));
-    if (typeof syncEngSeg === "function") syncEngSeg();
   }
 
   function setMode(m) {
@@ -380,25 +383,8 @@ export function buildPanelWidget(node, container) {
     node.setDirtyCanvas?.(true);
   }
 
-  /* ---------- 引擎切换 (Fast/Smart, 写入 selection_state.random_config_ref) ---------- */
-  const engSeg = $(".tl-eng-seg");
-  function syncEngSeg() {
-    if (!engSeg) return;
-    engSeg.style.display = ui.mode === "auto" ? "" : "none";
-    const ref = getState(node).random_config_ref || "default_fast";
-    engSeg.querySelectorAll("button").forEach((b) =>
-      b.classList.toggle("active", b.dataset.eng === ref));
-  }
-  engSeg?.querySelectorAll("button").forEach((b) => {
-    b.onclick = () => {
-      setState(node, { random_config_ref: b.dataset.eng });
-      syncEngSeg();
-      if (ui.mode === "auto") renderTags();
-    };
-  });
-
   /* ---------- 清空: 一键清掉当前节点显示的全部标签 ---------- */
-  $(".tl-clear-btn").onclick = () => {
+  function doClearTags() {
     const st = getState(node);
     if (!(st.tags || []).length) return toast("当前没有标签可清空");
     setState(node, { tags: [] });
@@ -408,16 +394,20 @@ export function buildPanelWidget(node, container) {
     toast("已清空节点标签");
   };
 
-  /* ---------- 预览模式: 简洁 / 带权重 / 调试 ---------- */
+  /* ---------- 预览模式: 简洁 / 带权重 / 调试 (在 ⋯ 菜单里循环) ---------- */
   const PV_MODES = ["simple", "weighted", "debug"];
-  $(".tl-pv-btn").onclick = () => {
+  const PV_LABEL = { simple: "简洁", weighted: "带权重", debug: "调试" };
+  const LANG_LABEL = { bilingual: "双语", en: "英文", zh: "中文" };
+
+  function cyclePvMode() {
     const cur = getState(node).preview_mode || "simple";
     const next = PV_MODES[(PV_MODES.indexOf(cur) + 1) % PV_MODES.length];
     setState(node, { preview_mode: next });
     ui.previewMode = next;
     previewEl.textContent = outputPreview(getState(node).tags, next);
-    toast(`预览模式: ${{ simple: "简洁", weighted: "带权重", debug: "调试" }[next]}`);
-  };
+    renderMenuState();
+    toast(`预览模式: ${PV_LABEL[next]}`);
+  }
 
   /* ---------- nsfw (二态按钮: 默认关, 开=绿色) ---------- */
   function renderNsfw() {
@@ -437,11 +427,11 @@ export function buildPanelWidget(node, container) {
   /* ---------- 性别三态 (关闭 ⚥ / 女性 ♀ 剔除男性专属 / 男性 ♂ 剔除女性专属) ---------- */
   function renderGender() {
     const g = getGender(node);
-    genderBtn.textContent = GENDER_LABEL[g];
-    genderBtn.title = GENDER_TITLE[g];
-    genderBtn.classList.toggle("on", g !== "off");
-    genderBtn.classList.toggle("g-female", g === "female");
-    genderBtn.classList.toggle("g-male", g === "male");
+    genderVal.textContent = GENDER_LABEL[g];
+    genderItem.title = GENDER_TITLE[g];
+    genderItem.classList.toggle("on", g !== "off");
+    genderItem.classList.toggle("g-female", g === "female");
+    genderItem.classList.toggle("g-male", g === "male");
     container.dataset.gender = g;
   }
   function cycleGender() {
@@ -452,7 +442,6 @@ export function buildPanelWidget(node, container) {
     renderAll();
     toast(GENDER_TITLE[next]);
   }
-  genderBtn.addEventListener("click", cycleGender);
 
   /* ----------Added-tags view ----------
      chipzone 现在只渲染 state.tags —— 用户从 ➕窗口 添加进来的标签。
@@ -597,8 +586,7 @@ export function buildPanelWidget(node, container) {
     mode = mode || getState(node).preview_mode || "simple";
     if (mode === "debug") {
       const enabledN = tags.filter((t) => t.enabled !== false).length;
-      return `(调试) 共 ${tags.length} · 启用 ${enabledN} · 模式 ${ui.mode} · 引擎 `
-        + (getState(node).random_config_ref || "default_fast");
+      return `(调试) 共 ${tags.length} · 启用 ${enabledN} · 模式 ${ui.mode}`;
     }
     const act = activeOutputTags(tags);
     const weighted = mode === "weighted";
@@ -756,8 +744,7 @@ export function buildPanelWidget(node, container) {
     const cur = getLang();
     const next = order[(order.indexOf(cur) + 1) % order.length];
     setSetting(SET_LANG, next);
-    container.querySelector(".tl-lang-btn").textContent =
-      next === "bilingual" ? "文A" : next === "en" ? "EN" : "中";
+    container.querySelector(".tl-lang-val").textContent = LANG_LABEL[next];
     // 全量重渲染: 已选标签 chip、填充分组、预览全部跟随语言
     renderAll();
   }
@@ -775,16 +762,74 @@ export function buildPanelWidget(node, container) {
 
   function renderConflictBtn() {
     const on = getState(node).avoid_conflicts !== false;
-    const b = container.querySelector(".tl-conflict-btn");
-    b.textContent = on ? "🚫" : "⚔";
-    b.title = on ? "防冲突已开启 (随机时同组互斥) — 点击关闭"
-                 : "防冲突已关闭 — 点击开启";
-    b.style.opacity = on ? "1" : ".45";
+    conflictVal.textContent = on ? "已开启" : "已关闭";
+    conflictItem.classList.toggle("on", on);
+    conflictItem.title = on ? "防冲突已开启 (随机时同组互斥) — 点击关闭"
+                            : "防冲突已关闭 — 点击开启";
+  }
+
+  function toggleConflict() {
+    const cur = getState(node).avoid_conflicts !== false;
+    setState(node, { avoid_conflicts: !cur });
+    renderConflictBtn(); renderMenuState();
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); syncEngSeg();
+    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderMenuState();
   }
+
+  /* ---------- ⋯ 更多菜单 ----------
+     低频操作集中于此 (性别 / 防冲突 / 显示语言 / 预览模式 / 清空),
+     同时充当"当前状态"的读数板; ⋯ 上小圆点提示有非默认项。 */
+  function renderMenuState() {
+    container.querySelector(".tl-lang-val").textContent =
+      LANG_LABEL[getSetting(SET_LANG, "bilingual")] || "双语";
+    container.querySelector(".tl-pv-val").textContent =
+      PV_LABEL[getState(node).preview_mode || "simple"] || "简洁";
+    // 语言/预览的效果在 chip 上可见; 性别与防冲突的效果不明显, 用圆点提示
+    const dirty = getGender(node) !== "off" || getState(node).avoid_conflicts === false;
+    moreBtn.classList.toggle("dirty", dirty);
+  }
+
+  function closeMoreMenu() {
+    moreMenu.hidden = true;
+  }
+  moreBtn.onclick = (e) => {
+    e.stopPropagation();
+    if (moreMenu.hidden) {
+      moreMenu.hidden = false;
+      // 菜单是面板内的下拉, 关闭时机全部收在面板作用域内 —— 不用 document 级
+      // 监听: 画布类页面里同一个 holder 会有多份渲染克隆, 全局监听会互相干扰,
+      // 导致"刚打开就被关掉"。面板内 pointerdown 已经覆盖了所有真实操作路径。
+      moreBtn.blur();
+    } else {
+      closeMoreMenu();
+    }
+  };
+  // 点面板别处 / 再次点 ⋯ / 按 Esc -> 关闭
+  container.addEventListener("pointerdown", (e) => {
+    if (moreMenu.hidden) return;
+    if (moreMenu.contains(e.target) || moreBtn.contains(e.target)) return;
+    closeMoreMenu();
+  });
+  container.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !moreMenu.hidden) {
+      closeMoreMenu();
+      moreBtn.focus();
+    }
+  });
+  moreMenu.querySelectorAll(".tl-menu-item").forEach((b) => {
+    b.onclick = () => {
+      const act = b.dataset.act;
+      if (act === "gender") cycleGender();
+      else if (act === "conflict") toggleConflict();
+      else if (act === "lang") cycleLang();
+      else if (act === "pv") cyclePvMode();
+      else if (act === "clear") doClearTags();
+      // 语言/预览模式改完留在菜单里, 方便看到值的变化
+      if (act !== "lang" && act !== "pv") closeMoreMenu();
+    };
+  });
 
   // 全局偏好变更 -> 本节点面板实时跟随。
   // 本版本前端 extensionManager 没有 settings change 事件面 (setting/setting.settings
@@ -858,12 +903,6 @@ export function buildPanelWidget(node, container) {
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollFill;
-  container.querySelector('[data-act="lang"]').onclick = cycleLang;
-  container.querySelector('[data-act="conflict"]').onclick = () => {
-    const cur = getState(node).avoid_conflicts !== false;
-    setState(node, { avoid_conflicts: !cur });
-    renderConflictBtn();
-  };
   searchEl.oninput = () => { ui.filter = searchEl.value; renderTags(); };
   modeSeg.querySelectorAll("button").forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
 

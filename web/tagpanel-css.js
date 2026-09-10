@@ -107,6 +107,7 @@ html:not(.dark-theme) .tl-scope,
 .tl-scope *, .tl-scope *::before, .tl-scope *::after { box-sizing: inherit; }
 .taglib-widget-holder { all: initial; display: block; font-family: inherit; min-width: 0; width: 100%; height: var(--comfy-widget-height, 60%); min-height: var(--comfy-widget-min-height, 160px); overflow: hidden; box-sizing: border-box; }
 .taglib-panel {
+  position: relative;      /* ⋯ 菜单的定位上下文 */
   box-sizing: border-box;
   width: 100%;
   height: 100%;
@@ -175,20 +176,6 @@ html:not(.dark-theme) .tl-scope,
 }
 .tl-nsfw-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.55); }
 
-/* ---------- 性别三态按钮 (⚥关 / ♀女 / ♂男) ---------- */
-.tl-gender-btn { padding: 3px 8px; font-weight: 600; }
-.tl-gender-btn.g-female {
-  background: linear-gradient(135deg, rgba(255,107,157,.35), rgba(255,107,157,.18));
-  border-color: rgba(255,107,157,.65);
-  color: #ffb3d1;
-}
-.tl-gender-btn.g-female:hover { box-shadow: 0 0 10px -2px rgba(255,107,157,.55); }
-.tl-gender-btn.g-male {
-  background: linear-gradient(135deg, rgba(84,160,255,.35), rgba(84,160,255,.18));
-  border-color: rgba(84,160,255,.65);
-  color: #a8d1ff;
-}
-.tl-gender-btn.g-male:hover { box-shadow: 0 0 10px -2px rgba(84,160,255,.55); }
 
 /* 标签 chip 前缀性别符号: ♀粉 / ♂蓝; 通用(无符号)=绿, NSFW=红(已有) */
 .tl-gsym { font-weight: 700; margin-right: 3px; }
@@ -295,18 +282,36 @@ html:not(.dark-theme) .tl-scope,
 /* 性别过滤剔除 (♀ 时男性专属 / ♂ 时女性专属): 虚线 + 灰显 + 删除线, chip 自带 ♂♀ 符号 */
 .tl-ttag.tl-gdrop { opacity: .45; border-style: dashed; text-decoration: line-through; }
 .tl-ttag.tl-gdrop.on { background: transparent; box-shadow: none; }
-/* 引擎切换段 (自动模式显示) */
-.tl-eng-seg { display: inline-flex; border: 1px solid var(--tl-border); border-radius: 7px; overflow: hidden; }
-.tl-eng-seg button {
-  border: 0; background: transparent; color: var(--tl-muted); cursor: pointer;
-  font-size: 10px; padding: 3px 7px; transition: all .12s ease;
+/* ---------- ⋯ 更多菜单 (低频操作集中地, 同时是状态读数板) ---------- */
+.tl-more-btn { position: relative; font-size: 14px; line-height: 1; padding: 2px 7px; }
+.tl-more-dot { display: none; }
+.tl-more-btn.dirty::after {
+  content: ""; position: absolute; top: 3px; right: 4px;
+  width: 5px; height: 5px; border-radius: 50%; background: var(--tl-accent);
 }
-.tl-eng-seg button + button { border-left: 1px solid var(--tl-border); }
-.tl-eng-seg button.active { color: #cfe4ff; background: rgba(84,160,255,.18); }
-/* 锁定/预览小按钮 */
-/* 清空/预览小按钮 */
-.tl-clear-btn, .tl-pv-btn { opacity: .55; }
-.tl-clear-btn:hover, .tl-pv-btn:hover { opacity: 1; }
+.tl-menu {
+  position: absolute; right: 8px; bottom: 38px; z-index: 20; min-width: 172px;
+  border: 1px solid var(--tl-border-2); border-radius: 9px;
+  background: var(--tl-bg-solid); box-shadow: 0 6px 20px rgba(0,0,0,.35);
+  overflow: hidden; display: flex; flex-direction: column;
+}
+.tl-menu[hidden] { display: none; }
+.tl-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  border: 0; background: transparent; color: var(--tl-text); text-align: left;
+  font: inherit; font-size: 11.5px; padding: 6px 10px; cursor: pointer;
+  transition: background .12s;
+}
+.tl-menu-item + .tl-menu-item { border-top: 1px solid var(--tl-border); }
+.tl-menu-item:hover { background: var(--tl-hover); }
+.tl-menu-item:focus-visible { outline: 2px solid var(--tl-accent); outline-offset: -2px; }
+.tl-menu-item .tl-mi-k { flex: 1; color: var(--tl-text-2); }
+.tl-menu-item .tl-mi-v { color: var(--tl-muted); font-size: 11px; }
+.tl-menu-item.on .tl-mi-v { color: var(--tl-accent-text); font-weight: 600; }
+.tl-menu-item.g-female .tl-mi-v { color: #ff6b9d; }
+.tl-menu-item.g-male .tl-mi-v { color: var(--tl-accent); }
+.tl-menu-item.danger .tl-mi-k { color: var(--tl-danger); }
+.tl-menu-item.danger:hover { background: rgba(255,71,87,.10); }
 .tl-ttag.nsfw.on {
   background: color-mix(in srgb, #ff4757 22%, transparent);
   border-color: rgba(255,71,87,.7);

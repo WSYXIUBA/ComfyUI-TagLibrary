@@ -1,7 +1,8 @@
-"""1.3.0 UI 验收 (一次成型版): 新标签页 → 开 picker → 逐 tab 截图+断言。
+"""1.3.0 UI 验收 (一次成型版): 面板结构 → 开 picker → 逐 tab 截图+断言。
 
 python tests/ui_v13_check.py
-产出: tests/ui_axis.png, tests/ui_prof.png, tests/ui_grp.png, tests/ui_nl.png, tests/ui_set.png
+产出: tests/ui_panel.png, ui_axis.png, ui_prof.png, ui_grp.png, ui_nl.png, ui_set.png
+退出码 0 = 面板结构断言全过。
 """
 
 import base64
@@ -139,9 +140,80 @@ def main():
     })()""")
     print("node:", r)
     time.sleep(2)
+
+    # ---- 节点面板结构 (面板瘦身: 死 UI 已删, 低频项收进 ⋯ 菜单) ----
+    panel_errs = []
+    probe = cdp.ev("""(() => {
+      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const w = n.widgets.find(x=>x.name==='taglib_panel');
+      const p = w.element;
+      const label = (sel) => { const e = p.querySelector(sel); return e ? e.textContent.trim() : null; };
+      const menu = p.querySelector('.tl-menu');
+      return JSON.stringify({
+        headButtons: p.querySelectorAll('.tl-head button').length,
+        hasEngineSeg: !!p.querySelector('.tl-eng-seg'),
+        menuHidden: menu ? menu.hidden : null,
+        menuItems: menu ? menu.querySelectorAll('.tl-menu-item').length : 0,
+        nsfw: label('.tl-nsfw-btn'),
+        gender: label('.tl-gender-val'),
+        conflict: label('.tl-conflict-val'),
+        lang: label('.tl-lang-val'),
+        pv: label('.tl-pv-val'),
+        hasRoll: !!p.querySelector('.tl-roll-btn'),
+        hasClearBtn: !!p.querySelector('.tl-clear-btn'),
+      });
+    })()""")
+    pv = json.loads(probe)
+    print("PANEL:", json.dumps(pv, ensure_ascii=False))
+
+    def chk(name, got, want):
+        ok = got == want
+        print(f"    {'✓' if ok else '✗'} {name}: {got!r}" + ("" if ok else f" (期望 {want!r})"))
+        if not ok:
+            panel_errs.append(f"{name}={got!r} 期望 {want!r}")
+
+    chk("头部常驻按钮数", pv["headButtons"], 3)          # NSFW / ⋯ / ＋添加标签
+    chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
+    chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
+    chk("⋯ 菜单项数", pv["menuItems"], 5)                # 性别/防冲突/语言/预览/清空
+    chk("清空按钮已移入菜单", pv["hasClearBtn"], False)
+    chk("🎲 填充常驻", pv["hasRoll"], True)
+    for k, name in [("gender", "菜单·性别"), ("conflict", "菜单·防冲突"),
+                    ("lang", "菜单·语言"), ("pv", "菜单·预览")]:
+        if not pv[k]:
+            print(f"    ✗ {name} 无状态文案")
+            panel_errs.append(f"{name} 无状态文案")
+        else:
+            print(f"    ✓ {name}: {pv[k]}")
+
+    # 展开 ⋯ 菜单, 确认可正常打开
+    cdp.ev("""(() => {
+      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const p = n.widgets.find(x=>x.name==='taglib_panel').element;
+      p.querySelector('.tl-more-btn').click(); return 'ok';
+    })()""")
+    time.sleep(0.6)
+    opened = cdp.ev("""(() => {
+      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const p = n.widgets.find(x=>x.name==='taglib_panel').element;
+      const m = p.querySelector('.tl-menu');
+      return JSON.stringify({hidden: m.hidden, visible: m.offsetHeight > 0});
+    })()""")
+    ov = json.loads(opened)
+    print(f"    ⋯ 菜单展开: {ov}")
+    if ov["hidden"] or not ov["visible"]:
+        panel_errs.append("⋯ 菜单展开失败")
+    cdp.shot("ui_panel.png")
+    cdp.ev("""(() => {
+      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const p = n.widgets.find(x=>x.name==='taglib_panel').element;
+      p.querySelector('.tl-more-btn').click(); return 'ok';
+    })()""")
+    time.sleep(0.3)
+
+    # 打开挑选器
     r = cdp.ev("""(() => {
       const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
-      if (!n) return 'NO-NODE';
       const w = n.widgets.find(x=>x.name==='taglib_panel');
       if (!w || !w.element) return 'NO-PANEL-WIDGET';
       const btn = [...w.element.querySelectorAll('button')].find(b=>/添加标签/.test(b.textContent));
@@ -205,7 +277,14 @@ def main():
                 return JSON.stringify({nl_tail:has('自然语言'), bundle:has('武器带姿势'), maxw:has('同时武器上限')});
               })()""", "SET")
 
-    print("\n截图在 tests/ 下: ui_axis ui_prof ui_grp ui_nl ui_set")
+    print("\n截图在 tests/ 下: ui_panel ui_axis ui_prof ui_grp ui_nl ui_set")
+
+    if panel_errs:
+        print(f"\n❌ 面板结构巡检失败 ({len(panel_errs)} 项):")
+        for e in panel_errs:
+            print("   -", e)
+        sys.exit(1)
+    print("✅ 面板结构巡检通过 (死 UI 已删 / 低频项收进 ⋯ 菜单)")
 
 
 if __name__ == "__main__":
