@@ -15,7 +15,7 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.dirname(os.path.dirname(HERE))  # tests/_scratch/ 上两级 = 仓库根
 sys.path.insert(0, HERE)
 sys.path.insert(0, ROOT)
 

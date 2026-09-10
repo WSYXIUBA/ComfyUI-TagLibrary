@@ -14,7 +14,7 @@ import urllib.request
 from manager_v5_test import CDP, check, find_tab, PASS, FAIL
 
 BASE = "http://127.0.0.1:8188"
-PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PLUGIN_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 LIB_DIR = os.path.join(PLUGIN_ROOT, "data", "标签库")
 
 

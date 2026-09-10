@@ -5,7 +5,7 @@
   钉选占用所在子类目配额 — 1~1 时钉 1 个 → 该子类目不再出词
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import library as L
 import random_engine as RE

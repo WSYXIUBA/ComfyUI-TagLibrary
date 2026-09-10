@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-"""M4: 日常物品档案 + NL 句式扩充 (AI 起草, 词表只用 Danbooru 真实 tag)。幂等。"""
+"""M4: 日常物品档案 + NL 句式扩充 (AI 起草, 词表只用 Danbooru 真实 tag)。幂等。
+
+⚠ 一次性脚本: 1.3.0 的 11 份物品档案已写入 taglib/profiles.json 与 nl_flavors.json,
+   常规开发/升级无需再跑。此处仅作词表来源归档保留 (幂等, 重复运行不会重复写入)。
+"""
 import json
 import os
 import sys
 
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tools/ 的上一级 = 仓库根
 sys.path.insert(0, ROOT)
 
 P_PATH = os.path.join(ROOT, "data", "default", "taglib", "profiles.json")

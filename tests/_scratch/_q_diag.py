@@ -1,6 +1,6 @@
 """定点回放审计失败样本: 打印每个 pick 的出处 (pool/pinned/implied/bundle)。"""
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), ".."))
 import library, runtime_snapshot, engine
 
 lib = library.get_merged()

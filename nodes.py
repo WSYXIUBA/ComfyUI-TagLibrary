@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import json
-import random
-from typing import Any
 
 import gc as _gc
 import time as _tmod
@@ -152,22 +150,7 @@ class TagLibraryNode:
             "result": (text, text),
         }
 
-    # ------------------------------------------------------------------ engine
-
-    @staticmethod
-    def _norm(text: str) -> str:
-        return (text or "").strip().lower()
-
-    @classmethod
-    def _tag_matches(cls, tag: dict, query: str) -> bool:
-        q = cls._norm(query)
-        if not q:
-            return True
-        haystacks = [
-            tag.get("en", ""), tag.get("zh", ""),
-            " ".join(tag.get("aliases", []) or []),
-        ]
-        return any(q in cls._norm(h) for h in haystacks)
+    # ---------------------------------------------- 库遍历 / 格式化 / 过滤
 
     @staticmethod
     def _flat(library_data: dict) -> list[tuple[dict, str]]:
@@ -274,7 +257,6 @@ class TagLibraryNode:
         # ---- 脏数据纠偏 (旧工作流 widget 错位产生的非法值, 就地兜底不炸) ----
         if mode not in ("manual", "auto"):
             mode = "auto" if mode == "random_mix" else "manual"  # 旧值迁移
-        _auto_chosen = None  # auto 模式抽取的原始标签 (回传前端面板用)
         try:
             seed = int(seed)
         except (TypeError, ValueError):
@@ -459,23 +441,6 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
-        # auto 模式: 把实际抽到的标签回传给前端面板 (executed 事件 → 面板自动刷新显示)
-        if mode == "auto":
-            if _auto_chosen:
-                echo_items = [{"en": str(t.get("en", "")),
-                               "zh": t.get("zh") or "",
-                               "cat": t.get("_cat", ""),
-                               "nsfw": bool(t.get("nsfw")),
-                               "gender": str(t.get("gender") or ""),
-                               "enabled": True} for t in _auto_chosen]
-            else:
-                echo_items = [{"en": p.strip(), "zh": "", "cat": "", "nsfw": False,
-                               "enabled": True}
-                              for p in tags]
-            return {
-                "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False)},
-                "result": (text, text),
-            }
         return (text, text)
 
     @staticmethod
@@ -486,19 +451,6 @@ class TagLibraryNode:
         except json.JSONDecodeError:
             return {}
 
-
-def weighted_sample(pool: list[Any], k: int, weight_fn, rng: random.Random) -> list[Any]:
-    """Efraimidis-Spirakis 加权不放回抽样: 按 -U^(1/w) 取最大 k 个, O(n log n)。"""
-    if k <= 0 or not pool:
-        return []
-    keyed = []
-    for item in pool:
-        u = rng.random()
-        while u <= 0.0:
-            u = rng.random()
-        keyed.append((-(u ** (1.0 / max(weight_fn(item), 1e-9))), item))
-    keyed.sort(key=lambda x: x[0], reverse=True)
-    return [item for _, item in keyed[:k]]
 
 
 NODE_CLASS_MAPPINGS = {"TagLibraryNode": TagLibraryNode}

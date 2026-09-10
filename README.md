@@ -123,20 +123,40 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 
 ## 测试
 
+一键跑全部门禁（**推荐**，会自动快照并还原 `data/default/taglib/`，不会污染工作区）：
+
 ```bash
-python tests/m1_engine_test.py        # 新引擎骨架（轴/组/跨池/确定性）
-python tests/m2_weapon_slice_test.py  # 武器束 + 旧 repro 缺陷翻案
-python tests/m3_nl_test.py            # NL 编译 + 反拼接断言
-python tests/m4_objects_test.py       # 物品档案 + 万 seed 长跑 (--long)
-python tests/quality_audit.py         # 30 条完整提示词人工级审计
-python tests/smoke_test.py            # 后端全链路（沙箱）
-python tests/conflicts_test.py        # 反冲突引擎
-python tests/folder_template_test.py  # 文件夹热同步
-python tests/parser_conflict_test.py  # .md 解析器
-python tests/perf_build_test.py       # 性能门禁 (10k 库 p50<3ms)
-python tests/real_http_test.py        # 真机 ComfyUI HTTP queue 验收
-python tests/ui_v13_check.py          # CDP 浏览器 UI 巡检 (截图+断言)
+python tools/run_gates.py               # 10 项离线门禁
+python tools/run_gates.py --with-online # 加上需要 ComfyUI 实例的在线门禁
+python tools/run_gates.py --list        # 列出所有门禁
+python tools/run_gates.py m1 m3         # 只跑名字匹配的
 ```
+
+也可单独运行（离线）：
+
+| 脚本 | 覆盖 |
+|---|---|
+| `tests/m1_engine_test.py` | 新引擎骨架（轴/组/跨池/确定性） |
+| `tests/m2_weapon_slice_test.py` | 武器束 + 旧 repro 缺陷翻案 |
+| `tests/m3_nl_test.py` | NL 编译 + 反拼接断言 |
+| `tests/m4_objects_test.py` | 物品档案（`--long` 万 seed 长跑） |
+| `tests/quality_audit.py` | 30 条完整提示词人工级审计 |
+| `tests/smoke_test.py` | 后端全链路（沙箱） |
+| `tests/conflicts_test.py` | 反冲突引擎 |
+| `tests/folder_template_test.py` | 文件夹热同步 |
+| `tests/parser_conflict_test.py` | .md 解析器 |
+| `tests/perf_build_test.py` | 性能门禁（10k 库 p50<3ms） |
+
+需先启动 ComfyUI（`ui_*` 还需 Edge 远程调试 9222）：
+
+| 脚本 | 覆盖 |
+|---|---|
+| `tests/real_http_test.py` | 真机 HTTP queue 验收 |
+| `tests/ui_v13_check.py` | 浏览器 UI 巡检（逐 tab 截图 + 断言） |
+| `tests/ui_theme_check.py` | 主题一致性巡检（深色 / 浅色 / 管理页） |
+
+> `tests/_scratch/` 是历史一次性诊断脚本的归档，不属门禁，仅作追溯参考。
+> CI 见 `.github/workflows/gates.yml`（只跑离线门禁）。
 
 ## 更新记录
 

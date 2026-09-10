@@ -11,7 +11,7 @@ import urllib.request
 from manager_v5_test import CDP, check, find_tab, PASS, FAIL
 
 BASE = "http://127.0.0.1:8188"
-CONFLICTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+CONFLICTS_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
                               "data", "taglib", "conflicts.json")
 
 

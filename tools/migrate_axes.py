@@ -9,8 +9,12 @@
      /taglib/api/conflicts 契约与前端 rollFill 不破。
   覆盖校验: 每一对 (l,r) 必须被 groups ∪ mutex.json 覆盖, 漏一对拒绝落盘。
 
-用法: python migrate_axes.py          (dry-run 报告)
-      python migrate_axes.py --apply   (备份 + 落盘)
+用法: python tools/migrate_axes.py          (dry-run 报告)
+      python tools/migrate_axes.py --apply   (备份 + 落盘)
+
+⚠ 一次性脚本: 1.3.0 发布时已执行完毕, 常规开发与升级无需再跑。重复执行会按当前库
+   重新推导 axis 并覆盖 groups, 可能冲掉手工调整 —— 除非确有必要, 勿再运行。
+   此处仅作历史归档 / 灾难恢复工具保留。
 """
 
 from __future__ import annotations
@@ -20,7 +24,8 @@ import os
 import shutil
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tools/ 的上一级 = 仓库根
+sys.path.insert(0, ROOT)
 
 import axes  # noqa: E402
 import tagconflicts  # noqa: E402

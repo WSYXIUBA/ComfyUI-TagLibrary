@@ -1,6 +1,6 @@
 """验证 ext 词组名查询一致性。"""
 import sys, os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), ".."))
 import library, runtime_snapshot, grouprules
 
 lib = library.get_merged()
