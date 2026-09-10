@@ -1220,37 +1220,42 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     // ---- 总控制开关 + 范围 (放在"全部"上面) ----
     const st = getState(node);
     const master = st.fill_master ?? true;
-    const mlo = st.fill_master_min ?? 1;
-    const mhi = st.fill_master_max ?? 1;
+    // v1.5.0: "自动配额"模式的语义已从「每个槽位抽 N 个」改为
+    // 「全库总共出 N 个 + 各槽位配额内置」(见 slotpolicy.py)。原先按每槽位
+    // 3~5 个 × 63 槽位会爆到 200+ 词且自相矛盾, 故这里改为总词数预算。
+    const tmin = st.total_min ?? 40;
+    const tmax = st.total_max ?? 60;
     const masterBox = document.createElement("div");
     masterBox.className = "tp-master";
     masterBox.innerHTML = `
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
         <input type="checkbox" class="tp-master-sw" ${master ? "checked" : ""}
           style="width:14px;height:14px;accent-color:#54a0ff"/>
-        <b style="font-size:12px">总控制</b>
+        <b style="font-size:12px">自动配额</b>
       </label>
       <div class="tp-range" style="${master ? "" : "opacity:.35"}">
-        <input type="number" class="tp-master-min" min="0" max="20" value="${mlo}"/>
+        <input type="number" class="tp-total-min" min="0" max="200" value="${tmin}"/>
         <span>~</span>
-        <input type="number" class="tp-master-max" min="0" max="20" value="${mhi}"/>
+        <input type="number" class="tp-total-max" min="0" max="300" value="${tmax}"/>
       </div>
-      <div class="tp-range-hint">每${ui.viewMode === "axis" ? "轴" : "个子分类"}抽取 ${mlo}~${mhi} 个</div>`;
+      <div class="tp-range-hint">全库共出 ${tmin}~${tmax} 个词 · 各槽位配额已内置<br>
+        关掉此开关则改为下方逐条自定义</div>`;
     catsBox.appendChild(masterBox);
     masterBox.querySelector(".tp-master-sw").onchange = (e) => {
       setState(node, { fill_master: e.target.checked });
       renderCats();
     };
     const saveMaster = () => {
-      const mn = parseInt(masterBox.querySelector(".tp-master-min").value) || 0;
-      const mx = parseInt(masterBox.querySelector(".tp-master-max").value) || 0;
-      setState(node, { fill_master_min: Math.min(20, Math.max(0, mn)),
-                       fill_master_max: Math.min(20, Math.max(0, mx)) });
-      masterBox.querySelector(".tp-range-hint").textContent =
-        `每个子分类抽取 ${Math.min(mn,mx)}~${Math.max(mn,mx)} 个`;
+      const mn = parseInt(masterBox.querySelector(".tp-total-min").value) || 0;
+      const mx = parseInt(masterBox.querySelector(".tp-total-max").value) || 0;
+      const lo = Math.min(200, Math.max(0, Math.min(mn, mx)));
+      const hi = Math.min(300, Math.max(0, Math.max(mn, mx)));
+      setState(node, { total_min: lo, total_max: hi });
+      masterBox.querySelector(".tp-range-hint").innerHTML =
+        `全库共出 ${lo}~${hi} 个词 · 各槽位配额已内置<br>关掉此开关则改为下方逐条自定义`;
     };
-    masterBox.querySelector(".tp-master-min").onchange = saveMaster;
-    masterBox.querySelector(".tp-master-max").onchange = saveMaster;
+    masterBox.querySelector(".tp-total-min").onchange = saveMaster;
+    masterBox.querySelector(".tp-total-max").onchange = saveMaster;
     // 排除的类目标注 0~0 (不填充)
     const excludedSet = new Set(getExcluded() || []);
     // ---- 轴视图模式: 侧栏 = 拼装轴列表 (引擎本体) ----

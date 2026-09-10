@@ -2,6 +2,81 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.5.0 — 输出质量修复：抽取语义重构 + 括号缺陷（2026-09-10）
+
+> 用群里一条真实提示词（62 词）当基准实测后发现：**分类只是表症，抽取语义本身错了**。
+> 修复前同配置下插件吐出 **200~213 个互相矛盾**的词，这一版把它压到 **33~60 个且不再自相矛盾**。
+
+### 致命问题（实测数据，非推测）
+
+修复前（5 个种子的真实输出）：
+
+| 冲突类型 | 实例 |
+|---|---|
+| 年龄三/四重 | `toddler` + `middle-aged man` + `elderly man` |
+| **白天与夜晚同现** | `daytime` + `starry night sky` + `eclipse night` |
+| 天气全叠 | `snow flurry` + `light snow` + `heat haze` + `fog bank` + `meteor shower` |
+| 鞋类 4 双 | `espadrilles` + `slides` + `high-top sneakers` + `soccer cleats` |
+| 表情 6 重 | `grin` + `intense stare` + `bashful` + `giggle` + `calm` + `unconscious` |
+| 人数与内容矛盾 | `1boy` + `faceless **female**` + `maid apron` + `thigh strap` |
+| 人数词自身矛盾 | `0others` / `5girls` + `multiple others` |
+
+三条根因，**没有一条是分类问题**：
+1. `fill_master_min/max` 的语义是「**每个**槽位抽 N 个」，63 槽位相乘直接爆表；
+2. **缺少"单选维度"概念** —— 年龄/情绪/表情/天气/时间/鞋类/场景地点天然只能选一个；
+3. 没有总量预算与配比（风格该 1~2 个、鞋该 1 个、外貌可 5~8 个，却共用一组 min/max）。
+
+### 新增 `slotpolicy.py` —— 逐槽位配额 + 互斥槽位组
+
+- `SLOT_MAX`：63 个槽位各自的 `(最多, 至少)` 配额，取代"全局每槽位 N 个"。
+- `EXCLUSIVE`：5 组**互斥槽位组**（同组至多一个槽位出词）——
+  场景地点（室内/自然/城镇/幻想）、风格基线（写实⟂二次元）、光源（自然⟂人工）、
+  姿态基线（站/坐/躺）、昼夜（时段⟂月与星空）。
+- `SINGLE_COUNT_WORDS` / `MULTI_COUNT_WORDS` / `MULTI_ONLY_SLOTS`：
+  人数语义 —— 单人场景不再抽「互动与双人」。
+
+### 引擎改动
+
+- 池循环重构为 `_slot_available()` + `_pool_fill()`，配额/互斥组/人数语义统一在该层判定。
+- **真正实现 `total_min`**（该字段一直存在于 `DEFAULT_CONFIG` 但从未被使用）：
+  第 2 遍补底，最多 3 轮、无进展即停（有界，不为凑数硬塞）。
+- **修掉 `total_max` 的连带陷阱**：原实现是朴素截断（`(keep+rest)[:tmax]`），
+  而 `rest` 按轴序排 → 靠后的 style/material/camera 会被**系统性砍光**。
+  改为 `_trim_to_budget()`：按槽位贡献数从多到少削，并保证不低于各槽位配额下限。
+- 顺手修掉一个自己引入的回归：`caps_for()` 返回 `(max, min)` 而调用处按 `(min, max)` 解包，
+  导致所有 `min_n=0` 的槽位被整池跳过（外貌与服装全空）。现已统一为 `(min, max)` 并显式注释。
+
+### 修复 `.md` 括号往返缺陷（Danbooru 官方语法）
+
+- 根因：`tagfiles._TAG_RE` 的 zh 组只允许 `[^)]*`，于是 `1other(单人(其他))` 被整体当成 en。
+  而 `(qualifier)` 是 **Danbooru 官方消歧语法**（`black_rock_shooter` 作品 /
+  `black_rock_shooter_(character)` 角色），不是边缘情况。
+- 修复：`_TAG_RE` 允许 zh 内**一层嵌套括号**；`schema.migrate_tag` 对历史数据就地还原，
+  `migrate_subcategory` 按 en 同槽位去重。
+- 数据修复（`tools/repair_malformed_tags.py`，幂等）：两个库文件 4357 → **4352 词**，
+  畸形 6 → **0**；其中 `jiangshi` 是唯一丢失的真词（其余 5 个是已有词的重复副本），已恢复。
+- 实测影响：修复前 300 个种子里有 **32 轮**把畸形词写进输出。
+
+### 新增 `tests/quality_gate_test.py`（已纳入一键门禁）
+
+6 项断言，300 种子（`--long` 为 10,000）：词数带 / 槽位配额 / 互斥槽位组 /
+人数唯一 / 无畸形词 / 确定性。**当前 300/300 全过、零违规。**
+
+### UI 同步
+
+- 挑选器「总控制 min~max」→「**自动配额 总词数 min~max**」（写 `state.total_min/max`），
+  并说明"各槽位配额已内置"。旧的 `fill_master_min/max` 在自动配额模式下不再被读取。
+
+### 效果对比
+
+| 指标 | 修复前 | 修复后 |
+|---|---|---|
+| 输出词数 | 200~213 | 中位 **57** / 均值 56 / 区间 33~60 |
+| 同维度互斥共现 | 每轮都有 | **0**（300 种子） |
+| 人数词数量 | 0~4 个且自相矛盾 | **恒为 1** |
+| 畸形词进输出 | 32/300 轮 | **0** |
+| 群内基准覆盖率 | 55% | 55%（词表补齐见 v1.5.x） |
+
 ## v1.4.1 — 节点面板瘦身（2026-09-10）
 
 UI 重写的第一步（方案见 `docs/UI-REDESIGN-PLAN.md`，S5 先做）。**纯前端改动，不涉及数据与引擎。**

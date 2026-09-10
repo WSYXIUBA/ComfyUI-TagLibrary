@@ -84,8 +84,19 @@ def spawn_rate_of(rarity: str) -> float:
 
 # ---------------------------------------------------------------- 迁移
 
+# .md 往返缺陷的产物: zh 含括号时 en 与 zh 被粘成一串, 例如
+#   en="1other(单人(其他))"  (真实身份: en="1other", zh="单人(其他)")
+# 2026-09-10: tagfiles._TAG_RE 已允许 zh 内一层嵌套括号, 旧数据由这里就地还原。
+_MALFORMED_EN_RE = re.compile(r"^(?P<base>.+?)\((?P<zh>[^()]*\([^()]*\))\)$")
+
+
 def migrate_tag(tag: dict, cat_name: str, sub_name: str) -> dict:
     """编辑层标签升级 v1→v2 (就地补默认, 不删字段)。"""
+    m = _MALFORMED_EN_RE.match(str(tag.get("en") or ""))
+    if m:
+        tag["en"] = m.group("base")
+        if not (tag.get("zh") or "").strip():
+            tag["zh"] = m.group("zh")
     tag.setdefault("type", infer_type(cat_name, sub_name))
     # axis 兜底注入 —— 与 runtime_snapshot 的取法同源 (t.get("axis") or axis_of(...)[0])。
     # 出厂库 tag_library.json 不带 axis; 若只靠用户库携带, 一旦用户库被清空后
@@ -119,8 +130,17 @@ def migrate_subcategory(sub: dict, cat_name: str) -> dict:
     sub.setdefault("min_count", 1)
     sub.setdefault("max_count", 1)
     sub.setdefault("priority_boost", 1.0)
+    seen: set[str] = set()
+    kept: list[dict] = []
     for t in sub.get("tags", []) or []:
         migrate_tag(t, cat_name, sub.get("name", ""))
+        key = str(t.get("en") or "").strip().lower()
+        if key and key in seen:
+            continue          # 修复后与既有词重名的副本: 丢弃
+        seen.add(key)
+        kept.append(t)
+    if len(kept) != len(sub.get("tags") or []):
+        sub["tags"] = kept
     return sub
 
 
