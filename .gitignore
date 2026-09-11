@@ -30,3 +30,6 @@ data/备份库/.升级待确认
 data/default/*.bak-*
 # data 脚本的自动备份 (含子目录)
 data/**/*.bak-*
+
+# comfy node publish 的临时 changelog 片段
+.release_changelog.tmp
