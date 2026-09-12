@@ -99,6 +99,7 @@ Restart ComfyUI. No pip dependencies.
 | `data/default/taglib/profiles.json` | weapon & object profiles (bundles / resources / state slots / NL) |
 | `data/default/taglib/grouprules.json` | global mutex domains (50 groups) |
 | `data/default/taglib/nl_flavors.json` | NL families (36 families + pose_map + object pools) |
+| `data/default/taglib/_tagmeta.json` | edit-layer field mirror (aliases/priority/rarity/enabled), survives folder rebuilds |
 | `data/default/taglib/conflicts.json` | cross-pool rules (kept for compatibility) |
 | `data/default/backups/` | backups |
 
@@ -116,16 +117,17 @@ Restart ComfyUI. No pip dependencies.
 ## Tests
 
 ```bash
-python tools/run_gates.py               # 13 offline gates
+python tools/run_gates.py               # 14 offline gates
 python tools/run_gates.py --with-online # + 4 gates that need a running ComfyUI
 python tools/run_gates.py --list
 python tools/run_gates.py m1 m3         # run a subset
 ```
 
-Offline gates (13): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
+Offline gates (14): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
 backend smoke chain, conflict engine, folder hot-sync, .md parser, perf build,
 output quality (word band / quotas / mutex / count / malformed / section order / NSFW round-trip),
-full-prompt heavy test, API security (CSRF middleware / export-dir confirm / precise two-way deletion).
+full-prompt heavy test, API security (CSRF middleware / export-dir confirm / precise two-way deletion),
+edit-layer sidecar round-trip (aliases / priority / rarity / enabled).
 
 Online gates (4, need a running ComfyUI; `ui_*` also need Edge remote debugging on 9222):
 real HTTP queue acceptance (incl. CSRF protection), real-node output test (60 generations × text-level asserts),
@@ -136,7 +138,7 @@ browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme
 
 ## Changelog
 
-Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.6.5**.
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.7.0**.
 
 ## License
 

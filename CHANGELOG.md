@@ -2,6 +2,59 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.7.0 — 结构优化：编辑层字段完整往返 + 前端拆模块（2026-09-12）
+
+体检第 3 期。两个底层演进：`.md` 文件夹镜像不再丢编辑层字段；3156 行的前端
+单文件拆成三个职责清晰的 ES 模块。
+
+### 1. 编辑层字段 sidecar `_tagmeta.json` (`tagfiles.py`)
+
+`.md` 镜像只承载**输出层**字段 (en/zh/weight/nsfw/gender)。aliases / priority /
+rarity / enabled=false 这些**编辑层**字段此前在"文件夹重建库"（热同步 pull、
+清空后重导、user.json 损坏重建）时**静默丢失** —— grouprules 当年就是为同样
+的问题独立成文件的，这次把剩下的编辑层字段也补上等价物：
+
+- `sync_to_folder` 落镜像时同步写 `_tagmeta.json`（按 en_lower 查表，**只存非默认值**
+  控体积；`_` 前缀 = 指纹扫描/导入扫描/清空保留都跳过，不会形成同步循环）
+- 吸入路径（`import_files_into` 热同步 pull / 管理页 `_parse_and_merge_tree`）
+  在 parse 之后调 `apply_tag_meta` 还原：aliases/priority/rarity 只填缺省，
+  enabled 只做单向还原（sidecar 说停用 → 覆盖 parse 物化的 True，绝不反向）
+- 新离线门禁 `tagmeta_roundtrip_test`（第 14 项）：写出/还原/全链路吸入/不进指纹
+
+### 2. 前端拆模块 (`web/`)
+
+`taglibrary.js`（3156 行）按职责拆三份，段落逐行搬运零改写 + 导入完整性脚本校验：
+
+| 模块 | 行数 | 职责 |
+|---|---|---|
+| `taglib-common.js` | 265 | 转义/toast/设置读写/主题/偏好轮询/两级库缓存/selection_state 语义 |
+| `taglib-picker.js` | 1669 | 全库挑选器五页签 + 三个行内编辑视图 |
+| `taglibrary.js` | ~1290 | 节点面板 / executed 回显 / 管理弹窗 / registerExtension 入口 |
+
+共享的可变缓存（LIB_CACHE/PANEL_CATS/LIB_PATH…）放 common 用 ESM 活绑定：
+applyPanelIndex 在 common 内重新赋值，所有导入方立即看到新值。
+
+### 3. deep_merge 索引化 (`library.py`)
+
+用户库分类/子分类建一次 id 索引，取代每个子分类的线性扫描（65 子分类 × 用户库
+规模的 O(n²) → O(n)）；`_find_user_tags` 等四个私有 helper 随之退役。语义不变
+（首见优先与旧扫描一致），smoke_test 全链路逐项通过。
+
+注：`_pool_fill` 补底轮的候选表缓存经评估**不做** —— 候选过滤依赖每次抽取的
+动态账本（used_lower/性别锁），缓存整表要么失效要么加失效逻辑，p50 已在 1-4ms，
+复杂度不划算。
+
+### 仓库瘦身说明
+
+`node.zip` / `ComfyUI-TagLibrary-v1.2.0-r2.zip` / `tests/*.png` 在 v1.6.4 前后的
+`.gitignore` 调整中已全部移出 git 跟踪（HEAD 与发布包不再包含，仅剩 docs/ 下
+README 引用的 5 张截图）；磁盘上的两个旧 zip 是从未入库的本地文件，留待自行处理。
+
+### 验证
+
+离线门禁 14/14；在线 4/4（拆模块后 ui_v13 面板结构/五页签/三视图可编辑 +
+ui_theme 深/浅主题全过）。
+
 ## v1.6.6 — 安全加固：CSRF 防护 + 导出确认 + 双向删除精确匹配（2026-09-12）
 
 体检发现的第 2 期加固项。ComfyUI 主应用无鉴权，用户浏览器里打开的**任意网页**都能把
