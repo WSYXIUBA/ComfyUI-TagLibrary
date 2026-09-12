@@ -13,7 +13,8 @@ try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
 except ImportError:  # pragma: no cover
     import library
 
-from ._common import _WEB_DIR, _json_response  # noqa: F401  (对外保持可用)
+from ._common import (_WEB_DIR, _json_response,  # noqa: F401  (对外保持可用)
+                      taglib_csrf_middleware)
 from .library_routes import (
     serve_manager_page, get_library, get_subtags, search_tags, get_panel_index,
     save_library, reset_library, backup_library, backup_info, restore_backup,
@@ -43,6 +44,8 @@ def register_routes() -> None:
         return
     app = PromptServer.instance.app
     # 页面 + API 直接挂主应用 (PromptServer.app 是暴露的 aiohttp Application)
+    # CSRF 防护中间件: 只拦 /taglib/api/* 的跨站写请求, 其余路由零影响
+    app.middlewares.append(taglib_csrf_middleware)
     app.router.add_get("/taglib", serve_manager_page)
     # 管理页的 js/css 走静态子路径 (避免相对路径解析到根 404)
     app.router.add_static("/taglib/static/", _WEB_DIR)

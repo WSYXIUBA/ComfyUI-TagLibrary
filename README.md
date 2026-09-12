@@ -32,6 +32,7 @@
 - **钉选语义**：📌 钉选标签随机/填充/生成回显必含且不被覆盖；钉选武器同样带束出生
 - **出图元数据**：PNG 信息自动写入 `TagLibrary` 键（节点/模式/种子/实际出词），同 seed 可复现
 - **翻译扩展免疫**：面板/挑选器/管理页标签英文永不被翻译插件改写
+- **API 安全**：写接口带 CSRF 防护（跨站 Origin 拒绝），整库导出到外部目录需管理页显式确认
 - **性能**：节点执行 1-4ms；10k 标签库 snapshot 构建内 p50 <3ms；手动模式 en/id 查表按库缓存
 - **seed 决定论**：同 seed 输出可复现；权重语法 `(tag:1.2)`、去重保序、prefix/suffix 串接
 
@@ -126,13 +127,13 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 一键跑全部门禁（**推荐**，会自动快照并还原 `data/default/taglib/`，不会污染工作区）：
 
 ```bash
-python tools/run_gates.py               # 12 项离线门禁
+python tools/run_gates.py               # 13 项离线门禁
 python tools/run_gates.py --with-online # 加上需要 ComfyUI 实例的在线门禁
 python tools/run_gates.py --list        # 列出所有门禁
 python tools/run_gates.py m1 m3         # 只跑名字匹配的
 ```
 
-离线门禁（12 项）：
+离线门禁（13 项）：
 
 | 脚本 | 覆盖 |
 |---|---|
@@ -148,12 +149,13 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/perf_build_test.py` | 性能门禁 |
 | `tests/quality_gate_test.py` | 输出质量门禁（词数/配额/互斥/人数/畸形词/段位/NSFW 往返） |
 | `tests/prompt_quality_test.py` | 完整提示词重度测试（文本层语义/段位/性别/负向词） |
+| `tests/api_security_test.py` | API 安全门禁（CSRF 中间件/导出目录确认/双向删除精确匹配） |
 
 需先启动 ComfyUI（在线组 4 项，`ui_*` 还需 Edge 远程调试 9222）：
 
 | 脚本 | 覆盖 |
 |---|---|
-| `tests/real_http_test.py` | 真机 HTTP queue 验收 |
+| `tests/real_http_test.py` | 真机 HTTP queue 验收（接口/端口/性别锁 + CSRF 防护） |
 | `tests/node_output_test.py` | 真机节点输出测试（60 次生成 × 文本层断言） |
 | `tests/ui_v13_check.py` | 浏览器 UI 巡检（逐 tab 截图 + 断言 + 默认模式设置生效） |
 | `tests/ui_theme_check.py` | 主题一致性巡检（深色 / 浅色 / 管理页） |

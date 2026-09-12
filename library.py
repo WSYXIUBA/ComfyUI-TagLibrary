@@ -473,10 +473,18 @@ def _apply_folder_deletions(base: dict, missing_rels: list[str]) -> int:
                 remaining.add(os.path.splitext(fn)[0])
         kept_subs = []
         for s in cat.get("subcategories", []):
+            sub_name = s.get("name") or ""
+            own = tagfiles.sanitize_fsname(sub_name)
             safe_sub = None
             for fn in remaining:
-                # md 文件名 = sanitize_fsname(子分类名); 反向匹配用包含判断
-                if fn == s.get("name") or fn.replace("(", "").replace(")", "") in s.get("name", ""):
+                # md 文件名 = sanitize_fsname(子分类名)。只认精确匹配:
+                # 原名 / 净化名 / 净化名(n) (同名净化冲突时 _uniq 追加的去重后缀)。
+                # ⚠ 不能用包含式模糊匹配 —— 子分类名互为子串时 (如 "凉鞋" 匹配进
+                #   "凉鞋"、"上装" 被 "上装细节.md" 顶替) 会把"文件已删"误判成
+                #   "还在", 双向删除静默失效。
+                if fn == sub_name or fn == own or (
+                        own and fn.startswith(own + "(") and fn.endswith(")")
+                        and fn[len(own) + 1:-1].isdigit()):
                     safe_sub = fn
                     break
             if safe_sub or not remaining:
