@@ -460,6 +460,11 @@ def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR) -> dict:
         with open(guide, "w", encoding="utf-8") as f:
             f.write(_GUIDE_TEXT)
 
+    # ⑤ 编辑层字段 sidecar: .md 只承载输出层字段 (en/zh/weight/nsfw/gender),
+    #    aliases/priority/rarity/enabled 走 _tagmeta.json 按 en 查表 ——
+    #    "文件夹重建库" (pull/清空重导) 不再静默丢字段 (1.7.0)
+    _write_tag_meta(lib, folder)
+
     _save_sync_state(folder)
     return stats
 
@@ -472,6 +477,87 @@ def export_to_folder(lib: dict, folder: str) -> dict:
 # ---------------------------------------------------------------- 热同步: 文件夹 -> 库
 
 SYNC_STATE_NAME = "_sync_state.json"
+
+# 编辑层字段 sidecar (`_` 前缀 = 指纹扫描/导入扫描/清空保留都跳过, 不会形成同步循环)
+TAG_META_NAME = "_tagmeta.json"
+
+
+def _tag_meta_of(lib: dict) -> dict[str, dict]:
+    """合并库 → {en_lower: 仅非默认的编辑层字段}。默认值不进 sidecar, 控制体积。"""
+    out: dict[str, dict] = {}
+    for cat in lib.get("categories", []):
+        for sub in cat.get("subcategories", []):
+            for t in sub.get("tags", []):
+                en_l = str(t.get("en") or "").strip().lower()
+                if not en_l:
+                    continue
+                entry: dict = {}
+                if t.get("aliases"):
+                    entry["aliases"] = list(t["aliases"])
+                try:
+                    if float(t.get("priority", 50) or 50) != 50:
+                        entry["priority"] = float(t["priority"])
+                except (TypeError, ValueError):
+                    pass
+                if t.get("rarity") and t["rarity"] != "common":
+                    entry["rarity"] = str(t["rarity"])
+                if t.get("enabled") is False:
+                    entry["enabled"] = False
+                if entry:
+                    out[en_l] = entry
+    return out
+
+
+def _write_tag_meta(lib: dict, folder: str) -> None:
+    os.makedirs(folder, exist_ok=True)
+    payload = {"version": 1, "tags": _tag_meta_of(lib)}
+    tmp = os.path.join(folder, TAG_META_NAME + ".tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(payload, f, ensure_ascii=False, indent=1)
+    os.replace(tmp, os.path.join(folder, TAG_META_NAME))
+
+
+def load_tag_meta(folder: str | None = None) -> dict:
+    """sidecar → {en_lower: meta}; 缺失/损坏 = 空 (不炸)。
+
+    folder 默认 None = 调用时取 LIBRARY_DIR (测试沙箱会替换该全局, 不能在
+    定义期绑定默认值)。
+    """
+    folder = folder or LIBRARY_DIR
+    try:
+        with open(os.path.join(folder, TAG_META_NAME), "r", encoding="utf-8") as f:
+            data = json.load(f)
+        tags = data.get("tags")
+        return tags if isinstance(tags, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def apply_tag_meta(tree: dict, folder: str | None = None) -> dict:
+    """把 sidecar 字段就地补进解析树的同名标签。
+
+    parse_tagfile 会把 aliases/enabled 物化成默认值 ([]) / True —— 所以:
+      aliases/priority/rarity 只填"缺省或空"; enabled 只做单向还原
+      (sidecar 说停用 → 覆盖成 False, 绝不反向把停用改回启用)。
+    """
+    meta = load_tag_meta(folder)
+    if not meta:
+        return tree
+    for cat in tree.get("categories", []):
+        for sub in cat.get("subcategories", []):
+            for t in sub.get("tags", []):
+                m = meta.get(str(t.get("en") or "").strip().lower())
+                if not m:
+                    continue
+                if m.get("aliases") and not t.get("aliases"):
+                    t["aliases"] = list(m["aliases"])
+                if "priority" in m and "priority" not in t:
+                    t["priority"] = m["priority"]
+                if m.get("rarity") and not t.get("rarity"):
+                    t["rarity"] = m["rarity"]
+                if m.get("enabled") is False:
+                    t["enabled"] = False
+    return tree
 
 
 def _migrate_legacy_folder() -> None:
@@ -583,6 +669,7 @@ def import_files_into(base: dict, files: list[dict]) -> dict:
             continue
         text = apply_implied_headings(text, info.get("cat_dir"), info.get("sub_dir"))
         tree = parse_tagfile(text)
+        apply_tag_meta(tree)   # 编辑层字段从 sidecar 还原 (aliases/priority/rarity/enabled)
         _tree, stats = dedupe_against(tree, base)
         if stats["total_new"]:
             merge_tree_by_name(base, _tree)

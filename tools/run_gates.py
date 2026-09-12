@@ -46,6 +46,7 @@ OFFLINE = [
     ("quality_gate_test", "输出质量门禁 (词数/配额/互斥/人数/畸形词/确定性)"),
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
     ("api_security_test", "API 安全门禁 (CSRF 中间件/导出目录确认/双向删除精确匹配)"),
+    ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
 ]
 
 # 需要 ComfyUI 在跑的在线门禁 (--with-online 才跑)

@@ -149,6 +149,17 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
     """default + user -> 完整库 (不修改两个输入)。"""
     tombstones = set(user.get("_tombstones") or [])
 
+    # 用户库一次性索引: 分类/子分类按 id 直查 (取代逐子分类的线性扫描,
+    # 65 子分类 × 用户库规模 的 O(n²) -> O(n); 首见优先与旧线性扫描一致)
+    u_cat_by_id: dict[str, dict] = {}
+    u_sub_by_id: dict[str, dict] = {}
+    for c in user.get("categories") or []:
+        if c.get("id") and c["id"] not in u_cat_by_id:
+            u_cat_by_id[c["id"]] = c
+        for s in c.get("subcategories") or []:
+            if s.get("id") and s["id"] not in u_sub_by_id:
+                u_sub_by_id[s["id"]] = s
+
     cats = _merge_level(default.get("categories") or [],
                         user.get("categories") or [])
     d_cat_map = {c.get("id"): c for c in (default.get("categories") or [])}
@@ -161,8 +172,9 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
         # ⚠ 默认库版本作二级 merge 底座: cats 里同 id 分类是"用户版整体优先",
         # 直接用它会把默认库新增的子分类丢掉 (deep_merge 遮蔽 bug, 阶段6扩库踩中)
         d_subs = (d_cat_map.get(cid) or {}).get("subcategories") or []
+        d_sub_by_id = {s.get("id"): s for s in d_subs if s.get("id")}
         subs = _merge_level(d_subs,
-                            _find_user_subcats(user, cid))
+                            (u_cat_by_id.get(cid) or {}).get("subcategories") or [])
         out_subs: list[dict] = []
         for sub in subs:
             sid = sub.get("id")
@@ -171,15 +183,14 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             sub = dict(sub)
             # ⚠ 标签层同理: 用户库同 id 子分类快照整体优先, 默认库新增标签会丢 —
             # 用默认库版本子分类的 tags 作 default 侧底座 (阶段6扩库踩中, 与二级修复配套)
-            d_sub = next((s for s in d_subs if s.get("id") == sid), None)
-            d_tags = (d_sub or sub).get("tags") or []
+            d_tags = (d_sub_by_id.get(sid) or sub).get("tags") or []
             tags = _merge_level(d_tags,
-                                _find_user_tags(user, sid))
+                                (u_sub_by_id.get(sid) or {}).get("tags") or [])
             sub["tags"] = [t for t in tags if t.get("id") not in tombstones]
             # 三级: 归并孙分类 groups (用户版本优先)
             if "groups" in sub:
                 groups = _merge_level(sub.get("groups") or [],
-                                      _find_user_groups(user, sid))
+                                      (u_sub_by_id.get(sid) or {}).get("groups") or [])
                 clean_groups = []
                 for g in groups:
                     if g.get("id") in tombstones:
@@ -208,26 +219,6 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "has_user_data": bool(user.get("categories")) or bool(tombstones),
         },
     }
-
-
-def _user_cat(user: dict, cid: str | None) -> dict | None:
-    for c in user.get("categories") or []:
-        if c.get("id") == cid:
-            return c
-    return None
-
-
-def _find_user_subcats(user: dict, cid: str | None) -> list[dict]:
-    cat = _user_cat(user, cid)
-    return (cat or {}).get("subcategories") or []
-
-
-def _find_user_tags(user: dict, sid: str | None) -> list[dict]:
-    for cat in user.get("categories") or []:
-        for sub in cat.get("subcategories") or []:
-            if sub.get("id") == sid:
-                return sub.get("tags") or []
-    return []
 
 
 # ---------------------------------------------------------------- validate & save
@@ -597,12 +588,3 @@ def invalidate_cache() -> None:
     global _cache
     with _lock:
         _cache = None
-
-
-def _find_user_groups(user: dict, sid: str) -> list[dict]:
-    """找到用户库中指定子分类的孙分类列表 (groups)。"""
-    for cat in user.get("categories", []):
-        for sub in cat.get("subcategories", []):
-            if sub.get("id") == sid:
-                return sub.get("groups") or []
-    return []

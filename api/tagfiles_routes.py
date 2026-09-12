@@ -84,6 +84,7 @@ def _parse_and_merge_tree(payload: dict) -> tuple[dict, dict]:
     dup_total = 0
     for item in _collect_texts(payload):
         tree = tagfiles.parse_tagfile(item["text"])
+        tagfiles.apply_tag_meta(tree)   # 编辑层字段从 sidecar 还原 (1.7.0)
         tree, stats = tagfiles.dedupe_against(tree, merged_now)
         dup_total += stats["duplicates_removed"]
         tagfiles.merge_tree_by_name(agg, tree)
