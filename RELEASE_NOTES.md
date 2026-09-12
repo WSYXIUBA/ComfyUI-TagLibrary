@@ -1,76 +1,53 @@
-## 🏷 ComfyUI-TagLibrary v1.6.4
+# ComfyUI-TagLibrary v1.7.1 Release
 
-结构化标签库节点 —— 给 Anima 出词用的**抽取引擎 + 数据工作台**。
-输出 STRING 直连 CLIPTextEncode；不依赖任何 pip 包（aiohttp 由 ComfyUI 提供）。
+输出质量真审：未成年锁定 / 人数词分类补全 / 人称一致（2026-09-12）
 
-### 本版重点（v1.4.1 → v1.6.4 累计）
+用户问"完整提示词质量到底如何、你真验证过吗"。回答：门禁全过 ≠ 没毛病 ——
+把真机输出**当人读**后抓到 4 类门禁管不到的语义缺陷，全部修复并固化为新断言。
 
-| 版本 | 内容 |
-|---|---|
-| 1.4.1 | 节点面板瘦身：删死的 Fast/Smart 切换，常驻控件 12 → 4 |
-| **1.5.0** | **输出质量修复**：抽取语义重构 —— 从 200+ 个互相矛盾的词修到 40~60 且零互斥共现 |
-| 1.5.1 | 词表补齐（基准词 + 质量词），群内基准覆盖率 **55% → 97%** |
-| 1.5.2/1.5.3 | 输出段位对齐 Anima 官方 tag order；人数语义三类修复 |
-| **1.6.0** | 挑选器重构：8 页签 → 5，三个数据视图改为**行内可编辑** |
-| **1.6.1** | **分类四维重构**：9 大类 → 12 轴（大类降级为 facet），词数不变 |
-| 1.6.2 | 单一视图 + **每个轴/槽位带启用开关** + 完整提示词重度测试 |
-| 1.6.3 | **画师轴**：留空 + 默认关闭 + 输出自动补 `@` 前缀 |
-| 1.6.4 | 真机节点输出测试（180 次真实生成 × 文本层断言） |
+### 真审抓到什么（真实输出实例）
 
-### 关键点
+| 缺陷 | 实测输出 | 根因 |
+|---|---|---|
+| **未成年 × 成人内容** | `toddler` + `side-tie panties` | 年龄词与成人词散布 9 个槽位，配额/互斥槽位组/跨池规则全管不到 |
+| **群像配单数人称** | `large group` + "She has asymmetric bangs..." | 人数轴 30 词里 9 个没进 MULTI 表；`_pronouns` 按 `_INTRO_KEYS` 扫描，扫不到回落 "She" |
+| **摄影 × 手绘媒介** | `product photography` + `shin-hanga` | style_base 互斥只盖 写实摄影⊥二次元向 |
+| (连带发现) | `4girls/5girls/6+girls/1other/0others` 缺人称行 | 同上，Q10 建好后由门禁自己抓出来 |
 
-- **绑定角色时能关掉整条轴**：侧栏每行都有勾选框，关掉「角色身份」就不参与抽取
-- **画师留空 + 默认关闭**：它是"选定"而不是"随机"的维度；想用就勾上或手动加 `@画师名`
-- **输出次序按 Anima 官方六段**：`[质量·元信息·风格] [人数] [角色] [画师] [通用]`
-- **`.md` 文件夹镜像**：目录结构 = 真实结构（`轴/槽位/槽位.md`），可外部编辑后热同步
+### 修了什么
 
-### 测试
+- **未成年锁定 (slotpolicy + engine)**：`MINOR_AGE_WORDS` (toddler/infant/child/
+  preteen/loli/shota/teen/…) 一经出生（抽取或钉选），`MINOR_BLOCK_WORDS`
+  (~55 个成人向词：裸露/内衣/泳装/体型/表情/氛围情绪的成人子集) 在候选级
+  全池屏蔽。**词级**而非槽位级 —— 裸露槽的 "bare shoulders"、腿袜槽的
+  "thighhighs" 等日常词保持可用。
+- **人数词分类补全 (slotpolicy + nl)**：group of girls/boys、trio、quartet、
+  ensemble、pair、large/small group、crowd 进 MULTI 表；全部 30 个人数轴词
+  进 `_PRONOUN` + `_INTRO_KEYS`（缺了任何一张表都会回落 She）。
+- **NL 群像开箱句 (nl_flavors.json)**：给 23 个复数/中性人数词补 intro 句
+  （此前只有 1girl/1boy/solo 有，群像从来不出引入句）。
+- **摄影⊥艺术媒介 (slotpolicy.EXCLUSIVE)**：新增 style_photo_art 互斥组；
+  二次元向不参与（anime style + oil painting 是合法组合）。
+  题材风格的 art nouveau 等流派词不锁（摄影配流派语义成立）。
 
-15 项门禁 + 180 次真机节点生成，全部零违规。
+### 新断言
 
-### 安装
+- `quality_gate_test` **Q10 人数词分类完备**：人数轴每词必须进三张分类表 +
+  `_PRONOUN`/`_INTRO_KEYS`（建好后立即抓出 crowd/4girls/5girls/6+girls/1other/
+  0others 六个漏网，全部补齐）。
+- `quality_gate_test` **Q11 未成年锁定**：钉选 toddler + NSFW 全开，30 seed 内
+  成人向词必须零出现。
+- `prompt_quality_test` **P4 新增 4 对未成年矛盾**、**P9 NL 人称与人数词一致**
+  （人数词为复数时尾段出现 She/He/her/his 即违规）。
 
-放进 `ComfyUI/custom_nodes/` 即可（无 pip 依赖）。
-
----
-
-## v1.6.4 — 真机节点输出测试：补上一直缺的一层（2026-09-10）
-
-### 起因：用户问"节点输出你就测了几次？"
-
-老实回答：**差一个数量级。**
-
-| 层级 | 之前实际跑了多少 |
-|---|---|
-| 引擎层（直接调 `run_auto`） | 约 **5,500 次**抽取 —— `quality_gate_test` 300×7 轮、`prompt_quality_test` (200+800)×2 模式、加各种临时验证 1,400+ |
-| **真机节点**（ComfyUI HTTP queue） | 只有 **约 30 次** —— `real_http_test` 是 7 个固定用例 + 1 次复现 + 20 个 seed 的**性别锁**，**没做文本层质量断言** |
-
-而真机路径恰恰多出节点这一段：前后缀拼接 / `_format_tag`（权重语法、画师 `@`）/
-分隔符 / NL 尾段拼接 / `executed` 回显。这些在前两个测试里都是**我手工模拟**的 ——
-节点那段逻辑一旦改错，它们都不会报。
-
-### 新增 `tests/node_output_test.py`
-
-经真实队列跑 N 次（3 种状态 × N 个 seed），读 `history` 里节点**实际吐出的 positive 字符串**，
-做 7 项文本层断言：词数带 / 无重复 / 无畸形 / **语义互斥对不共现** / 负向词不漏入 /
-NL 尾段 ≥2 句 / 标签段纯净且尾段在末尾。
-
-### 它立刻抓到一处"测试与产品不一致"
-
-首轮 180 次生成报 **N6 120 次失败（"NL 0 句"）**，看起来像 NL 尾段根本没输出。
-追下去发现是**我的测试写错了**：节点是用 `". "`（句号+空格）把尾段接在标签后面的，
-而我按 `"\n\n"` 切分 —— 永远切不出尾段。真机 positive 实际长这样：
+### 修复后实测
 
 ```
-..., floating runes. They hold katana between their teeth, both hands free.
-Eyes lowered, they seem to listen to something far off.
+[seed2]  count='group of girls' → The group of girls fills the scene. They have swept bangs and wolf cut, ...
+[seed6]  count='5girls'         → They hold katana between their teeth, both hands free. ...
+[seed8]  count='large group'    → A large group fills the frame to its edges. They hold sword ...
 ```
 
-尾段在，而且正好 2 句。已把切分改为「标签段不含句号 → 第一个 `. ` 之后即尾段」。
-**这正是这一层测试的价值：引擎层永远发现不了"节点把尾段接成了别的样子"。**
+### 验证
 
-### 门禁
-
-`node_output_test` 纳入 `run_gates.py` 的**在线组**（需要 ComfyUI 在跑）。
-默认 20×3 = 60 次生成（约 4 分钟）；发布前重度跑 `--n 200`（600 次）。
-同时把在线组抽成独立的 `ONLINE` 列表，便于核对。
+离线门禁 14/14；在线 node_output_test（真机 60 次生成 × 文本层断言）通过。
