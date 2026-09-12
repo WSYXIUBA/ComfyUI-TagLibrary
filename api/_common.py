@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import time
 
 from aiohttp import web
@@ -95,6 +96,71 @@ _migrate_legacy_backup_layout()
 
 def _json_response(data, status: int = 200) -> web.Response:
     return web.json_response(data, status=status)
+
+
+# ---------------------------------------------------------------- CSRF 防护
+
+# 浏览器跨站攻击模型: ComfyUI 主应用无鉴权, 用户浏览器里打开的任意网页都可以把
+# 请求打进 http://127.0.0.1:8188 —— 用 text/plain 的"简单请求"即可绕过 CORS
+# 预检, 让删库/覆盖库/向任意路径导出文件真正执行 (响应读不到, 但破坏已发生)。
+# 防护思路: 写方法 (POST/PUT/DELETE/PATCH) 一旦带了 Origin/Referer 且指向别处,
+# 一律拒绝。三类合法调用者全部放行:
+#   1. 本插件页面 (节点面板/管理页) —— 同源, Origin 与 Host 一致
+#   2. curl / 测试脚本等非浏览器客户端 —— 通常不带 Origin/Referer
+#   3. 反向代理后的同域页面 —— authority(含端口) 归一后与 Host 一致
+_UNSAFE_METHODS = frozenset({"POST", "PUT", "DELETE", "PATCH"})
+_API_PREFIX = "/taglib/api/"
+_ORIGIN_RE = re.compile(r"^[a-z][a-z0-9+.\-]*://([^/?#]+)", re.IGNORECASE)
+
+
+def _authority_of(origin_url: str) -> str | None:
+    """从 Origin/Referer 里取 authority (host[:port]); 取不到返回 None。"""
+    m = _ORIGIN_RE.match(str(origin_url or "").strip())
+    return m.group(1) if m else None
+
+
+def _norm_authority(authority: str | None) -> str:
+    """authority 归一: 小写 + 去默认端口 (http :80 / https :443)。"""
+    a = str(authority or "").strip().lower()
+    if a.endswith(":80"):
+        a = a[:-3]
+    elif a.endswith(":443"):
+        a = a[:-4]
+    return a
+
+
+def csrf_rejected(request: web.Request) -> bool:
+    """该写请求是否应被 CSRF 防护拒绝 (只判 /taglib/api/* 的写方法)。"""
+    if request.method not in _UNSAFE_METHODS:
+        return False
+    if not request.path.startswith(_API_PREFIX):
+        return False
+    origin_header = (request.headers.get("Origin") or "").strip()
+    if origin_header:
+        if origin_header.lower() == "null":
+            return True          # 沙箱 iframe / file:// 等不透明来源, 拒
+        origin_authority = _authority_of(origin_header)
+        if not origin_authority:
+            return True          # 形态怪异的 Origin: 浏览器不会发, 保守拒绝
+    else:
+        # 老浏览器/某些环境不发 Origin 只发 Referer —— 取其 authority
+        origin_authority = _authority_of(request.headers.get("Referer"))
+    if not origin_authority:
+        return False             # 无来源信息 → 非浏览器客户端 (curl/测试脚本) 放行
+    return _norm_authority(origin_authority) != _norm_authority(request.host)
+
+
+@web.middleware
+async def taglib_csrf_middleware(request: web.Request, handler):
+    """aiohttp 中间件: 挡掉指向本插件写接口的跨站请求 (403)。
+
+    只作用于 /taglib/api/*, ComfyUI 其余路由零影响; 同源请求/无 Origin 请求直通。
+    """
+    if csrf_rejected(request):
+        return _json_response(
+            {"ok": False, "error": "跨站请求被拒绝 (CSRF 防护): Origin/Referer 与服务地址不一致"},
+            403)
+    return await handler(request)
 
 
 # ---------------------------------------------------------------- page

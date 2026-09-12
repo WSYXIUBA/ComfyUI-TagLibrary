@@ -4,7 +4,9 @@ python tests/real_http_test.py
 """
 import json
 import sys
+import tempfile
 import time
+import urllib.error
 import urllib.request
 
 BASE = "http://127.0.0.1:8188"
@@ -121,3 +123,47 @@ if fails:
     print("❌", fails)
     sys.exit(1)
 print("✅ 真机 HTTP queue 全部通过 (9 用例 + 复现 + 20 seed 性别锁)")
+
+# ---- CSRF 中间件真机验收 (1.6.6): 写接口对跨站 Origin 必须 403, 同源/无源放行 ----
+def raw_status(path, method, headers, body=b"{}"):
+    """发一个原始请求只看状态码 (4xx 时 urlopen 会抛, 这里接住取 code)。"""
+    r = urllib.request.Request(BASE + path, method=method,
+                               data=body,
+                               headers={"Content-Type": "application/json",
+                                        **headers})
+    try:
+        with urllib.request.urlopen(r, timeout=10) as resp:
+            return resp.status
+    except urllib.error.HTTPError as e:
+        return e.code
+
+csrf_fails = []
+# 跨站 Origin → 403 (preview-import 无副作用, 拿它当靶子最安全)
+got = raw_status("/taglib/api/tagfiles/preview-import", "POST",
+                 {"Origin": "https://evil.example"})
+if got != 403:
+    csrf_fails.append(f"跨站 Origin 未拦: {got}")
+# 不透明 Origin → 403
+got = raw_status("/taglib/api/tagfiles/preview-import", "POST", {"Origin": "null"})
+if got != 403:
+    csrf_fails.append(f"null Origin 未拦: {got}")
+# 同源 Origin → 放行 (200/400 均可, 不能是 403)
+got = raw_status("/taglib/api/tagfiles/preview-import", "POST",
+                 {"Origin": BASE})
+if got == 403:
+    csrf_fails.append("同源 Origin 被误拦")
+# 无 Origin (脚本客户端) → 放行
+got = raw_status("/taglib/api/tagfiles/preview-import", "POST", {})
+if got == 403:
+    csrf_fails.append("无 Origin 被误拦 (会弄坏测试脚本/第三方工具)")
+# 导出 data/ 之外无 confirm → 403 (同源但缺确认语义; dir 必须在请求体里)。
+# (confirm=True 的放行路径无副作用需求不高, 离线门禁 api_security_test S2 已覆盖)
+got = raw_status("/taglib/api/tagfiles/export-folder", "POST", {"Origin": BASE},
+                 body=json.dumps({"dir": tempfile.gettempdir()}).encode())
+if got != 403:
+    csrf_fails.append(f"外目录导出无 confirm 未拦: {got}")
+
+if csrf_fails:
+    print("❌ CSRF:", csrf_fails)
+    sys.exit(1)
+print("✅ CSRF 防护真机验收通过 (跨站 403 / 同源与脚本放行 / 外目录导出需 confirm)")

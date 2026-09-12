@@ -17,7 +17,7 @@ from .. import grouprules as _grouprules
 from .. import nl as _nl
 from .. import engine as _engine
 from ._common import (
-    _WEB_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
+    _WEB_DIR, _PKG_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
     UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, _json_response, _mirror_folder,
 )
 
@@ -158,22 +158,46 @@ async def import_tagfile(request: web.Request) -> web.Response:
 
 
 async def export_folder(request: web.Request) -> web.Response:
-    """POST /taglib/api/tagfiles/export-folder  {dir?}
+    """POST /taglib/api/tagfiles/export-folder  {dir?, confirm?}
 
-    把当前合并库镜像导出为两级文件夹结构 (默认写入插件内 data/标签库/)。
+    把当前合并库镜像导出为两级文件夹结构 (默认写入插件内 data/default/taglib/)。
+    导出到插件数据目录之外属于敏感操作 (镜像会覆盖/删除目标位置库结构内的 .md),
+    需前端显式 confirm=true (管理页会先弹确认框)。
     """
     try:
         payload = await request.json() if request.can_read_body else {}
     except Exception:
         payload = {}
     folder = (payload.get("dir") or "").strip() or tagfiles.LIBRARY_DIR
-    if not os.path.isabs(folder):
-        return _json_response({"ok": False, "error": "目录必须是绝对路径"}, 400)
+    err = _export_dir_error(folder, payload)
+    if err:
+        status = 400 if "绝对路径" in err else 403
+        return _json_response({"ok": False, "error": err}, status)
     try:
         stats = tagfiles.export_to_folder(library.get_merged(), folder)
         return _json_response({"ok": True, **stats})
     except OSError as exc:
         return _json_response({"ok": False, "error": f"导出失败: {exc}"}, 500)
+
+
+def _export_dir_error(folder: str, payload: dict) -> str | None:
+    """导出目录校验: 返回错误信息; 合法返回 None。
+
+    - 必须绝对路径
+    - 插件 data/ 子树内直接放行 (taglib 镜像 / 外置导出模板都属于日常路径)
+    - data/ 之外要求 payload.confirm is True (配合 CSRF 中间件双保险:
+      跨站请求既过不了中间件, 也无法伪造"用户在管理页点过确认"的语义)
+    """
+    if not os.path.isabs(folder):
+        return "目录必须是绝对路径"
+    real_dir = os.path.realpath(folder)
+    data_root = os.path.realpath(os.path.join(_PKG_DIR, "data"))
+    if real_dir == data_root or real_dir.startswith(data_root + os.sep):
+        return None
+    if payload.get("confirm") is not True:
+        return (f"导出到插件数据目录之外 ({folder}) 属于敏感操作: "
+                "镜像会覆盖/删除目标位置库结构内的 .md。请在管理页确认后重试")
+    return None
 
 
 # ------------------------------------------------------------ 1.3.0: 档案 / 互斥域 / NL / 抽取
