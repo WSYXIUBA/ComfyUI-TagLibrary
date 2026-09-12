@@ -49,19 +49,36 @@ def load_flavors() -> dict:
 
 
 # count 词 → (主格, 所有格)
+# ⚠ 与 slotpolicy.SINGLE/MULTI_COUNT_WORDS 同步维护: 人数轴每个词都要有行,
+#   否则回落 ("She","her") —— 真机实测 "large group" 群像配 "She has" 的出处。
+#   quality_gate_test Q10 固化覆盖检查。
 _PRONOUN = {
     "1girl": ("She", "her"), "1other": ("She", "their"),
     "solo": ("She", "her"),
     "1boy": ("He", "his"),
     "2girls": ("They", "their"), "3girls": ("They", "their"),
+    "4girls": ("They", "their"), "5girls": ("They", "their"),
+    "6+girls": ("They", "their"),
     "2boys": ("They", "their"), "3boys": ("They", "their"),
     "multiple girls": ("They", "their"), "multiple boys": ("They", "their"),
+    "multiple others": ("They", "their"),
     "1girl and 1boy": ("They", "their"), "couple": ("They", "their"),
     "group": ("They", "their"), "crowd": ("They", "their"),
+    "everyone": ("They", "their"), "ot3": ("They", "their"),
+    "group of girls": ("They", "their"), "group of boys": ("They", "their"),
+    "trio": ("They", "their"), "quartet": ("They", "their"),
+    "ensemble": ("They", "their"), "pair": ("They", "their"),
+    "large group": ("They", "their"), "small group": ("They", "their"),
+    "0others": ("She", "their"),
 }
-_INTRO_KEYS = ("1girl", "1boy", "2girls", "3girls", "2boys", "3boys",
-               "multiple girls", "multiple boys", "1girl and 1boy", "couple",
-               "group", "crowd", "solo")
+_INTRO_KEYS = ("1girl", "1boy", "1other", "0others",
+               "2girls", "3girls", "4girls", "5girls",
+               "6+girls", "2boys", "3boys",
+               "multiple girls", "multiple boys", "multiple others",
+               "1girl and 1boy", "couple",
+               "group", "crowd", "everyone", "ot3", "solo",
+               "group of girls", "group of boys", "trio", "quartet",
+               "ensemble", "pair", "large group", "small group")
 # 环境词优先级 (越靠前越"有画面"), 取第一个命中的
 ENV_PRIORITY = ["rain", "snowing", "thunderstorm", "cherry blossoms",
                 "starry sky", "sunset", "night", "fog", "wind", "daytime",
