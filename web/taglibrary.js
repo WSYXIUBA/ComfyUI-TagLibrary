@@ -270,14 +270,16 @@ function getState(node) {
     const raw = JSON.parse(w.value || "{}");
     st = { ...st, ...raw, tags: Array.isArray(raw.tags) ? raw.tags : [] };
   } catch {}
+  // nsfw 只允许显式布尔: null/缺失就地物化为当前全局默认 ——
+  // 否则面板按全局默认显示 NSFW 词、后端却按 false 过滤 (预览≠生成)。
+  if (st.nsfw !== true && st.nsfw !== false) {
+    st.nsfw = !!getSetting(SET_DEFAULT_NSFW, false);
+  }
   return st;
 }
 
 function getNsfwEffective(node) {
-  // state.nsfw 显式覆盖 > 全局设置
-  const st = getState(node);
-  if (st.nsfw === true || st.nsfw === false) return st.nsfw;
-  return !!getSetting(SET_DEFAULT_NSFW, false);
+  return getState(node).nsfw === true;
 }
 
 function getGender(node) {
@@ -697,11 +699,12 @@ export function buildPanelWidget(node, container) {
     const usedEn = new Set(keptTags.map((t) => t.en.toLowerCase()));
     let drawRes;
     try {
+      // 🎲 填充 = 面板临时随机一次: seed 每次全新 (与 widget 种子无关, 那是 queue 用的)
       drawRes = await fetch("/taglib/api/draw", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ state: { ...st, nsfw: nsfwOn },
-                               seed: (getState(node).seed | 0) + Math.floor(Math.random() * 1000) }),
+                               seed: Math.floor(Math.random() * 0xffffffff) }),
       }).then((r) => r.json());
     } catch (e) { console.warn("[taglib] draw 失败", e); return; }
     if (!drawRes?.ok) { console.warn("[taglib] draw 返回异常", drawRes); return; }
@@ -757,9 +760,12 @@ export function buildPanelWidget(node, container) {
     const gsym = tg === "female" ? '<span class="tl-gsym g-f">♀</span>'
                : tg === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
     const bsym = t._bundle ? '<span class="tl-bsym" title="武器档案束成员 (姿势/配件, 随武器出生)">⚔</span>' : "";
-    if (lang === "en") return bsym + gsym + t.en;
-    if (lang === "zh") return bsym + gsym + (t.zh || t.en);
-    return bsym + gsym + `${t.en}${t.zh ? `<span style="opacity:.8;font-size:10px">${t.zh}</span>` : ""}`;
+    // 库内文本统一转义 —— 词来自可导入的 .md/JSON, 不能直接进 innerHTML
+    const en = escapeHtml(t.en);
+    const zh = t.zh ? escapeHtml(t.zh) : "";
+    if (lang === "en") return bsym + gsym + en;
+    if (lang === "zh") return bsym + gsym + (t.zh ? zh : en);
+    return bsym + gsym + `${en}${t.zh ? `<span style="opacity:.8;font-size:10px">${zh}</span>` : ""}`;
   }
 
   function renderConflictBtn() {
@@ -1408,7 +1414,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       (toggle ? `<input type="checkbox" class="tp-row-tog" ${toggle.on ? "checked" : ""}`
                 + ` title="${toggle.title || "启用/关闭"}" style="margin-right:2px"/>` : "") +
       `${chevron ? `<span class="tp-chev">${open ? "▾" : "▸"}</span>` : (depth > 0 ? '<span class="tp-chev">·</span>' : "")}` +
-      `<span>${icon}</span><span class="nm">${name}</span><span class="ct">${count}</span>` +
+      `<span>${esc(String(icon))}</span><span class="nm">${esc(String(name))}</span><span class="ct">${count}</span>` +
       rangeHtml;
     const togEl = el.querySelector(".tp-row-tog");
     if (togEl) {
@@ -1537,7 +1543,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     el.innerHTML = (isBundled ? '<span class="tl-bsym">⚔</span>' : "")
       + (t.gender === "female" ? '<span class="tl-gsym g-f">♀</span>'
         : t.gender === "male" ? '<span class="tl-gsym g-m">♂</span>' : "")
-      + `${t.en}${t.zh ? `<span style="opacity:.55"> ${t.zh}</span>` : ""}`;
+      + `${esc(t.en)}${t.zh ? `<span style="opacity:.55"> ${esc(t.zh)}</span>` : ""}`;
     return el;
   }
   function renderChips() {
@@ -1650,7 +1656,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         勾选要<b>排除</b>的层级: 可排除<b>整类</b>, 也可展开后只排除<b>子分类</b>或<b>孙分类</b>。<br/>
         排除后随机抽取与输出都会跳过对应标签。上游已有发色/眼睛等描述时 (如 <code>blue hair, blue eyes</code>),
         排除对应层级避免冲突。
-        ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下内容 (粉色标记): ' + Object.entries(hints).map(([k, v]) => `<b>${k}</b>(${v.join(",")})`).join(" ") : ""}
+        ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下内容 (粉色标记): ' + Object.entries(hints).map(([k, v]) => `<b>${esc(k)}</b>(${esc(v.join(","))})`).join(" ") : ""}
       </div>
     `;
     for (const cat of libCats()) {
@@ -1661,9 +1667,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       card.className = "tp-exc-card" + (isEx ? " excluded" : "");
       card.innerHTML = `
         <input type="checkbox" ${isEx ? "checked" : ""} style="width:16px;height:16px;accent-color:#ff4757"/>
-        <span>${cat.icon || ""}</span>
-        <span class="nm">${cat.name}<span style="color:#8b93a5;font-size:11px"> · ${countTags(cat)} 条</span></span>
-        <span class="why">${why}</span>
+        <span>${esc(String(cat.icon || ""))}</span>
+        <span class="nm">${esc(cat.name)}<span style="color:#8b93a5;font-size:11px"> · ${countTags(cat)} 条</span></span>
+        <span class="why">${esc(why)}</span>
         <span class="tp-chev tp-exc-toggle">${ui.excOpen?.has(cat.id) ? "▾" : "▸"}</span>
       `;
       card.querySelector("input").onchange = (e2) => {
@@ -1694,7 +1700,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           subCard.style.cssText = "margin-left:26px;padding:6px 12px;";
           subCard.innerHTML = `
             <input type="checkbox" ${subEx ? "checked" : ""} style="width:14px;height:14px;accent-color:#ff4757"/>
-            <span class="nm">${sub.name}<span style="color:#8b93a5;font-size:11px"> · ${(sub.tags || []).length}</span></span>
+            <span class="nm">${esc(sub.name)}<span style="color:#8b93a5;font-size:11px"> · ${(sub.tags || []).length}</span></span>
             ${(sub.groups || []).length ? `<span class="tp-chev tp-exc-toggle2">${ui.excOpenSub?.has(sub.id) ? "▾" : "▸"}</span>` : ""}
           `;
           subCard.querySelector("input").onchange = (e2) => {
@@ -1727,7 +1733,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
               gCard.style.cssText = "margin-left:52px;padding:5px 10px;";
               gCard.innerHTML = `
                 <input type="checkbox" ${gEx ? "checked" : ""} style="width:13px;height:13px;accent-color:#ff4757"/>
-                <span class="nm" style="font-size:12px">${g.name}<span style="color:#8b93a5"> · ${(g.tags || []).length}</span></span>
+                <span class="nm" style="font-size:12px">${esc(g.name)}<span style="color:#8b93a5"> · ${(g.tags || []).length}</span></span>
               `;
               gCard.querySelector("input").onchange = (e2) => {
                 const cur = excKeys();
@@ -2860,6 +2866,12 @@ app.registerExtension({
               if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
                 sw.value = "{}";
                 repaired.push("selection_state→{}");
+              } else if (parsed.nsfw !== true && parsed.nsfw !== false) {
+                // 旧工作流 state.nsfw 缺失/null: 载入时就地物化成显式布尔,
+                // 否则面板按全局默认显示、后端却按 false 过滤 (预览≠生成)。
+                parsed.nsfw = !!getSetting(SET_DEFAULT_NSFW, false);
+                sw.value = JSON.stringify(parsed);
+                repaired.push("nsfw→显式布尔");
               }
               // 旧 v2 工作流: 错位把 8 个旧参数值留在 widgets_values 里, 而新签名
               // 只消费 5 个 (state/mode/seed/ctl/nsfw) → 多余的 8 个不会污染任何 widget,
@@ -2891,18 +2903,26 @@ app.registerExtension({
 
         const modeW = node.widgets?.find((w) => w.name === "mode");
         const defMode = getSetting(SET_DEFAULT_MODE, "manual");
-        // 只对"新建节点"应用默认模式: widgets_values 还没被工作流填充时值为原型默认。
-        // 加载旧工作流时此 setTimeout 同样会跑, 但 mode 已是工作流保存值, 不能覆盖!
-        if (modeW && node.widgets_values === null && Object.values(modeW.options || {}).includes(defMode)) {
+        // 只对"新建节点"应用默认模式: widgets_values 尚未被工作流填充时才生效。
+        // ⚠ 新前端里新节点的 widgets_values 是 **undefined** 而非 null (旧 litegraph
+        //   才是 null) —— 只判 === null 会让设置永远不生效; 工作流加载后它是数组。
+        //   且 configure 晚于本 setTimeout, 已保存的 mode 值最后总会覆盖回正确值。
+        // combo widget 的 options 在新前端是 {values:[...]} 对象 (旧 litegraph 才是数组),
+        // 不能用 Object.values(options).includes() 判断 —— 那会拿到 [[...]] 永远不命中。
+        const modeOpts = Array.isArray(modeW?.options) ? modeW.options
+          : (modeW?.options?.values || []);
+        const wvFresh = node.widgets_values === null || node.widgets_values === undefined;
+        if (modeW && wvFresh && modeOpts.includes(defMode)) {
           modeW.value = defMode;
         }
         const defNsfw = getSetting(SET_DEFAULT_NSFW, false);
-        if (defNsfw && node.widgets_values === null) {
+        if (node.widgets_values === null || node.widgets_values === undefined) {
           const sw = node.widgets?.find((w) => w.name === "selection_state");
           if (sw) {
             try {
               const st = JSON.parse(sw.value || "{}");
-              st.nsfw = true;
+              // 新节点直接物化成显式布尔 (关也写 false): state 自带语义, 不留 null
+              st.nsfw = !!defNsfw;
               sw.value = JSON.stringify(st);
             } catch {}
           }

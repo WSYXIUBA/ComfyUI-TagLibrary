@@ -402,6 +402,45 @@ def main():
                 return JSON.stringify({nl_tail:has('自然语言'), bundle:has('武器带姿势'), maxw:has('同时武器上限')});
               })()""", "SET")
 
+    # 9) 设置「新节点的默认模式」→ 新节点生效 (v1.6.5 回归:
+    #    combo widget 的 options 是 {values:[...]}, 旧判断 Object.values(options)
+    #    拿到 [[...]] 永远 includes 不中, 设置从未生效)
+    dm_res = cdp.ev("""(async () => {
+      try {
+        const app = window.app;
+        const set = app.extensionManager?.setting;
+        if (!set?.set || !set?.get) return JSON.stringify({err: 'no-setting-api'});
+        const KEY = 'TagLibrary.default_mode';
+        const prev = set.get(KEY);
+        set.set(KEY, 'auto');
+        await new Promise(r => setTimeout(r, 100));
+        const n = LiteGraph.createNode('TagLibraryNode');
+        n.pos = [100, 100];
+        app.graph.add(n);
+        await new Promise(r => setTimeout(r, 800));   // onNodeCreated 里的 setTimeout(0) 要跑完
+        const modeW = n.widgets?.find(w => w.name === 'mode');
+        const got = modeW ? modeW.value : null;
+        app.graph.remove(n);
+        set.set(KEY, prev === undefined || prev === null ? 'manual' : prev);
+        return JSON.stringify({got: got, prev: prev});
+      } catch (e) {
+        return JSON.stringify({err: String(e).slice(0, 120)});
+      }
+    })()""")
+    print("默认模式:", dm_res)
+    try:
+        dm = json.loads(dm_res)
+    except (TypeError, ValueError):
+        dm = {"err": str(dm_res)[:120]}
+    if dm.get("err") == "no-setting-api":
+        print("    ⚠ 默认模式断言跳过: 设置 API 不可用")
+    elif dm.get("err"):
+        ui_errs.append(f"默认模式断言执行失败: {dm['err']}")
+    elif dm.get("got") != "auto":
+        ui_errs.append(f"新节点默认模式未生效: got={dm.get('got')!r} 期望 'auto'")
+    else:
+        print("    ✓ 新节点默认模式 = auto (设置生效)")
+
     print("\n截图在 tests/ 下: ui_panel ui_axis ui_prof ui_grp ui_nl ui_set")
 
     all_errs = panel_errs + ui_errs

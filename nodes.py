@@ -39,6 +39,47 @@ except ImportError:  # pragma: no cover
     import nl
 
 
+# 手动模式查表索引缓存: (库 mtime 键, 库 dict 身份, en→标签, en→路径, id→标签)
+# 库没变 (mtime 同 + get_merged 返回同一个 dict) 时手动模式零全库扫描;
+# 任一变化即重建。表内容只读, 调用方不得修改 (chosen 里取的是浅拷贝)。
+_index_cache: tuple | None = None
+
+
+def _manual_index(merged: dict) -> tuple[dict, dict, dict]:
+    """合并库 → (en_lower→标签, en_lower→(cat,sub,group), id→标签)。
+
+    by_en/by_id 只收 enabled≠False 的标签 (与旧 _flat 口径一致, 停用标签
+    落到 state 自带字段的合成兜底); en_path 收全部标签 (排除判断要看路径,
+    与标签是否停用无关)。同名 en 多处出现时后写者覆盖 (与旧 dict 推导一致)。
+    """
+    global _index_cache
+    key = (library._mtime(library.DEFAULT_PATH), library._mtime(library.USER_PATH))
+    if _index_cache is not None and _index_cache[0] == key and _index_cache[1] is merged:
+        return _index_cache[2], _index_cache[3], _index_cache[4]
+    by_en: dict[str, dict] = {}
+    en_path: dict[str, tuple] = {}
+    by_id: dict[str, dict] = {}
+    for cat in merged.get("categories", []):
+        for sub in cat.get("subcategories", []):
+            for t in sub.get("tags", []):
+                en_l = str(t.get("en", "")).strip().lower()
+                if not en_l:
+                    continue
+                # groups 已被 validate 摊平进 sub.tags; 先记直属路径, 组归属由下方覆盖
+                en_path[en_l] = (cat, sub, None)
+                if t.get("enabled", True):
+                    by_en[en_l] = t
+                    if t.get("id"):
+                        by_id[t["id"]] = t
+            for g in sub.get("groups", []) or []:
+                for t in g.get("tags", []):
+                    en_l = str(t.get("en", "")).strip().lower()
+                    if en_l:
+                        en_path[en_l] = (cat, sub, g)
+    _index_cache = (key, merged, by_en, en_path, by_id)
+    return by_en, en_path, by_id
+
+
 class TagLibraryNode:
     CATEGORY = "纸心/prompt"
     FUNCTION = "build"
@@ -86,15 +127,16 @@ class TagLibraryNode:
         }
 
     # 旧版参数 → 新 selection_state 字段的映射 (兼容旧工作流, 值并入 state 不丢)
-    # (pinned_required 已移除: 钉选必含现在常开, 旧工作流残留值直接忽略)
+    # (pinned_required 已移除: 钉选必含现在常开, 旧工作流残留值直接忽略;
+    #  min_tags/max_tags 已随 v3 签名退役, 旧工作流残留值并入 state 后无人读取)
     LEGACY_OPT_KEYS = (
-        "min_tags", "max_tags", "category_weights", "search_text",
+        "category_weights", "search_text",
         "separator", "use_weights_syntax", "dedupe",
     )
 
     # ------------------------------------------------------ v2 auto (引擎)
 
-    def _build_auto(self, lib, state: dict, seed: int, mode: str, *, nsfw_on: bool,
+    def _build_auto(self, lib, state: dict, seed: int, *, nsfw_on: bool,
                     avoid_conflicts: bool, search_text: str, category_weights,
                     use_weights_syntax: bool, dedupe: bool,
                     separator: str, prefix: str | None, suffix: str | None,
@@ -176,36 +218,6 @@ class TagLibraryNode:
             return f"({text}:{w:g})"
         return text
 
-    @staticmethod
-    def _apply_nsfw(lib: dict, nsfw_on: bool, gender: str = "off") -> dict:
-        """nsfw_on=False 剔除 nsfw 标签; True 全量。
-        gender: "off" 全量 / "female" 剔除男性专属 / "male" 剔除女性专属。"""
-        g = str(gender or "off").strip().lower()
-        if nsfw_on and g == "off":
-            return lib
-
-        def keep_tag(t: dict) -> bool:
-            if not nsfw_on and bool(t.get("nsfw", False)):
-                return False
-            tg = str(t.get("gender") or "").strip().lower()
-            if g == "female" and tg == "male":
-                return False
-            if g == "male" and tg == "female":
-                return False
-            return True
-
-        out_cats = []
-        for cat in lib.get("categories", []):
-            cat = dict(cat)
-            subs = []
-            for sub in cat.get("subcategories", []):
-                sub = dict(sub)
-                sub["tags"] = [t for t in sub.get("tags", []) if keep_tag(t)]
-                subs.append(sub)
-            cat["subcategories"] = subs
-            out_cats.append(cat)
-        return {**lib, "categories": out_cats}
-
     def _record_pnginfo(self, extra_pnginfo, unique_id, text: str, mode: str, seed) -> None:
         """本节点实际输出的提示词 → PNG 元数据 (extra_pnginfo["TagLibrary"])。
 
@@ -282,25 +294,12 @@ class TagLibraryNode:
         separator = state.get("separator", "comma")
         if separator not in ("comma", "space"):
             separator = "comma"
-        try:
-            min_tags = max(0, int(state.get("min_tags", 3)))
-        except (TypeError, ValueError):
-            min_tags = 3
-        try:
-            max_tags = max(0, int(state.get("max_tags", 8)))
-        except (TypeError, ValueError):
-            max_tags = 8
-        if max_tags == 0:
-            max_tags = max(min_tags, 1)
-        if min_tags > max_tags:
-            min_tags, max_tags = max_tags, min_tags
         use_weights_syntax = bool(state.get("use_weights_syntax", False))
         dedupe = bool(state.get("dedupe", True))
         category_weights = state.get("category_weights", "{}")
         if not isinstance(category_weights, str):
             category_weights = "{}"
         search_text = str(state.get("search_text", "") or "")
-        exclude_keys_state = state.get("exclude_categories") or []
         if not isinstance(use_weights_syntax, bool):
             use_weights_syntax = bool(use_weights_syntax)
         if not isinstance(dedupe, bool):
@@ -313,8 +312,10 @@ class TagLibraryNode:
         gender = str(state.get("gender") or "off").strip().lower()
         if gender not in ("off", "female", "male"):
             gender = "off"
-        lib = self._apply_nsfw(lib, nsfw_on, gender)
-
+        # ⚠ 这里**不做**全库 NSFW/性别过滤拷贝: auto 路径的引擎在快照池层面处理
+        # (pools_nonsfw / pools_nofemale / pools_nomale), 快照缓存键只有文件 mtime,
+        # 若把过滤树喂给 get_snapshot, 编译出的快照会缺 NSFW 词, 且之后打开 NSFW
+        # 开关也拿不回 (同一键命中旧快照)。manual 路径则在 chosen 层复核, 同样不需要。
         selected_ids: list[str] = list(state.get("selected") or [])
         pinned_ids: set[str] = set(state.get("pinned") or [])
         avoid_conflicts = bool(state.get("avoid_conflicts", True))
@@ -324,10 +325,10 @@ class TagLibraryNode:
         if mode != "manual":
             # v2 自动模式 (auto / 旧 random_mix 兼容): RandomEngine 在 RuntimeSnapshot
             # 上出词, NSFW/排除类目/互斥都在池层面处理, 不再全库复制过滤
-            return self._build_auto(lib, state, seed, mode,
+            return self._build_auto(lib, state, seed,
                                     nsfw_on=nsfw_on,
                                     avoid_conflicts=avoid_conflicts,
-                                    search_text=str(state.get("search_text", "") or ""),
+                                    search_text=search_text,
                                     category_weights=category_weights,
                                     use_weights_syntax=use_weights_syntax,
                                     dedupe=dedupe,
@@ -335,19 +336,6 @@ class TagLibraryNode:
                                     prefix=prefix,
                                     suffix=suffix,
                                     exclude_keys=exclude_keys)
-
-        def cat_excluded(cat: dict) -> bool:
-            return cat.get("name") in exclude_keys
-
-        def sub_excluded(cat: dict, sub: dict) -> bool:
-            n = cat.get("name", "")
-            return (f"{n}/{sub.get('name', '')}" in exclude_keys
-                    or cat_excluded(cat))
-
-        def group_excluded(cat: dict, sub: dict, g: dict) -> bool:
-            n = cat.get("name", "")
-            return (f"{n}/{sub.get('name', '')}/{g.get('name', '')}" in exclude_keys
-                    or sub_excluded(cat, sub))
 
         def tag_excluded(cat_name: str, sub: dict, g, exclude_keys: set) -> bool:
             """前端同名逻辑: 标签级排除判断。"""
@@ -359,78 +347,44 @@ class TagLibraryNode:
                 return True
             return False
 
-        if exclude_keys:
-            def keep_sub(cat: dict, sub: dict) -> bool:
-                if sub_excluded(cat, sub):
-                    return False
-                groups = sub.get("groups") or []
-                if groups:
-                    # 只要有未排除的孙分类就保留该子分类, 但清除被排除的孙
-                    sub = dict(sub)
-                    sub["groups"] = [g for g in groups if not group_excluded(cat, sub, g)]
-                    if not sub["groups"]:
-                        return False
-                return True
-
-            kept_cats = []
-            for cat in lib.get("categories", []):
-                if cat_excluded(cat):
+        # ---- 手动模式: 只查已选标签, 不做全库过滤拷贝 ----
+        # NSFW/性别/排除全部在 chosen 层复核 (与原出口级过滤同规则, 旧工作流
+        # selected ids 路径的排除语义由 en_path 反查补齐); en/id 索引按库缓存。
+        full_by_en, en_path, by_id = _manual_index(lib)
+        chosen: list[dict] = []
+        if state.get("tags"):
+            for st_tag in state["tags"]:
+                if not isinstance(st_tag, dict) or st_tag.get("enabled") is False:
                     continue
-                cat = dict(cat)
-                cat["subcategories"] = [s for s in cat.get("subcategories", [])
-                                        if keep_sub(cat, s)]
-                kept_cats.append(cat)
-            lib = {"version": lib.get("version", 1), "categories": kept_cats}
-
-        tags: list[str] = []
-
-        if mode == "manual":
-            # 手动模式: 标签需要按来源层级判断是否被排除
-            # 建立 en -> (cat_name, sub, group) 的映射
-            full_by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(library.get_merged())}
-            en_path: dict[str, tuple] = {}
-            for cat in library.get_merged().get("categories", []):
-                for sub in cat.get("subcategories", []):
-                    for t in sub.get("tags", []):
-                        en_l = str(t.get("en", "")).strip().lower()
-                        en_path[en_l] = (cat, sub, None)
-                        # groups 已被 validate 摊平进 sub.tags; 单独记录 group 归属
-                    for g in sub.get("groups", []) or []:
-                        for t in g.get("tags", []):
-                            en_l = str(t.get("en", "")).strip().lower()
-                            en_path[en_l] = (cat, sub, g)
-
-            by_en = {str(t.get("en", "")).strip().lower(): t for t, _ in self._flat(lib)}
-            chosen: list[dict] = []
-            if state.get("tags"):
-                for st_tag in state["tags"]:
-                    if not isinstance(st_tag, dict) or st_tag.get("enabled") is False:
-                        continue
-                    en_l = str(st_tag.get("en", "")).strip().lower()
-                    # 排除检查 (三级路径)
-                    path = en_path.get(en_l)
-                    if path:
-                        cat, sub, g = path
-                        if tag_excluded(cat.get("name"), sub, g, exclude_keys):
-                            continue
-                    lib_t = by_en.get(en_l)
-                    if lib_t is None:
-                        lib_t = full_by_en.get(en_l)
-                    if lib_t is None:
-                        lib_t = {"en": st_tag.get("en", ""), "zh": st_tag.get("zh", ""),
-                                 "weight": 1.0}
-                    chosen.append(dict(lib_t))
-            else:
-                by_id = {t.get("id"): t for t, _ in self._flat(lib)}
-                chosen = [by_id[i] for i in selected_ids if i in by_id]
-            if not nsfw_on:
-                chosen = [t for t in chosen if not t.get("nsfw", False)]
-            # 手动输出也受性别过滤 (lib 已被 _apply_nsfw 过滤, 但 en 查不到时走 full_by_en 补底 → 再拦一道)
-            if gender == "female":
-                chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "male"]
-            elif gender == "male":
-                chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "female"]
-            tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
+                en_l = str(st_tag.get("en", "")).strip().lower()
+                path = en_path.get(en_l)
+                if path and tag_excluded(path[0].get("name", ""), path[1], path[2],
+                                         exclude_keys):
+                    continue
+                lib_t = full_by_en.get(en_l)
+                if lib_t is None:
+                    lib_t = {"en": st_tag.get("en", ""), "zh": st_tag.get("zh", ""),
+                             "weight": 1.0}
+                chosen.append(dict(lib_t))
+        else:
+            # v2 旧工作流 selected ids 结构仍兼容
+            for i in selected_ids:
+                t = by_id.get(i)
+                if t is None:
+                    continue
+                path = en_path.get(str(t.get("en", "")).strip().lower())
+                if path and tag_excluded(path[0].get("name", ""), path[1], path[2],
+                                         exclude_keys):
+                    continue
+                chosen.append(dict(t))
+        if not nsfw_on:
+            chosen = [t for t in chosen if not t.get("nsfw", False)]
+        # 手动输出也受性别过滤 (出口级复核, 与引擎 tag_ok 同规则)
+        if gender == "female":
+            chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "male"]
+        elif gender == "male":
+            chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "female"]
+        tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
         if dedupe:
             seen: set[str] = set()
