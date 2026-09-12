@@ -13,8 +13,12 @@ python tests/quality_gate_test.py --long    # 10,000 个种子 (发布前跑)
   Q7 段位序      输出必须符合 Anima 六段序 (段位不递减) —— §8.3 T3
   Q8 人数语义    "no humans" 时不得出现身份/外貌/服装词
   Q9 NSFW 往返   同一快照先关后开: 关=零泄漏, 开=能抽出 NSFW 词
-                 (回归: 过滤树曾被喂进快照编译, 而快照缓存键只有文件 mtime,
+                 (回归: 过滤树曾被喂进快照编译, 缓存键只有文件 mtime,
                   之后打开 NSFW 开关也拿不回 —— 1.6.5 修复)
+  Q10 人数词分类  人数轴每个词必须进 SINGLE/MULTI/NO_HUMAN 三张表且有人称行
+                 (回归: "large group" 漏分类 → NL 尾段群像配 "She has" —— 1.7.0 修复)
+  Q11 未成年锁定  钉选未成年年龄词 → 成人向词 (MINOR_BLOCK_WORDS) 零出现
+                 (回归: "toddler + side-tie panties" 真机实测 —— 1.7.0 修复)
 
 为什么需要它: 2026-09-10 实测发现默认配置下插件吐出 200+ 个互相矛盾的词
 (daytime + starry night sky / toddler + middle-aged + elderly / 四双鞋 …)。
@@ -36,6 +40,7 @@ sys.path.insert(0, ROOT)
 import axes  # noqa: E402
 import engine  # noqa: E402
 import library  # noqa: E402
+import nl  # noqa: E402
 import runtime_snapshot  # noqa: E402
 import slotpolicy  # noqa: E402
 
@@ -166,6 +171,42 @@ def main() -> int:
     else:
         print("  (库里没有 NSFW 词, Q9 跳过)")
 
+    # Q10 人数词分类完备性: 人数轴每个词都要被分类且有人称行
+    count_words = sorted({snap.tag_text[i].strip().lower()
+                          for i in range(snap.n_tags)
+                          if snap.axis_arr[i] == "count"})
+    unclassified = [w for w in count_words
+                    if w not in slotpolicy.SINGLE_COUNT_WORDS
+                    and w not in slotpolicy.MULTI_COUNT_WORDS
+                    and w not in slotpolicy.NO_HUMAN_COUNT_WORDS]
+    if unclassified:
+        stat["Q10"] += 1
+        fails.append(f"Q10: 人数轴词未进 SINGLE/MULTI/NO_HUMAN 分类表: {unclassified}")
+    no_pronoun = [w for w in count_words
+                  if w != "no humans"
+                  and (w not in nl._PRONOUN or w not in nl._INTRO_KEYS)]
+    if no_pronoun:
+        stat["Q10"] += 1
+        fails.append(f"Q10: 人数词缺 nl._PRONOUN/_INTRO_KEYS 行 "
+                     f"(人称解析按 _INTRO_KEYS 扫描, 缺了会回落 She): {no_pronoun}")
+
+    # Q11 未成年锁定: 钉选 toddler, NSFW 全开 —— 成人向词也必须零出现
+    if snap.tag_id("toddler") is not None:
+        minor_state = {**state, "nsfw": True,
+                       "tags": state["tags"] + [{"en": "toddler", "pinned": True}]}
+        bad_hits: list[set] = []
+        for s in range(30):
+            m_picks = engine.run_auto(snap, minor_state, s, nsfw_on=True, config=cfg).picks
+            m_ens = {p.en.strip().lower() for p in m_picks}
+            hits = m_ens & slotpolicy.MINOR_BLOCK_WORDS
+            if hits:
+                bad_hits.append(hits)
+            if "toddler" not in m_ens:
+                bad_hits.append({"钉选丢失: toddler"})
+        if bad_hits:
+            stat["Q11"] += 1
+            fails.append(f"Q11: 未成年锁定失效, 30 seed 内出现 {bad_hits[:3]}")
+
     counts.sort()
     print(f"跑 {n_seeds} 个种子 | 词数 最小{counts[0]} 中位{counts[len(counts) // 2]} "
           f"最大{counts[-1]} 均值{sum(counts) / len(counts):.1f}")
@@ -173,7 +214,8 @@ def main() -> int:
     print()
     for tag, desc in [("Q1", "词数带"), ("Q2", "槽位配额"), ("Q3", "互斥槽位组"),
                       ("Q4", "人数唯一"), ("Q5", "无畸形词"), ("Q6", "确定性"),
-                      ("Q7", "段位序"), ("Q8", "no humans 语义"), ("Q9", "NSFW 往返")]:
+                      ("Q7", "段位序"), ("Q8", "no humans 语义"), ("Q9", "NSFW 往返"),
+                      ("Q10", "人数词分类完备"), ("Q11", "未成年锁定")]:
         print(f"  {'✓' if not stat[tag] else '✗'} {tag} {desc}: {stat[tag]} 次违规")
     if fails:
         print("\n前几条失败:")

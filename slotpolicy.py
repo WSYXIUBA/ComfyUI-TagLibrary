@@ -144,6 +144,9 @@ EXCLUSIVE: list[tuple[str, tuple[str, ...]]] = [
                      "场景环境/城镇人文", "场景环境/幻想科幻")),
     # 风格基线: 写实与二次元是两条互斥主线
     ("style_base", ("风格媒介/写实摄影", "风格媒介/二次元向")),
+    # 摄影与手绘媒介互斥 (真机实测: "product photography + shin-hanga") —
+    # 二次元向不参与: "anime style + oil painting" 是常见组合, 不能并入
+    ("style_photo_art", ("风格媒介/写实摄影", "风格媒介/艺术媒介")),
     # 主光源: 自然光与人工光互斥
     ("light_type", ("光影氛围/自然光", "光影氛围/人工光")),
     # 姿态基线: 站 / 坐 / 躺 只能一种
@@ -181,10 +184,16 @@ SINGLE_COUNT_WORDS = frozenset({
 })
 
 # 多人词: 表示画面有多人 -> 互动类槽位成立
+# ⚠ 人数轴**每加一个词都要同步这张表和 nl._PRONOUN**, 否则: NL 尾段人称回落
+#   "She" (large group 配 She has 的实测出处)、互动槽位该开不开。
+# quality_gate_test Q10 固化了"人数轴词必须全部被分类"这道防线。
 MULTI_COUNT_WORDS = frozenset({
     "2girls", "3girls", "4girls", "5girls", "6+girls", "2boys", "3boys",
-    "multiple girls", "multiple boys", "multiple others", "group",
+    "multiple girls", "multiple boys", "multiple others", "group", "crowd",
     "1girl and 1boy", "1boy and 1girl", "couple", "everyone", "ot3",
+    # 1.7.0 补齐 (此前漏分类: "large group + She has..." 人称错位实测)
+    "group of girls", "group of boys", "trio", "quartet", "ensemble",
+    "pair", "large group", "small group",
 })
 
 # 仅在多人场景成立的槽位
@@ -206,3 +215,41 @@ BLOCK_WORDS_BY_SLOT: dict[str, frozenset[str]] = {
 # 否则会产出 "no humans + long hair" 这类直接矛盾的组合。
 NO_HUMAN_COUNT_WORDS = frozenset({"no humans"})
 NO_HUMAN_SKIP_AXES = frozenset({"character", "appearance", "clothing"})
+
+# ------------------------------------------------------------------ 未成年锁定
+# 动机 (真机实测): "toddler + side-tie panties" —— 年龄词与成人内容跨 9 个槽位,
+# 配额/互斥槽位组/跨池规则都管不到。这里做成**词级黑名单**: 任何未成年年龄词
+# 一经出生 (抽取/钉选), 黑名单词在候选级 (engine.tag_ok) 全池屏蔽。
+# 词表是人工整理的**成人向子集** —— 裸露/腿袜两槽里的 "bare shoulders"、
+# "thighhighs" 等日常词保持可用, 不能整槽屏蔽。
+MINOR_AGE_WORDS = frozenset({
+    "toddler", "infant", "child", "preteen", "loli", "shota",
+    "teen", "teenage girl", "teenage boy", "early teens", "late teens",
+    "young girl", "young boy",
+})
+
+MINOR_BLOCK_WORDS = frozenset({
+    # 裸露与暴露 (成人向子集; bare shoulders/legs/back 等日常词不在内)
+    "nude", "topless", "completely nude", "nipples", "puffy nipples",
+    "underboob", "sideboob", "cleavage", "deep cleavage", "underboob cleavage",
+    "sideboob exposure", "micro bikini", "string bikini", "naked apron",
+    "spread legs", "ahegao", "partially nude", "bottomless", "naked towel",
+    "naked ribbon", "covered nipples", "hair over breasts",
+    "see-through clothing", "cameltoe", "erect nipples", "areolae",
+    "pubic hair", "shaved", "visible areola through clothes",
+    "micro skirt", "lingerie",
+    # 腿袜与内衣 (内衣/裤袜子类; thighhighs/socks 等日常裤袜不在内)
+    "thong", "frilled panties", "side-tie panties", "chastity belt",
+    "crotchless panties", "sheer panties", "boyshorts panties",
+    "high-waisted panties", "thong with garter", "seamless panties",
+    "underwear", "bra", "sports bra", "push-up bra", "lace bra",
+    "strapless bra", "balconette bra", "boyshorts",
+    "garter belt", "garter straps", "garter stockings",
+    "stockings with garter",
+    # 其他槽位的成人向词 (体型/表情/皮肤/泳装/首饰/手部/氛围情绪)
+    "huge breasts", "small breasts", "perky breasts", "medium breasts",
+    "large breasts", "breasts", "mole on breast", "nipple piercing",
+    "covering breasts", "holding own breast",
+    "seductive", "seductive smile", "erotic mood",
+    "swimsuit", "competition swimsuit",
+})

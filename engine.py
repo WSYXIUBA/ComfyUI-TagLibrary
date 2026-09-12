@@ -241,9 +241,16 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     gmode = str(state.get("gender") or "off").strip().lower()
 
+    # 未成年锁定: 任一年龄词出生后, 成人向词在候选级全池屏蔽 (词级黑名单,
+    # 覆盖裸露/内衣/泳装/体型/表情等 9 个槽位, 见 slotpolicy.MINOR_*)。
+    # 必须在 tag_ok 定义前赋值 —— 钉选阶段就会调 tag_ok。
+    minor_age = False
+
     def tag_ok(tid: int) -> bool:
-        """排除/NSFW/性别三态/性别锁 四闸门 (候选级)。"""
+        """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
         if not nsfw_on and snap.nsfw_flag[tid]:
+            return False
+        if minor_age and snap.tag_lower[tid] in slotpolicy.MINOR_BLOCK_WORDS:
             return False
         g = snap.gender_flag[tid]
         if gmode == "female" and g == 2:
@@ -478,6 +485,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             count_single = False
         if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
             count_no_human = True
+        if _low in slotpolicy.MINOR_AGE_WORDS:
+            minor_age = True
 
     slot_filled: dict[int, int] = {si: pinned_sub_count.get(si, 0) for si in pool_ids}
 
@@ -506,7 +515,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     def _pool_fill(si: int, want: int) -> int:
         """从槽位 si 抽至多 want 个词, 返回实际抽出数。两遍共用。"""
-        nonlocal count_single, count_no_human
+        nonlocal count_single, count_no_human, minor_age
         sub_key = snap.sub_keys[si]
         cname = snap.cat_names[snap.cat_of_sub[si]]
         excl_gid = slotpolicy.exclusive_group(sub_key)
@@ -564,6 +573,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                     count_single = False
                 if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
                     count_no_human = True
+            if snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
+                minor_age = True
             if mount_of_tag.get(tid):
                 n = attach_bundle(tid, picks[-1].order, cname, snap.axis_arr[tid])
                 if n:
