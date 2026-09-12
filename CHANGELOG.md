@@ -2,201 +2,21 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
-## v1.7.1 — 输出质量真审：未成年锁定 / 人数词分类补全 / 人称一致（2026-09-12）
+## v1.7.1 — 输出质量修复（2026-09-12）
 
-用户问"完整提示词质量到底如何、你真验证过吗"。回答：门禁全过 ≠ 没毛病 ——
-把真机输出**当人读**后抓到 4 类门禁管不到的语义缺陷，全部修复并固化为新断言。
+修复了若干提示词输出质量问题：未成年的年龄词不再与成人内容同现；多人场景的自然语言描述人称更准确。
 
-### 真审抓到什么（真实输出实例）
+## v1.7.0 — 结构优化（2026-09-12）
 
-| 缺陷 | 实测输出 | 根因 |
-|---|---|---|
-| **未成年 × 成人内容** | `toddler` + `side-tie panties` | 年龄词与成人词散布 9 个槽位，配额/互斥槽位组/跨池规则全管不到 |
-| **群像配单数人称** | `large group` + "She has asymmetric bangs..." | 人数轴 30 词里 9 个没进 MULTI 表；`_pronouns` 按 `_INTRO_KEYS` 扫描，扫不到回落 "She" |
-| **摄影 × 手绘媒介** | `product photography` + `shin-hanga` | style_base 互斥只盖 写实摄影⊥二次元向 |
-| (连带发现) | `4girls/5girls/6+girls/1other/0others` 缺人称行 | 同上，Q10 建好后由门禁自己抓出来 |
+`.md` 文件夹镜像新增 `_tagmeta.json`，别名/优先级/稀有度/停用等编辑层字段在文件夹重建时不再丢失；前端 taglibrary.js 拆分为 common / picker / 入口三个模块；库合并性能优化。
 
-### 修了什么
+## v1.6.6 — 安全加固（2026-09-12）
 
-- **未成年锁定 (slotpolicy + engine)**：`MINOR_AGE_WORDS` (toddler/infant/child/
-  preteen/loli/shota/teen/…) 一经出生（抽取或钉选），`MINOR_BLOCK_WORDS`
-  (~55 个成人向词：裸露/内衣/泳装/体型/表情/氛围情绪的成人子集) 在候选级
-  全池屏蔽。**词级**而非槽位级 —— 裸露槽的 "bare shoulders"、腿袜槽的
-  "thighhighs" 等日常词保持可用。
-- **人数词分类补全 (slotpolicy + nl)**：group of girls/boys、trio、quartet、
-  ensemble、pair、large/small group、crowd 进 MULTI 表；全部 30 个人数轴词
-  进 `_PRONOUN` + `_INTRO_KEYS`（缺了任何一张表都会回落 She）。
-- **NL 群像开箱句 (nl_flavors.json)**：给 23 个复数/中性人数词补 intro 句
-  （此前只有 1girl/1boy/solo 有，群像从来不出引入句）。
-- **摄影⊥艺术媒介 (slotpolicy.EXCLUSIVE)**：新增 style_photo_art 互斥组；
-  二次元向不参与（anime style + oil painting 是合法组合）。
-  题材风格的 art nouveau 等流派词不锁（摄影配流派语义成立）。
+API 写接口增加跨站请求（CSRF）防护；整库导出到外部目录需要确认；双向删除的文件匹配改为精确匹配。
 
-### 新断言
+## v1.6.5 — 问题修复（2026-09-12）
 
-- `quality_gate_test` **Q10 人数词分类完备**：人数轴每词必须进三张分类表 +
-  `_PRONOUN`/`_INTRO_KEYS`（建好后立即抓出 crowd/4girls/5girls/6+girls/1other/
-  0others 六个漏网，全部补齐）。
-- `quality_gate_test` **Q11 未成年锁定**：钉选 toddler + NSFW 全开，30 seed 内
-  成人向词必须零出现。
-- `prompt_quality_test` **P4 新增 4 对未成年矛盾**、**P9 NL 人称与人数词一致**
-  （人数词为复数时尾段出现 She/He/her/his 即违规）。
-
-### 修复后实测
-
-```
-[seed2]  count='group of girls' → The group of girls fills the scene. They have swept bangs and wolf cut, ...
-[seed6]  count='5girls'         → They hold katana between their teeth, both hands free. ...
-[seed8]  count='large group'    → A large group fills the frame to its edges. They hold sword ...
-```
-
-### 验证
-
-离线门禁 14/14；在线 node_output_test（真机 60 次生成 × 文本层断言）通过。
-
-## v1.7.0 — 结构优化：编辑层字段完整往返 + 前端拆模块（2026-09-12）
-
-体检第 3 期。两个底层演进：`.md` 文件夹镜像不再丢编辑层字段；3156 行的前端
-单文件拆成三个职责清晰的 ES 模块。
-
-### 1. 编辑层字段 sidecar `_tagmeta.json` (`tagfiles.py`)
-
-`.md` 镜像只承载**输出层**字段 (en/zh/weight/nsfw/gender)。aliases / priority /
-rarity / enabled=false 这些**编辑层**字段此前在"文件夹重建库"（热同步 pull、
-清空后重导、user.json 损坏重建）时**静默丢失** —— grouprules 当年就是为同样
-的问题独立成文件的，这次把剩下的编辑层字段也补上等价物：
-
-- `sync_to_folder` 落镜像时同步写 `_tagmeta.json`（按 en_lower 查表，**只存非默认值**
-  控体积；`_` 前缀 = 指纹扫描/导入扫描/清空保留都跳过，不会形成同步循环）
-- 吸入路径（`import_files_into` 热同步 pull / 管理页 `_parse_and_merge_tree`）
-  在 parse 之后调 `apply_tag_meta` 还原：aliases/priority/rarity 只填缺省，
-  enabled 只做单向还原（sidecar 说停用 → 覆盖 parse 物化的 True，绝不反向）
-- 新离线门禁 `tagmeta_roundtrip_test`（第 14 项）：写出/还原/全链路吸入/不进指纹
-
-### 2. 前端拆模块 (`web/`)
-
-`taglibrary.js`（3156 行）按职责拆三份，段落逐行搬运零改写 + 导入完整性脚本校验：
-
-| 模块 | 行数 | 职责 |
-|---|---|---|
-| `taglib-common.js` | 265 | 转义/toast/设置读写/主题/偏好轮询/两级库缓存/selection_state 语义 |
-| `taglib-picker.js` | 1669 | 全库挑选器五页签 + 三个行内编辑视图 |
-| `taglibrary.js` | ~1290 | 节点面板 / executed 回显 / 管理弹窗 / registerExtension 入口 |
-
-共享的可变缓存（LIB_CACHE/PANEL_CATS/LIB_PATH…）放 common 用 ESM 活绑定：
-applyPanelIndex 在 common 内重新赋值，所有导入方立即看到新值。
-
-### 3. deep_merge 索引化 (`library.py`)
-
-用户库分类/子分类建一次 id 索引，取代每个子分类的线性扫描（65 子分类 × 用户库
-规模的 O(n²) → O(n)）；`_find_user_tags` 等四个私有 helper 随之退役。语义不变
-（首见优先与旧扫描一致），smoke_test 全链路逐项通过。
-
-注：`_pool_fill` 补底轮的候选表缓存经评估**不做** —— 候选过滤依赖每次抽取的
-动态账本（used_lower/性别锁），缓存整表要么失效要么加失效逻辑，p50 已在 1-4ms，
-复杂度不划算。
-
-### 仓库瘦身说明
-
-`node.zip` / `ComfyUI-TagLibrary-v1.2.0-r2.zip` / `tests/*.png` 在 v1.6.4 前后的
-`.gitignore` 调整中已全部移出 git 跟踪（HEAD 与发布包不再包含，仅剩 docs/ 下
-README 引用的 5 张截图）；磁盘上的两个旧 zip 是从未入库的本地文件，留待自行处理。
-
-### 验证
-
-离线门禁 14/14；在线 4/4（拆模块后 ui_v13 面板结构/五页签/三视图可编辑 +
-ui_theme 深/浅主题全过）。
-
-## v1.6.6 — 安全加固：CSRF 防护 + 导出确认 + 双向删除精确匹配（2026-09-12）
-
-体检发现的第 2 期加固项。ComfyUI 主应用无鉴权，用户浏览器里打开的**任意网页**都能把
-请求打进 `localhost:8188` —— 用 `text/plain` 的"简单请求"即可绕过 CORS 预检
-（响应虽然读不到，但删库/覆盖库/导文件已经真实执行了）。
-
-### 1. CSRF 防护中间件 (`api/_common.py` + `api/__init__.py`)
-
-- 只作用于 `/taglib/api/*` 的写方法 (POST/PUT/DELETE/PATCH)，ComfyUI 其余路由零影响
-- 判定：请求带 Origin/Referer 且 authority 与 Host 不一致 → 403
-- 三类合法调用者全部放行：同源页面（面板/管理页）、无 Origin 的脚本客户端
-  （curl/测试脚本/第三方工具）、反代后同域页面（authority 归一含默认端口剥离）
-- `Origin: null`（沙箱 iframe / file://）与形态怪异的 Origin 保守拒绝
-- 真机验收进 `real_http_test`：跨站 403 / 同源放行 / 无源放行 / 外目录导出无 confirm 403
-
-### 2. 整库导出到外部目录需显式确认 (`api/tagfiles_routes.py` + `web/manager.js`)
-
-`export-folder` 的 `dir` 原先只查绝对路径——任何同源请求都能把整库镜像写到任意
-可写路径。现在：`data/` 子树内直接放行；之外要求 `confirm: true`，管理页同步加了
-确认弹窗（镜像会覆盖/删除目标位置库结构内的 .md，值得让用户看清目标路径）。
-
-### 3. 双向删除反向匹配改精确 (`library.py`)
-
-`_apply_folder_deletions` 找"子分类对应的 md 还在不在"原先用包含式模糊匹配
-（`fn.replace("()","") in 子分类名`）——子分类名互为子串时（"上装" ⊂ "上装细节"）
-会把**文件已删的子分类误判成还在**，双向删除静默失效。改为只认三种精确形态：
-原名 / `sanitize_fsname` 净化名 / 净化名`(n)` 去重后缀。
-
-### 门禁
-
-新增离线门禁 `api_security_test`（第 13 项）：
-- S1 CSRF 中间件：aiohttp TestServer 真跑 —— 跨站/null/跨端口 Origin 拒绝，
-  同源/Referer 兜底/无源/GET/非本插件路径放行
-- S2 导出目录：相对路径拒 / data/ 内放行 / 外部无 confirm 拒 / confirm 放行
-- S3 双向删除：子串误匹配回归（上装/上装细节）、净化名、`(n)` 后缀
-
-### 验证
-
-离线门禁 13/13；在线 4/4（real_http 含新 CSRF 真机断言）。
-
-## v1.6.5 — 全仓体检修复：一个隐藏 bug、一处从未生效的设置、热路径减负（2026-09-12）
-
-全仓通读体检（后端 ~4.5k 行 / 前端 ~5k 行）后修复四个缺陷、清理死代码，并补两条门禁防回归。
-
-### 修了什么
-
-1. **快照被过滤树污染（后端，最重）** `nodes.py`
-   auto 模式曾把 `_apply_nsfw` 过滤后的库喂给 `get_snapshot()`，而快照缓存键只有文件
-   mtime —— 后果：同一进程先以 NSFW 关生成过一次，之后打开 NSFW 开关**也抽不出任何
-   NSFW 词**（旧快照永久命中）。现在 auto 一律喂全量库，NSFW/性别由引擎在池层面处理
-   （`pools_nonsfw` / `pools_nofemale` / `pools_nomale` 本来就是为此设计的）。
-
-2. **「新节点的默认模式」设置从未生效（前端）** `web/taglibrary.js`
-   旧判断 `Object.values(modeW.options).includes(defMode)`：新前端 combo widget 的
-   options 是 `{values:[...]}` 对象，`Object.values` 拿到 `[[...]]`，includes 永远
-   不命中。因默认值恰好也是 manual 一直没暴露。现按数组/对象两种形态取值判断。
-
-3. **NSFW 开关的 null 语义前后端不一致（前端）** `web/taglibrary.js`
-   `state.nsfw=null` 时面板按全局设置显示（可能开）、后端按 false 过滤 —— 预览≠生成。
-   现在 `getState()` 就地物化成显式布尔；工作流载入（onConfigure）与新建节点两个入口
-   都写回显式值，state 自带语义。
-
-4. **README/README_EN 停在 v1.3.0** —— "8 页签挑选器"/"分类树+轴双视图"等均已是
-   前几个版本的旧账。两份 README 重写到当前口径（5 页签 / 单一视图 / 12 轴 66 槽位
-   4458 词 / 画师轴 / 12+4 门禁）。
-
-### 热路径减负
-
-- **手动模式不再每次生成做全库过滤拷贝**：原流程每轮 `_apply_nsfw` 深拷贝整棵树 +
-  三次全库遍历建 `full_by_en`/`en_path`/`by_en`。现在 NSFW/性别/排除全部在 chosen 层
-  复核（与原出口级过滤同规则），en/id 查表索引按库 mtime + dict 身份缓存，库没变就
-  零扫描。
-- **死代码清理**：`min_tags`/`max_tags` 解析块（v3 签名后无人读取）、`_apply_nsfw`
-  （随 1/3 项退役）、`_build_auto` 的 `mode` 形参、前端 `(getState(node).seed|0)`
-  （`state.seed` 从未被写入过）。
-- **面板/挑选器 HTML 注入面收口**：`chipLabel` / 挑选器 `chipEl` / 侧栏 `mkRow` /
-  排除抽屉卡片原先把库内 en/zh/分类名原文塞 `innerHTML`，统一走转义（库内容来自
-  可导入的 .md/JSON，不能信）。
-
-### 门禁
-
-- `quality_gate_test` 新增 **Q9 NSFW 往返**：同一快照先关后开 —— 关=零泄漏，
-  开=30 seed 内必能抽出 NSFW 词（正是缺陷 1 的回归特征）。
-- `ui_v13_check` 新增 **默认模式生效断言**：设置 `TagLibrary.default_mode=auto` 后
-  新建节点 mode 必须是 auto（正是缺陷 2 的回归特征；设置 API 不可用时显式跳过）。
-
-### 验证
-
-`tools/run_gates.py` 12 项离线全过（smoke_test 覆盖手动双路径 + NSFW 三态 +
-排除 + 权重 + 去重，行为与改前逐项一致）。
+修复自动模式快照被 NSFW 过滤污染（先关后开会抽不到 NSFW 词）、新节点默认模式设置失效、NSFW 开关前后端不一致等问题；手动模式性能优化；README 重写。
 
 ## v1.6.4 — 真机节点输出测试：补上一直缺的一层（2026-09-10）
 
