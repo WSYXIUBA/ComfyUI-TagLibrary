@@ -10,7 +10,7 @@ import {
   escapeHtml, toast, getSetting, setSetting, getState, setState,
   getNsfwEffective, getGender, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
   SET_SCALE, SET_LANG, SETTING_PREFIX,
-  LIB_CACHE, fetchLibrary, fetchPanelIndex, invalidateLibraryCache,
+  LIB_CACHE, LIB_PATH, fetchLibrary, fetchPanelIndex, invalidateLibraryCache,
 } from "./taglib-common.js";
 
 /* --------------------------------------------- tag picker (全库挑选器) */
@@ -269,6 +269,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <button class="tp-tabbtn tp-proftab">⚔ 武器档案</button>
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
         <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
+        <button class="tp-tabbtn tp-prtab">📦 预设</button>
         <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
         <span style="flex:1"></span>
@@ -279,6 +280,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <section class="tp-profview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-nlview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
+        <section class="tp-prview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-setview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
       </div>
       <div class="tp-foot">
@@ -834,6 +836,143 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .then(() => { renderCats(); renderChips(); });
   }
 
+  /* ---------- 📦 预设页 (1.8.1): 预设的完整管理界面搬进挑选器 ---------- */
+  const prView = $(".tp-prview");
+  const CFG_KEYS = ["total_min", "total_max", "bundle_pose_prob", "extra_prob",
+                    "max_weapons", "nsfw_intensity", "solo_lock", "bg_mode", "focus_mode"];
+
+  function applyPresetToNode(p) {
+    const st = getState(node);
+    const wantPins = new Set((p.pinned || []).map((x) => String(x).toLowerCase()));
+    const tags = st.tags.map((t) =>
+      wantPins.has(String(t.en).toLowerCase()) ? { ...t, pinned: true } : t);
+    const have = new Set(tags.map((t) => String(t.en).toLowerCase()));
+    for (const en of p.pinned || []) {
+      const lo = String(en).toLowerCase();
+      if (have.has(lo)) continue;
+      const t = { en, zh: "", pinned: true, enabled: true };
+      const path = LIB_PATH.get(lo);
+      if (path) t._cat = path[0];
+      tags.push(t);
+    }
+    const upd = {
+      tags: tags.map((t) => ({ ...t, enabled: t.enabled !== false })),
+      exclude_categories: (p.exclude || []).slice(),
+    };
+    const cfg = p.config || {};
+    for (const k of CFG_KEYS) upd[k] = cfg[k] !== undefined ? cfg[k] : null;
+    setState(node, upd);
+    onNodeState?.();
+  }
+
+  async function saveUserPresets(list) {
+    const r = await fetch("/taglib/api/settings").then((x) => x.json());
+    await fetch("/taglib/api/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: { presets: list } }),
+    });
+  }
+
+  async function renderPresetView() {
+    let data;
+    try { data = await fetch("/taglib/api/presets").then((x) => x.json()); }
+    catch { prView.innerHTML = '<div class="tp-empty">预设加载失败</div>'; return; }
+    const factory = data.factory || [], user = data.user || [];
+    const esc = escapeHtml;
+    const rowHtml = (p, isUser) => `
+      <div class="tp-gitem2" data-pid="${esc(String(p.id))}" data-src="${isUser ? "u" : "f"}">
+        <div class="tp-gitem2-h">
+          <b>${esc(p.name)}</b><span class="tp-gn">${esc(p.kind || "")}</span>
+          <span class="tp-gn">${esc(p.pinned?.length ? "钉 " + p.pinned.length : "")}${p.exclude?.length ? " · 排除 " + p.exclude.length : ""}${p.config && Object.keys(p.config).length ? " · 配置" : ""}</span>
+          <span style="flex:1"></span>
+          <button class="tp-eadd tp-pr-apply">载入到节点</button>
+          ${isUser ? '<button class="tp-edel tp-pr-edit">✎</button><button class="tp-edel tp-pr-del">✕</button>' : ""}
+        </div>
+        <div class="tp-exc-hint" style="margin:4px 0 0;">
+          ${esc(p.note || "")}${p.pinned?.length ? "<br/>钉选: " + esc(p.pinned.join(", ")) : ""}
+          ${p.exclude?.length ? "<br/>排除: " + esc(p.exclude.join(", ")) : ""}</div>
+      </div>`;
+    prView.innerHTML = `
+      <div class="tp-set-sec" style="margin-bottom:10px;">
+        <div class="tp-exc-hint">预设 = 钉选词 + 排除域 + 配置 (强度/场景开关等) 的一键组合。
+        「载入到节点」写进当前节点状态, 约束不锁死 —— 🎲 继续在预设框内随机。</div>
+      </div>
+      ${factory.length ? '<div class="tp-sub">出厂预设</div>' + factory.map((p) => rowHtml(p, false)).join("") : ""}
+      ${user.length ? '<div class="tp-sub">我的预设</div>' + user.map((p) => rowHtml(p, true)).join("") : '<div class="tp-sub">我的预设 (空)</div>'}
+      <div class="tp-gitem2">
+        <div class="tp-gitem2-h"><b>💾 把当前节点面板存为预设</b></div>
+        <div class="tp-erow">
+          <input class="tp-ecell wide tp-pr-name" placeholder="预设名称" />
+          <select class="tp-ecell tp-pr-kind">
+            <option>场景</option><option>角色</option><option>局面</option><option>背景</option>
+          </select>
+          <button class="tp-eadd tp-pr-save">保存</button>
+        </div>
+        <div class="tp-exc-hint tp-pr-msg" style="margin:6px 0 0;"></div>
+      </div>`;
+    const findPreset = (pid, isUser) =>
+      (isUser === "u" ? user : factory).find((x) => String(x.id) === pid);
+    prView.querySelectorAll('.tp-gitem2[data-pid]').forEach((row) => {
+      const pid = row.dataset.pid, srcFlag = row.dataset.src;
+      row.querySelector(".tp-pr-apply")?.addEventListener("click", () => {
+        const p = findPreset(pid, srcFlag);
+        if (p) { applyPresetToNode(p); toast("已载入预设「" + p.name + "」", false); }
+      });
+      row.querySelector(".tp-pr-del")?.addEventListener("click", async () => {
+        if (!confirm("删除预设「" + (findPreset(pid, srcFlag)?.name || pid) + "」?")) return;
+        await saveUserPresets(user.filter((x) => String(x.id) !== pid));
+        renderPresetView();
+      });
+      row.querySelector(".tp-pr-edit")?.addEventListener("click", () => {
+        const p = findPreset(pid, srcFlag);
+        if (!p) return;
+        const existing = row.querySelector(".tp-pr-json");
+        if (existing) { existing.remove(); return; }
+        const box = document.createElement("div");
+        box.className = "tp-pr-json";
+        box.style.marginTop = "6px";
+        box.innerHTML = '<textarea class="tp-ecell" style="width:100%;min-height:120px;font-family:monospace;">' + esc(JSON.stringify(p, null, 2)) + '</textarea>'
+          + '<button class="tp-eadd tp-pr-jsave" style="margin-top:4px;">保存 JSON</button>'
+          + '<span class="tp-exc-hint tp-pr-jmsg"></span>';
+        row.appendChild(box);
+        box.querySelector(".tp-pr-jsave").onclick = async () => {
+          let obj;
+          try { obj = JSON.parse(box.querySelector("textarea").value); }
+          catch (e) { box.querySelector(".tp-pr-jmsg").textContent = "JSON 不合法: " + e.message; return; }
+          if (!obj.name) { box.querySelector(".tp-pr-jmsg").textContent = "缺少 name"; return; }
+          await saveUserPresets(user.map((x) => String(x.id) === pid ? obj : x));
+          renderPresetView();
+        };
+      });
+    });
+    prView.querySelector(".tp-pr-save").onclick = async () => {
+      const nameEl = prView.querySelector(".tp-pr-name");
+      const name = nameEl.value.trim();
+      const msg = prView.querySelector(".tp-pr-msg");
+      if (!name) { msg.textContent = "⚠ 请先填预设名称"; return; }
+      const st = getState(node);
+      const preset = {
+        id: "u" + Date.now().toString(36),
+        name, kind: prView.querySelector(".tp-pr-kind").value,
+        pinned: st.tags.filter((t) => t.pinned).map((t) => t.en),
+        exclude: (st.exclude_categories || []).slice(),
+        config: {}, note: "",
+      };
+      for (const k of CFG_KEYS) {
+        if (st[k] !== undefined && st[k] !== null && st[k] !== false) preset.config[k] = st[k];
+      }
+      if (!preset.pinned.length && !preset.exclude.length && !Object.keys(preset.config).length) {
+        msg.textContent = "⚠ 当前没有钉选词 / 排除域 / 配置, 没什么可存";
+        return;
+      }
+      const r = await fetch("/taglib/api/settings").then((x) => x.json());
+      await saveUserPresets([...(r?.settings?.presets || []), preset]);
+      msg.textContent = "✅ 已保存「" + name + "」";
+      nameEl.value = "";
+      renderPresetView();
+    };
+  }
+
   /* ---------- 设置页: 节点参数(原⚙弹窗) + 全局偏好(与 ComfyUI 设置双向同步) ---------- */
   function renderSettingsView() {
     const st = getState(node);
@@ -865,6 +1004,23 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           "相同标签只输出一次")}
         ${row("组合随机过滤词", `<input type="text" class="sv-search" value="${(st.search_text || "").replace(/"/g, "&quot;")}" placeholder="留空 = 全库抽取"/>`,
           "只从匹配的标签里随机 (支持中文/英文/别名)")}
+      </div>
+      </details>
+      <details class="tp-set-sec" open>
+      <summary>🎛 场景控制 <span class="sub">· 单人锁 / 简洁背景 / 人物特写 / NSFW 强度</span></summary>
+      <div class="tp-set-card">
+        ${row("👤 单人锁", '<input type="checkbox" class="sv-solo" ' + (st.solo_lock ? "checked" : "") + '/>',
+          "人数轴只出单词 (1girl/1boy/solo…), 禁多人词与互动槽 — 生效于下次 🎲/队列")}
+        ${row("🖼 简洁背景", '<input type="checkbox" class="sv-bg" ' + (st.bg_mode === "simple" ? "checked" : "") + '/>',
+          "禁具象场景/天气/粒子槽, 背景只出纯色/渐变/虚化/棚拍族")}
+        ${row("🎯 人物特写", '<input type="checkbox" class="sv-focus" ' + (st.focus_mode === "portrait" ? "checked" : "") + '/>',
+          "禁杂物道具槽, 取景只出 portrait/upper body 特写族")}
+        ${row("🔞 NSFW 强度", '<select class="sv-ninten">'
+            + '<option value="0"' + (Number(st.nsfw_intensity || 0) === 0 ? " selected" : "") + '>标准 (×1)</option>'
+            + '<option value="1"' + (Number(st.nsfw_intensity) === 1 ? " selected" : "") + '>强调 (×2.5)</option>'
+            + '<option value="2"' + (Number(st.nsfw_intensity) === 2 ? " selected" : "") + '>纯欲 (×6 + 槽位保底)</option>'
+            + '</select>',
+          "涩词抽样权重乘数; 纯欲档另有性行为/服装状态保底与显式词分层加权")}
       </div>
       </details>
       <details class="tp-set-sec" open>
@@ -914,6 +1070,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     $(".sv-bundleprob").onchange = (e) => saveNode({ bundle_pose_prob: clampPct(e.target.value, 85) });
     $(".sv-maxweap").onchange = (e) => saveNode({ max_weapons: Math.min(4, Math.max(1, parseInt(e.target.value) || 2)) });
     $(".sv-extrprob").onchange = (e) => saveNode({ extra_prob: clampPct(e.target.value, 35) });
+    // 场景控制 (1.8.1)
+    $(".sv-solo").onchange = (e) => saveNode({ solo_lock: e.target.checked });
+    $(".sv-bg").onchange = (e) => saveNode({ bg_mode: e.target.checked ? "simple" : "normal" });
+    $(".sv-focus").onchange = (e) => saveNode({ focus_mode: e.target.checked ? "portrait" : "normal" });
+    $(".sv-ninten").onchange = (e) => saveNode({ nsfw_intensity: Number(e.target.value) || null });
     // 全局偏好: 写入 ComfyUI 设置 (官方持久化) + 当前面板即时跟随; 其他节点由轮询跟进
     const saveGlobal = (id, value) => { setSetting(id, value); onGlobalChange?.(); };
     $(".sv-gmode").onchange = (e) => saveGlobal(SET_DEFAULT_MODE, e.target.value);
@@ -1618,11 +1779,13 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     rootEl.querySelector(".tp-proftab")?.classList.toggle("active", tab === "prof");
     rootEl.querySelector(".tp-grptab")?.classList.toggle("active", tab === "grp");
     rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
+    rootEl.querySelector(".tp-prtab")?.classList.toggle("active", tab === "preset");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     profView.style.display = tab === "prof" ? "block" : "none";
     grpView.style.display = tab === "grp" ? "block" : "none";
     nlView.style.display = tab === "nl" ? "block" : "none";
+    prView.style.display = tab === "preset" ? "block" : "none";
     searchEl.style.visibility = tab === "pick" ? "visible" : "hidden";
     const info = $(".tp-footinfo");
     if (tab === "pick") {
@@ -1645,8 +1808,10 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (tab === "prof") renderProfView();
     if (tab === "grp") renderGrpView();
     if (tab === "nl") renderNlView();
+    if (tab === "preset") renderPresetView();
   }
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
+  rootEl.querySelector(".tp-prtab").onclick = () => switchTab("preset");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
   rootEl.querySelector(".tp-proftab")?.addEventListener("click", () => switchTab("prof"));
   rootEl.querySelector(".tp-grptab")?.addEventListener("click", () => switchTab("grp"));

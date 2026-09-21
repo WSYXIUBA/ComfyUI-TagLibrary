@@ -19,6 +19,10 @@ import {
 } from "./taglib-common.js";
 import { mountTagPicker } from "./taglib-picker.js";
 
+// 版本横幅: 控制台可核对浏览器加载的是否为新版 JS (老缓存是"点了没反应"的常见根因)
+window.__taglibVersion = "1.8.1";
+console.log("[TagLibrary] 面板脚本 v1.8.1 已加载");
+
 const NODE_NAME = "TagLibraryNode";
 
 /* chip 右键菜单 —— 单例复用。
@@ -87,7 +91,8 @@ export function buildPanelWidget(node, container) {
       <span class="tl-title">标签库</span>
       <span class="tl-head-spacer"></span>
       <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
-      <button class="tl-btn icon tl-more-btn" data-act="more" title="更多设置 (性别过滤 / 防冲突 / 显示语言 / 预览模式 / 清空)">⋯<i class="tl-more-dot"></i></button>
+      <button class="tl-btn tl-ninten-btn" data-act="ninten" title="NSFW 强度: 涩词抽样权重 ×1/×2.5/×6, 纯欲档另有槽位保底" style="display:none;">涩·标准</button>
+      <button class="tl-btn icon tl-more-btn" data-act="more" title="更多设置 (性别过滤 / 防冲突 / 显示语言 / 预览模式 / 预设管理 / 批量探索 / 清空)">⋯<i class="tl-more-dot"></i></button>
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
     </div>
     <div class="tl-toolbar">
@@ -98,13 +103,17 @@ export function buildPanelWidget(node, container) {
       </div>
     </div>
     <div class="tl-preset-row" style="display:flex;gap:4px;align-items:center;margin:4px 0 0;">
-      <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)"
-              style="flex:1;min-width:0;background:var(--tl-input,#1c1f26);color:inherit;border:1px solid var(--tl-border,#333845);border-radius:6px;font-size:11px;padding:3px 4px;">
+      <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)">
         <option value="">📦 场景预设…</option>
       </select>
       <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设" style="padding:2px 7px;">🗑</button>
       <button class="tl-btn icon" data-act="preset-save" title="把当前钉选词/排除域/随机配置存为预设" style="padding:2px 7px;">💾</button>
       <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库" style="padding:2px 7px;">📥</button>
+    </div>
+    <div class="tl-scene-row">
+      <button class="tl-scene-btn" data-scene="solo" title="单人锁: 人数轴只出单词 (1girl/1boy/solo…), 禁多人词与互动槽">👤 单人</button>
+      <button class="tl-scene-btn" data-scene="bg" title="简洁背景: 禁具象场景/天气/粒子槽, 背景处理只出简洁族 (纯色/渐变/虚化/棚拍)">🖼 简背景</button>
+      <button class="tl-scene-btn" data-scene="focus" title="人物特写: 禁杂物道具槽 (日用/食物/乐器/动物/束缚), 取景只出特写族 (portrait/upper body…)">🎯 特写</button>
     </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
@@ -116,7 +125,7 @@ export function buildPanelWidget(node, container) {
       <button class="tl-menu-item" data-act="conflict"><span class="tl-mi-k">防冲突</span><span class="tl-mi-v tl-conflict-val">已开启</span></button>
       <button class="tl-menu-item" data-act="lang"><span class="tl-mi-k">显示语言</span><span class="tl-mi-v tl-lang-val">双语</span></button>
       <button class="tl-menu-item" data-act="pv"><span class="tl-mi-k">预览模式</span><span class="tl-mi-v tl-pv-val">简洁</span></button>
-      <button class="tl-menu-item" data-act="ninten"><span class="tl-mi-k">NSFW 强度</span><span class="tl-mi-v tl-ninten-val">标准</span></button>
+      <button class="tl-menu-item" data-act="preset-mgr"><span class="tl-mi-k">📦 预设管理</span><span class="tl-mi-v">详情/编辑</span></button>
       <button class="tl-menu-item" data-act="explorer"><span class="tl-mi-k">🎲 批量探索</span><span class="tl-mi-v">一次看 N 条</span></button>
       <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
     </div>
@@ -578,7 +587,7 @@ export function buildPanelWidget(node, container) {
       exclude_categories: (p.exclude || []).slice(),
     };
     const cfg = p.config || {};
-    for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity"]) {
+    for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity", "solo_lock", "bg_mode", "focus_mode", "max_props_total"]) {
       upd[k] = cfg[k] !== undefined ? cfg[k] : null;   // null = 还原引擎默认
     }
     setState(node, upd);
@@ -587,36 +596,70 @@ export function buildPanelWidget(node, container) {
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
   }
 
-  async function savePreset() {
-    const name = prompt("预设名称:", "");
-    if (!name || !name.trim()) return;
-    const kind = prompt("类型 (场景 / 角色 / 局面):", "场景") || "场景";
-    const st = getState(node);
-    const preset = {
-      id: "u" + Date.now().toString(36),
-      name: name.trim(), kind: kind.trim() || "场景",
-      pinned: st.tags.filter((t) => t.pinned).map((t) => t.en),
-      exclude: (st.exclude_categories || []).slice(),
-      config: {},
-      note: "",
+  function savePresetDialog(onDone) {
+    const old = document.getElementById("taglib-preset-save-dialog");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-preset-save-dialog";
+    dlg.classList.add("p-inputtext");
+    dlg.setAttribute("translate", "no");
+    dlg.style.cssText = "background:#15171d;color:#e3e7ee;border:1px solid #333845;"
+      + "border-radius:12px;padding:14px;width:min(380px,92vw);";
+    dlg.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px;">💾 把当前面板存为预设</div>
+      <div style="display:grid;gap:8px;font-size:12px;">
+        <label>名称 <input id="tl-ps-name" style="width:100%;box-sizing:border-box;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;padding:5px 8px;" placeholder="例如 浴室·纯欲" /></label>
+        <label>类型 <select id="tl-ps-kind" style="width:100%;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;padding:5px 8px;">
+          <option>场景</option><option>角色</option><option>局面</option><option>背景</option></select></label>
+        <label>备注 (可选) <input id="tl-ps-note" style="width:100%;box-sizing:border-box;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;padding:5px 8px;" /></label>
+        <div id="tl-ps-err" style="color:#e77;font-size:11px;"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="tl-ps-ok" class="tl-btn primary" style="padding:4px 14px;">保存</button>
+        <span style="flex:1"></span>
+        <button id="tl-ps-cancel" class="tl-btn" style="padding:4px 10px;">取消</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    dlg.querySelector("#tl-ps-cancel").onclick = () => dlg.close();
+    dlg.querySelector("#tl-ps-ok").onclick = () => {
+      const name = dlg.querySelector("#tl-ps-name").value.trim();
+      if (!name) { dlg.querySelector("#tl-ps-err").textContent = "请填名称"; return; }
+      dlg.close();
+      onDone(name, dlg.querySelector("#tl-ps-kind").value, dlg.querySelector("#tl-ps-note").value.trim());
     };
-    for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity"]) {
-      if (st[k] !== undefined && st[k] !== null) preset.config[k] = st[k];
-    }
-    if (!preset.pinned.length && !preset.exclude.length && !Object.keys(preset.config).length) {
-      alert("当前没有钉选词 / 排除域 / 自定义配置, 没什么可存的");
-      return;
-    }
-    const r = await apiJson("/taglib/api/settings");
-    const list = (r?.settings?.presets || []).slice();
-    list.push(preset);
-    await apiJson("/taglib/api/settings", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ settings: { presets: list } }),
+    dlg.showModal();
+    dlg.querySelector("#tl-ps-name").focus();
+  }
+
+  async function savePreset() {
+    savePresetDialog(async (name, kind, note) => {
+      const st = getState(node);
+      const preset = {
+        id: "u" + Date.now().toString(36),
+        name, kind: kind || "场景",
+        pinned: st.tags.filter((t) => t.pinned).map((t) => t.en),
+        exclude: (st.exclude_categories || []).slice(),
+        config: {},
+        note: note || "",
+      };
+      for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity", "solo_lock", "bg_mode", "focus_mode", "max_props_total"]) {
+        if (st[k] !== undefined && st[k] !== null) preset.config[k] = st[k];
+      }
+      if (!preset.pinned.length && !preset.exclude.length && !Object.keys(preset.config).length) {
+        alert("当前没有钉选词 / 排除域 / 自定义配置, 没什么可存的");
+        return;
+      }
+      const r = await apiJson("/taglib/api/settings");
+      const list = (r?.settings?.presets || []).slice();
+      list.push(preset);
+      await apiJson("/taglib/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { presets: list } }),
+      });
+      await loadPresets();
+      const sel = container.querySelector(".tl-preset-sel");
+      if (sel) sel.value = "u." + preset.id;
     });
-    await loadPresets();
-    const sel = container.querySelector(".tl-preset-sel");
-    if (sel) sel.value = "u." + preset.id;
   }
 
   async function deletePreset() {
@@ -848,12 +891,16 @@ export function buildPanelWidget(node, container) {
     const cur = Number(st.nsfw_intensity || 0);
     const next = NINTEN_SEQ[(NINTEN_SEQ.indexOf(cur) + 1) % NINTEN_SEQ.length];
     setState(node, { nsfw_intensity: next === 0 ? null : next });
-    container.querySelector(".tl-ninten-val").textContent = NINTEN_LABEL[next];
+    renderNsfwIntensity();
+    rollFill();   // 立刻按新强度重抽, 按钮点了就见效
   }
   function renderNsfwIntensity() {
-    const v = NINTEN_LABEL[Number(getState(node).nsfw_intensity || 0)];
-    const el = container.querySelector(".tl-ninten-val");
-    if (el) el.textContent = v;
+    const btn = container.querySelector(".tl-ninten-btn");
+    if (!btn) return;
+    const on = getNsfwEffective(node);
+    btn.style.display = on ? "" : "none";
+    btn.textContent = "涩·" + NINTEN_LABEL[Number(getState(node).nsfw_intensity || 0)];
+    btn.classList.toggle("on", Number(getState(node).nsfw_intensity || 0) > 0);
   }
 
   function toggleConflict() {
@@ -862,8 +909,17 @@ export function buildPanelWidget(node, container) {
     renderConflictBtn(); renderMenuState();
   }
 
+  function renderSceneBar() {
+    const st = getState(node);
+    const on = (k) => container.querySelector(`.tl-scene-btn[data-scene="${k}"]`);
+    const b1 = on("solo"), b2 = on("bg"), b3 = on("focus");
+    if (b1) b1.classList.toggle("on", !!st.solo_lock);
+    if (b2) b2.classList.toggle("on", st.bg_mode === "simple");
+    if (b3) b3.classList.toggle("on", st.focus_mode === "portrait");
+  }
+
   function renderAll() {
-    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderNsfwIntensity(); renderMenuState();
+    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderNsfwIntensity(); renderSceneBar(); renderMenuState();
   }
 
   /* ---------- ⋯ 更多菜单 ----------
@@ -915,6 +971,7 @@ export function buildPanelWidget(node, container) {
       else if (act === "lang") cycleLang();
       else if (act === "pv") cyclePvMode();
       else if (act === "explorer") openDrawExplorer();
+      else if (act === "preset-mgr") openPresetMgr();
       else if (act === "clear") doClearTags();
       // 语言/预览模式改完留在菜单里, 方便看到值的变化
       if (act !== "lang" && act !== "pv") closeMoreMenu();
@@ -996,6 +1053,152 @@ export function buildPanelWidget(node, container) {
     dlg.showModal();
   }
 
+  // ---- 预设管理 (1.8.1): 列表/详情/应用/编辑/删除 —— 预设从"下拉里盲选"变成可视可控 ----
+  async function openPresetMgr() {
+    await loadPresets();
+    const old = document.getElementById("taglib-presetmgr-dialog");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-presetmgr-dialog";
+    dlg.classList.add("p-inputtext");
+    dlg.setAttribute("translate", "no");
+    dlg.style.cssText = "background:#15171d;color:#e3e7ee;border:1px solid #333845;"
+      + "border-radius:12px;padding:14px;width:min(620px,94vw);max-height:84vh;overflow:auto;";
+    dlg.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px;">📦 预设管理
+        <span style="opacity:.6;font-size:11px;">预设 = 钉选词 + 排除域 + 配置 (约束不锁死)</span></div>
+      <div id="tl-pmgr-list" style="font-size:12px;"></div>
+      <div style="display:flex;gap:8px;margin-top:10px;">
+        <button id="tl-pmgr-new" class="tl-btn primary" style="padding:4px 12px;">💾 把当前面板存为预设</button>
+        <span style="flex:1"></span>
+        <button id="tl-pmgr-close" class="tl-btn" style="padding:4px 10px;">关闭</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    const listEl = dlg.querySelector("#tl-pmgr-list");
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+    const summarize = (p) => {
+      const bits = [];
+      if (p.pinned?.length) bits.push(`钉 ${p.pinned.length}`);
+      if (p.exclude?.length) bits.push(`排除 ${p.exclude.length}`);
+      if (p.config && Object.keys(p.config).length) bits.push(`配置 ${Object.keys(p.config).length}`);
+      return bits.join(" · ") || "空预设";
+    };
+
+    const render = () => {
+      listEl.innerHTML = "";
+      const mkGroup = (label, arr, isUser) => {
+        if (!arr.length) return;
+        const h = document.createElement("div");
+        h.style.cssText = "opacity:.6;margin:8px 0 4px;";
+        h.textContent = label;
+        listEl.appendChild(h);
+        for (const p of arr) {
+          const row = document.createElement("div");
+          row.style.cssText = "border:1px solid #2a2e39;border-radius:8px;padding:8px;margin-bottom:6px;";
+          const head = document.createElement("div");
+          head.style.cssText = "display:flex;gap:8px;align-items:center;";
+          head.innerHTML = `<b>${esc(p.name)}</b><span style="opacity:.55;font-size:11px;">${esc(p.kind || "")}</span>
+            <span style="opacity:.5;font-size:11px;">${esc(summarize(p))}</span><span style="flex:1"></span>`;
+          const btnApply = document.createElement("button");
+          btnApply.className = "tl-btn primary";
+          btnApply.style.cssText = "padding:2px 10px;font-size:11px;";
+          btnApply.textContent = "载入";
+          btnApply.onclick = async () => { await applyPreset(p); dlg.close(); };
+          head.appendChild(btnApply);
+          if (isUser) {
+            const btnEdit = document.createElement("button");
+            btnEdit.className = "tl-btn";
+            btnEdit.style.cssText = "padding:2px 8px;font-size:11px;";
+            btnEdit.textContent = "✎ JSON";
+            btnEdit.onclick = () => editPresetJson(dlg, p, render);
+            const btnDel = document.createElement("button");
+            btnDel.className = "tl-btn";
+            btnDel.style.cssText = "padding:2px 8px;font-size:11px;";
+            btnDel.textContent = "🗑";
+            btnDel.onclick = async () => {
+              if (!confirm(`删除预设「${p.name}」?`)) return;
+              const r = await apiJson("/taglib/api/settings");
+              const list = (r?.settings?.presets || []).filter((x) => String(x.id) !== String(p.id));
+              await apiJson("/taglib/api/settings", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ settings: { presets: list } }),
+              });
+              await loadPresets();
+              render();
+            };
+            head.appendChild(btnEdit);
+            head.appendChild(btnDel);
+          }
+          row.appendChild(head);
+          const detail = document.createElement("div");
+          detail.style.cssText = "opacity:.75;font-size:11px;margin-top:4px;word-break:break-all;";
+          detail.textContent =
+            (p.pinned?.length ? `钉选: ${p.pinned.join(", ")}
+` : "")
+            + (p.exclude?.length ? `排除: ${p.exclude.join(", ")}
+` : "")
+            + (p.note ? `备注: ${p.note}` : "");
+          row.appendChild(detail);
+          listEl.appendChild(row);
+        }
+      };
+      mkGroup("出厂", _presetsCache.factory, false);
+      mkGroup("我的", _presetsCache.user, true);
+      if (!_presetsCache.factory.length && !_presetsCache.user.length)
+        listEl.innerHTML = `<div style="opacity:.6;">还没有预设 — 点下方「存为预设」创建</div>`;
+    };
+    render();
+    dlg.querySelector("#tl-pmgr-new").onclick = async () => { await savePreset(); render(); };
+    dlg.querySelector("#tl-pmgr-close").onclick = () => dlg.close();
+    dlg.showModal();
+  }
+
+  async function editPresetJson(mgrDlg, preset, rerender) {
+    mgrDlg.close();
+    const old = document.getElementById("taglib-presetedit-dialog");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-presetedit-dialog";
+    dlg.classList.add("p-inputtext");
+    dlg.setAttribute("translate", "no");
+    dlg.style.cssText = "background:#15171d;color:#e3e7ee;border:1px solid #333845;"
+      + "border-radius:12px;padding:14px;width:min(560px,94vw);";
+    dlg.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px;">✎ 编辑预设「${preset.name}」(JSON)</div>
+      <textarea id="tl-pe-json" rows="14" style="width:100%;box-sizing:border-box;background:#1c1f26;color:inherit;"
+        border:1px solid #333845;border-radius:8px;padding:8px;font-size:11px;font-family:monospace;"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;">
+        <button id="tl-pe-save" class="tl-btn primary" style="padding:4px 12px;">保存</button>
+        <span id="tl-pe-err" style="color:#e77; font-size:11px;align-self:center;"></span>
+        <span style="flex:1"></span>
+        <button id="tl-pe-cancel" class="tl-btn" style="padding:4px 10px;">取消</button>
+      </div>`;
+    document.body.appendChild(dlg);
+    const ta = dlg.querySelector("#tl-pe-json");
+    ta.value = JSON.stringify(preset, null, 2);
+    dlg.querySelector("#tl-pe-cancel").onclick = () => dlg.close();
+    dlg.querySelector("#tl-pe-save").onclick = async () => {
+      let obj;
+      try { obj = JSON.parse(ta.value); }
+      catch (e) { dlg.querySelector("#tl-pe-err").textContent = "JSON 不合法: " + e.message; return; }
+      if (!obj.name) { dlg.querySelector("#tl-pe-err").textContent = "缺少 name"; return; }
+      const r = await apiJson("/taglib/api/settings");
+      const list = (r?.settings?.presets || []).map((x) =>
+        String(x.id) === String(preset.id) ? obj : x);
+      await apiJson("/taglib/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ settings: { presets: list } }),
+      });
+      await loadPresets();
+      dlg.close();
+      mgrDlg.showModal();
+      rerender();
+    };
+    dlg.showModal();
+  }
+
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
   async function openTagPicker() {
     // 挑选器需要标签正文 (全量库) -> 首次打开才拉; 面板本身只用轻量索引
@@ -1059,6 +1262,19 @@ export function buildPanelWidget(node, container) {
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollFill;
   // 1.8.0: 预设 / 吸收器
+  container.querySelector('[data-act="ninten"]').onclick = cycleNsfwIntensity;
+  container.querySelectorAll(".tl-scene-btn").forEach((b) => {
+    b.onclick = () => {
+      const st = getState(node);
+      if (b.dataset.scene === "solo") setState(node, { solo_lock: !st.solo_lock });
+      else if (b.dataset.scene === "bg")
+        setState(node, { bg_mode: st.bg_mode === "simple" ? "normal" : "simple" });
+      else if (b.dataset.scene === "focus")
+        setState(node, { focus_mode: st.focus_mode === "portrait" ? "normal" : "portrait" });
+      renderSceneBar();
+      rollFill();   // 切换立刻按新约束重抽 (面板词立即变化, 不用自己去按 🎲)
+    };
+  });
   container.querySelector('[data-act="preset-save"]').onclick = savePreset;
   container.querySelector('[data-act="preset-del"]').onclick = deletePreset;
   container.querySelector('[data-act="absorb"]').onclick = openAbsorb;

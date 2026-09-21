@@ -363,6 +363,35 @@ html:not(.dark-theme) .tl-scope,
 .tl-chip-menu button:hover { background: var(--tl-hover); }
 .tl-chip-menu button.danger { color: var(--tl-danger); }
 /* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) — 已废弃: 只在真钉选时显示 */
+
+/* ---- 1.8.1 场景条 + 强度按钮 (全部走主题变量, 深浅主题自适应) ---- */
+.tl-scene-row { display: flex; gap: 4px; margin-top: 4px; align-items: center; }
+.tl-scene-btn {
+  flex: 1; padding: 3px 0; font-size: 11px; font: inherit;
+  border-radius: 7px; border: 1px solid var(--tl-border);
+  background: var(--tl-card); color: var(--tl-text);
+  cursor: pointer; transition: .12s;
+}
+.tl-scene-btn:hover { background: var(--tl-hover); }
+.tl-preset-sel {
+  flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 3px 4px;
+  background: var(--tl-input-bg); color: var(--tl-text);
+  border: 1px solid var(--tl-border-2); border-radius: 7px;
+}
+.tl-scene-btn.on {
+  background: color-mix(in srgb, #2ecc71 24%, var(--tl-card));
+  border-color: rgba(46, 204, 113, .65);
+  color: var(--tl-accent-text);
+  font-weight: 600;
+}
+.tl-scene-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.45); }
+.tl-ninten-btn { padding: 3px 8px; font-size: 10px; }
+.tl-ninten-btn.on {
+  background: color-mix(in srgb, #e67e22 26%, var(--tl-card));
+  border-color: rgba(230, 126, 34, .65);
+  color: #f0b27a;
+  font-weight: 600;
+}
 `;
 
 export function injectPanelStyle() {

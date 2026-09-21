@@ -31436,7 +31436,9 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "nsfw": true,
+       "minor_block": true
       },
       {
        "en": "fishnets",

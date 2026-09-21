@@ -300,3 +300,60 @@ MINOR_BLOCK_WORDS = frozenset({
     "kissing", "deep kiss", "neck kiss", "french kiss",
     "implied masturbation", "sensual atmosphere",
 })
+
+
+# ---------------------------------------------------------------- 场景条白名单 (1.8.1)
+# 面板「场景条」三开关 (👤单人锁 / 🖼简洁背景 / 🎯人物特写) 的引擎侧词表。
+# 数据源 = 库内实际词 (背景处理 40 词 / 取景范围 44 词), 白名单只收"简洁/特写"语义族。
+
+# bg_mode=simple: 背景处理槽只允许这些词 (简洁/纯色/虚化/棚拍族)
+SIMPLE_BG_WORDS = frozenset({
+    "simple background", "white background", "pure white background",
+    "pure black background", "pitch black background", "black background",
+    "grey background", "pink background", "gradient background",
+    "abstract background", "minimal backdrop", "cyclorama",
+    "studio seamless", "green screen", "transparent background",
+    "blurry background", "bokeh background", "bokeh circles background",
+    "halftone background", "screentone background",
+})
+
+# bg_mode=simple: 整槽排除的具象场景槽 (简洁背景不该出现具体地点/天气/粒子)
+# ⚠ 背景处理槽不在禁列 —— 它是 min_n=1 必出槽, simple 模式下按 SIMPLE_BG_WORDS 白名单过滤
+SIMPLE_BG_BAN_SLOTS = frozenset({
+    "场景环境/室内", "场景环境/自然景观", "场景环境/城镇人文",
+    "场景环境/幻想科幻", "场景环境/节日与季节", "场景环境/氛围粒子",
+    "场景环境/月与星空", "场景环境/天气现象", "场景环境/时间时段",
+})
+
+# focus_mode=portrait: 整槽排除的道具槽 (特写画面里这些是杂物)
+PORTRAIT_BAN_SLOTS = frozenset({
+    "道具武器/日用道具", "道具武器/食物饮品", "道具武器/乐器与运动",
+    "道具武器/动物伙伴", "道具武器/束缚道具",
+})
+
+# 模糊年龄词 (teen 系): NSFW 开启时源头排除 —— 未成年锁只挡成人向子集
+# (日常词按 v1.7.1 政策豁免), teen 系词本身年龄歧义, 涩涩场景直接不碰最稳。
+# toddler/child/loli/shota 等明确词维持原机制 (conflicts 规则 + MINOR_AGE_WORDS)。
+TEEN_AGE_WORDS = frozenset({
+    "teen", "teenage girl", "teenage boy", "early teens", "late teens",
+    "young girl", "young boy",
+})
+
+# focus_mode=portrait: 取景范围槽只允许这些词 (人物特写族)
+PORTRAIT_FRAMING_WORDS = frozenset({
+    "portrait", "close-up", "medium close-up", "medium shot",
+    "upper body", "upper body three quarter", "cowboy shot",
+    "face focus", "headshot", "bust shot", "intimate close-up",
+    "from the chest up", "knee-up shot",
+})
+
+
+# ---------------------------------------------------------------- 单人锁补充 (1.8.1)
+# 👤单人锁除人数轴/互动槽外, 还要封"隐含多人的行为词" —— 否则 1other + gangbang 这类
+# 组合漏网 (真机审看实测)。武器/道具词不在列。
+SOLO_BAN_WORDS = frozenset({
+    "gangbang", "group sex", "orgy", "threesome", "ffm threesome", "mmf threesome",
+    "foursome", "spitroast", "double penetration", "surrounded by penises",
+    "cooperative fellatio", "cooperative paizuri", "teamwork (sexual)",
+    "mutual masturbation", "futa with female", "surrounded by penises",
+})

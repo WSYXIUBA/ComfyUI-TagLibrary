@@ -223,6 +223,41 @@ def e9_explicit_tier(n_seeds=60):
     print(f"  显式词命中 {hits}/{n_seeds}")
 
 
+def e10_scene_bar(n_seeds=100):
+    print("E10 场景条三开关")
+    st = {"nsfw": True, "gender": "female", "exclude_categories": ["画师"],
+          "solo_lock": True, "bg_mode": "simple", "focus_mode": "portrait",
+          "nsfw_intensity": 2}
+    bad = {"multi": 0, "env": 0, "bgw": 0, "prop": 0, "fram": 0, "teen": 0}
+    for seed in range(n_seeds):
+        res = engine.run_auto(SNAP, st, seed, nsfw_on=True)
+        for p in res.picks:
+            if p.id is None:
+                continue
+            sk = SNAP.sub_keys[SNAP.sub_of[p.id]]
+            lo = p.en.lower()
+            if SNAP.axis_arr[p.id] == "count" and lo not in slotpolicy.SINGLE_COUNT_WORDS:
+                bad["multi"] += 1
+            if sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
+                bad["env"] += 1
+            if sk == "场景环境/背景处理" and lo not in slotpolicy.SIMPLE_BG_WORDS:
+                bad["bgw"] += 1
+            if sk in slotpolicy.PORTRAIT_BAN_SLOTS:
+                bad["prop"] += 1
+            if sk == "构图镜头/取景范围" and lo not in slotpolicy.PORTRAIT_FRAMING_WORDS:
+                bad["fram"] += 1
+            if lo in slotpolicy.TEEN_AGE_WORDS:
+                bad["teen"] += 1
+    for k, v in bad.items():
+        check(v == 0, f"场景条违规 {k}: {v}/{n_seeds}")
+    # NSFW 开启时 teen 系词全局禁出
+    st2 = {"nsfw": True, "gender": "female", "exclude_categories": ["画师"]}
+    teen = sum(1 for seed in range(n_seeds)
+               for p in engine.run_auto(SNAP, st2, seed, nsfw_on=True).picks
+               if p.id is not None and p.en.lower() in slotpolicy.TEEN_AGE_WORDS)
+    check(teen == 0, f"NSFW 模式 teen 系词出现 {teen}")
+
+
 if __name__ == "__main__":
     e1_ext_pack()
     e2_invariants()
@@ -233,8 +268,9 @@ if __name__ == "__main__":
     e7_section_order()
     e8_intensity()
     e9_explicit_tier()
+    e10_scene_bar()
     print()
     if ERRORS:
         print(f"❌ NSFW 扩展门禁 FAIL ({len(ERRORS)} 项)")
         sys.exit(1)
-    print("✅ NSFW 扩展门禁 PASS (E1~E9)")
+    print("✅ NSFW 扩展门禁 PASS (E1~E10)")

@@ -9,15 +9,14 @@
    "pinned": [
     "night",
     "city street",
-    "neon"
+    "neon lights"
    ],
    "exclude": [
-    "场景环境/自然景观",
-    "场景环境/城镇人文"
+    "场景环境/自然景观"
    ],
    "sub_ranges": {},
    "config": {},
-   "note": "夜景+霓虹, 排除自然景观避免场景打架"
+   "note": "夜景+霓虹, 只排除自然景观 (city street 在城镇人文槽, 不可自排除)"
   },
   {
    "id": "p.pure-portrait",
@@ -44,7 +43,7 @@
    "name": "战斗·持刃",
    "kind": "局面",
    "pinned": [
-    "dynamic pose"
+    "dynamic running pose"
    ],
    "exclude": [
     "场景环境/节日与季节"
@@ -59,6 +58,150 @@
     "bundle_pose_prob": 1.0
    },
    "note": "武器档案束必出, 动作感拉满"
+  },
+  {
+   "id": "p.bg-white",
+   "name": "纯白棚拍",
+   "kind": "背景",
+   "pinned": [
+    "pure white background",
+    "studio seamless"
+   ],
+   "exclude": [],
+   "config": {
+    "bg_mode": "simple"
+   },
+   "note": "白底+无缝棚拍, 禁一切具象场景"
+  },
+  {
+   "id": "p.bg-black",
+   "name": "纯黑背景",
+   "kind": "背景",
+   "pinned": [
+    "pitch black background"
+   ],
+   "exclude": [],
+   "config": {
+    "bg_mode": "simple"
+   },
+   "note": "黑底, 人物浮出"
+  },
+  {
+   "id": "p.bg-grad",
+   "name": "渐变背景",
+   "kind": "背景",
+   "pinned": [
+    "gradient background"
+   ],
+   "exclude": [],
+   "config": {
+    "bg_mode": "simple"
+   },
+   "note": "渐变纯色底"
+  },
+  {
+   "id": "p.bg-blur",
+   "name": "虚化外景",
+   "kind": "背景",
+   "pinned": [
+    "blurry background",
+    "bokeh background"
+   ],
+   "exclude": [],
+   "config": {
+    "bg_mode": "simple"
+   },
+   "note": "虚化+焦外, 有空间感但不抢主体"
+  },
+  {
+   "id": "p.bg-bedroom",
+   "name": "室内·卧室",
+   "kind": "背景",
+   "pinned": [
+    "bedroom"
+   ],
+   "exclude": [
+    "场景环境/自然景观",
+    "场景环境/城镇人文",
+    "场景环境/幻想科幻"
+   ],
+   "config": {
+    "max_props_total": 3
+   },
+   "note": "卧室场景"
+  },
+  {
+   "id": "p.bg-classroom",
+   "name": "室内·教室",
+   "kind": "背景",
+   "pinned": [
+    "classroom"
+   ],
+   "exclude": [
+    "场景环境/自然景观",
+    "场景环境/城镇人文"
+   ],
+   "config": {},
+   "note": "教室场景"
+  },
+  {
+   "id": "p.bg-outdoor",
+   "name": "外景·自然",
+   "kind": "背景",
+   "pinned": [
+    "outdoors"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/城镇人文",
+    "场景环境/幻想科幻"
+   ],
+   "config": {},
+   "note": "自然外景"
+  },
+  {
+   "id": "p.bg-street",
+   "name": "都市·街头",
+   "kind": "背景",
+   "pinned": [
+    "city street",
+    "day"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/自然景观"
+   ],
+   "config": {},
+   "note": "白天街景"
+  },
+  {
+   "id": "p.bg-rooftop",
+   "name": "屋顶天台",
+   "kind": "背景",
+   "pinned": [
+    "rooftop"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/自然景观"
+   ],
+   "config": {},
+   "note": "天台视角"
+  },
+  {
+   "id": "p.bg-beach",
+   "name": "海·沙滩",
+   "kind": "背景",
+   "pinned": [
+    "beach"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/城镇人文",
+    "场景环境/幻想科幻"
+   ],
+   "config": {},
+   "note": "海边"
   }
  ]
 }

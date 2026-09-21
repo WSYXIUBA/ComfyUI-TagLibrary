@@ -155,7 +155,7 @@
   ],
   "on_back": [
    "{O} rides on {POS} back, secured across the shoulders.",
-   "Strapped behind {POS}, {O} waits out of reach.",
+   "Strapped behind {POS} back, {O} waits out of reach.",
    "{S} carry {O} on {POS} back, hilt over the shoulder."
   ],
   "sheathed_idle": [

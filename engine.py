@@ -94,7 +94,7 @@ class _Ledger:
     """单次抽取的账本: 用过的词/组名/资源/状态槽 + 增量违禁集。"""
 
     __slots__ = ("used_lower", "used_groups", "hands", "gaze", "states",
-                 "used_ids", "banned_ids", "prop_count", "gender_lock")
+                 "used_ids", "banned_ids", "prop_count", "gender_lock", "props_lib")
 
     def __init__(self):
         self.used_lower: set[str] = set()
@@ -105,6 +105,7 @@ class _Ledger:
         self.used_ids: set[int] = set()
         self.banned_ids: set[int] = set()  # cross_banned 增量并集
         self.prop_count = 0                # 已出生的武器档案身份词数
+        self.props_lib = 0                 # prop 轴库内词总数 (max_props_total 上限用)
         self.gender_lock = 0               # 0=未锁 1=女 2=男 (count 轴推导)
 
     def budget_ok(self, hands: int, gaze: int, state: frozenset,
@@ -266,6 +267,19 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     # 1.8.0 分轴重摇: pin_ignore_exclude=true 时钉选词只过 NSFW/性别/未成年闸门,
     # 不受排除类目约束 (重摇轴 X 时, 其余轴的保留词经"排除其余轴"钉入)
     pin_force = bool(state.get("pin_ignore_exclude"))
+    # 1.8.1 道具总上限 (场景类预设用): prop 轴库内词最多出 N 个, 0 = 不限。
+    # 浴室/卧室这类封闭场景抽 8 个道具是杂物灾难 (真机审看实测), 预设携带此键。
+    try:
+        max_props_total = int(state.get("max_props_total") or 0)
+    except (TypeError, ValueError):
+        max_props_total = 0
+    # 1.8.1 场景条三开关 (面板常亮按钮, 状态存 selection_state, 引擎权威生效):
+    #   solo_lock  👤单人锁: 人数轴只许单词, 互动与双人槽封禁
+    #   bg_mode=simple  🖼简洁背景: 具象场景槽封禁, 背景处理槽白名单过滤
+    #   focus_mode=portrait  🎯人物特写: 杂物道具槽封禁, 取景范围白名单过滤
+    solo_lock = bool(state.get("solo_lock"))
+    bg_simple = str(state.get("bg_mode") or "normal") == "simple"
+    focus_portrait = str(state.get("focus_mode") or "normal") == "portrait"
 
     # 未成年锁定: 任一年龄词出生后, 成人向词在候选级全池屏蔽 (词级黑名单,
     # 覆盖裸露/内衣/泳装/体型/表情等 9 个槽位, 见 slotpolicy.MINOR_*)。
@@ -278,6 +292,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             return False
         # 纯欲档: 未成年年龄词源头排除 (否则未成年锁触发后整场显式词全灭)
         if nsfw_intensity >= 2 and snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
+            return False
+        # NSFW 开启时 teen 系模糊年龄词源头排除 (年龄歧义, 成人场景不碰)
+        if nsfw_on and snap.tag_lower[tid] in slotpolicy.TEEN_AGE_WORDS:
             return False
         if minor_age and (snap.tag_lower[tid] in minor_block_words):
             return False
@@ -294,6 +311,26 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         cname = snap.cat_names[snap.cat_of_sub[si]]
         if cname in excl_cats or snap.sub_keys[si] in excl_keys:
             return False
+        # ---- 场景条闸门 (1.8.1) ----
+        _sk = snap.sub_keys[si]
+        if solo_lock:
+            if snap.axis_arr[tid] == "count"                     and snap.tag_lower[tid] not in slotpolicy.SINGLE_COUNT_WORDS:
+                return False
+            if _sk == "动作姿态/互动与双人":
+                return False
+            # 隐含多人的行为词一并封禁 (1other + gangbang 实测漏网)
+            if snap.tag_lower[tid] in slotpolicy.SOLO_BAN_WORDS:
+                return False
+        if bg_simple:
+            if _sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
+                return False
+            if _sk == "场景环境/背景处理"                     and snap.tag_lower[tid] not in slotpolicy.SIMPLE_BG_WORDS:
+                return False
+        if focus_portrait:
+            if _sk in slotpolicy.PORTRAIT_BAN_SLOTS:
+                return False
+            if _sk == "构图镜头/取景范围"                     and snap.tag_lower[tid] not in slotpolicy.PORTRAIT_FRAMING_WORDS:
+                return False
         return True
 
     def make_pick(tid: int, source: str = "random") -> Pick:
@@ -587,6 +624,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
             if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
                 continue
+            if max_props_total > 0 and snap.axis_arr[tid] == "prop"                     and led.props_lib >= max_props_total:
+                continue   # 道具总上限: 封闭场景不再堆杂物 (排除武器的束不在此列)
             w = (snap.base_weights[tid] * snap.spawn_rate[tid]
                  * snap.priority_factor[tid] * cat_weight(cname))
             if nsfw_factor > 1.0 and snap.nsfw_flag[tid]:
@@ -612,6 +651,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
             if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
                 continue
+            # 道具总上限: 提交时复查 (同手账本, 候选期值过期)
+            if max_props_total > 0 and snap.axis_arr[tid] == "prop"                     and led.props_lib >= max_props_total:
+                continue
             if avoid_conflicts:
                 if led.used_groups & snap.group_sets[tid]:
                     stats["dropped_mutex"] += 1
@@ -625,6 +667,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                     continue
             commit_tag(tid)
             got += 1
+            if snap.axis_arr[tid] == "prop":
+                led.props_lib += 1
             if _hcost:
                 led.hands += _hcost
             if excl_gid:

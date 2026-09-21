@@ -67,7 +67,7 @@ CLOTH_STATE = [
     ("bow_panties", "蝴蝶结内裤"),
     ("highleg_panties", "高衩内裤"),
     ("highleg_leotard", "高衩紧身衣"),
-    ("panties_under_pantyhose", "裤袜内穿内裤", {"nsfw": False}),
+    ("panties_under_pantyhose", "裤袜内穿内裤"),
     ("pre_clothes_pull", "将脱未脱"),
     ("between_breasts", "乳间夹物"),
 ]
@@ -538,7 +538,8 @@ def _domain_members():
                             "remote control vibrator", "egg vibrator",
                             "hitachi magic wand", "dildo", "strap-on", "onahole"],
         # 与出厂域同名 → 并集 (口部资源账本: 一张嘴同时只能干一件事)
-        "legacy.mouth": ["fellatio", "irrumatio", "deepthroat",
+        "legacy.mouth": ["kissing", "deep kiss", "french kiss", "neck kiss",
+                         "fellatio", "irrumatio", "deepthroat",
                          "cooperative fellatio", "cunnilingus", "licking penis",
                          "licking pussy", "breast sucking", "licking breasts",
                          "ball gag", "cloth gag", "tape gag", "improvised gag",
@@ -550,6 +551,13 @@ def _domain_members():
 # word↔slot 批量互斥; 槽位名用现行 "轴/槽位" 路径。
 
 CROSS_RULES = [
+    {"id": "ext.nipple-cover-vs-exposed",
+     "note": "遮盖乳头 ↔ 乳晕/乳头外露 (danbooru 语义互斥)",
+     "left": {"kind": "tags", "value": ["covered nipples", "covered chest"]},
+     "right": [{"kind": "tag", "value": "areolae"},
+               {"kind": "tag", "value": "erect nipples"},
+               {"kind": "tag", "value": "puffy nipples"},
+               {"kind": "tag", "value": "large areolae"}]},
     {"id": "ext.completely-nude-vs-clothes",
      "note": "全裸 ↔ 核心穿着 (腿袜/配饰不拦: 裸+袜是高频组合)",
      "left": {"kind": "tags", "value": ["completely nude", "full nudity"]},

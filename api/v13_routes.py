@@ -158,7 +158,7 @@ async def draw_tags(request: web.Request) -> web.Response:
                         avoid_conflicts=bool(state.get("avoid_conflicts", True)),
                         search_text=str(state.get("search_text") or ""),
                         cat_weights=cw if isinstance(cw, dict) else None, config=cfg)
-    picks = [{"en": p.en, "zh": p.zh, "cat": p.cat, "src": p.source,
+    picks = [{"en": p.en, "zh": p.zh, "cat": p.cat, "axis": p.axis, "src": p.source,
               "bundle": p.bundle, "ext": p.kind == "ext", "nsfw": p.nsfw,
               "gender": p.gender, "hands": p.hands} for p in res.picks]
     return _json_response({"ok": True, "picks": picks, "seed": seed,

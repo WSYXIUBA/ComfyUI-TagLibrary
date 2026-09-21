@@ -1,7 +1,7 @@
 """UI 验收: 面板结构 → 开 picker → 逐 tab 截图+断言 → 编辑能力断言。
 
 v1.6.0 起额外断言 (失败即退出码非 0):
-  · 页签收敛为 5 个 (挑标签/武器档案/互斥域/NL句式/设置), 排除类目与防冲突已合并
+  · 页签收敛为 6 个 (挑标签/武器档案/互斥域/NL句式/预设/设置), 排除类目与防冲突已合并
   · 排除类目出现在侧栏抽屉里
   · 武器档案 / 互斥域 / NL 三个视图是**可编辑**的 (存在 input.tp-ecell / 增删按钮 / 保存按钮)
   · 跨池互斥规则已并入互斥域页
@@ -202,10 +202,10 @@ def main():
         if not ok:
             panel_errs.append(f"{name}={got!r} 期望 {want!r}")
 
-    chk("头部常驻按钮数", pv["headButtons"], 3)          # NSFW / ⋯ / ＋添加标签
+    chk("头部常驻按钮数", pv["headButtons"], 4)          # NSFW / 强度 / ⋯ / ＋添加标签 (1.8.1)
     chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
     chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
-    chk("⋯ 菜单项数", pv["menuItems"], 7)                # 性别/防冲突/强度/语言/预览/批量探索/清空 (1.8.0+)
+    chk("⋯ 菜单项数", pv["menuItems"], 7)                # 性别/防冲突/语言/预览/预设管理/批量探索/清空 (1.8.1: 强度移到标题栏)
     chk("清空按钮已移入菜单", pv["hasClearBtn"], False)
     chk("🎲 填充常驻", pv["hasRoll"], True)
     for k, name in [("gender", "菜单·性别"), ("conflict", "菜单·防冲突"),
@@ -264,9 +264,29 @@ def main():
     tabs = cdp.ev("[...document.querySelectorAll('.tp-tabbtn')].map(b=>b.textContent.trim()).join(' | ')")
     print("TABS:", tabs)
 
+    # ---- 📦 预设页签 (1.8.1): 打开 → 出厂/我的分组 + 载入按钮 ----
+    cdp.ev("document.querySelector('.tp-prtab').click()")
+    time.sleep(2)
+    pr_ok = cdp.ev("""(() => {
+      const v = document.querySelector('.tp-prview');
+      if (!v) return 'NO VIEW';
+      return JSON.stringify({
+        rows: v.querySelectorAll('.tp-gitem2[data-pid]').length,
+        apply: v.querySelectorAll('.tp-pr-apply').length,
+        save: !!v.querySelector('.tp-pr-save'),
+      });
+    })()""")
+    try:
+        prv = json.loads(pr_ok) if isinstance(pr_ok, str) else pr_ok
+        chk("预设页签: 载入按钮", prv.get("apply", 0) >= 1, True)
+        chk("预设页签: 保存表单", prv.get("save") is True, True)
+    except Exception as e:
+        ui_errs.append(f"预设页签解析失败: {e} / {pr_ok}")
+    cdp.ev("document.querySelector('.tp-picktab').click()")
+
     # ---- 页签收敛 + 排除抽屉 (v1.6.0) ----
     ui_errs = []
-    want_tabs = ["挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "⚙ 设置"]
+    want_tabs = ["挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
     for t in want_tabs:
         ok = t in tabs
         print(f"    {'✓' if ok else '✗'} 页签存在: {t}")
@@ -278,9 +298,9 @@ def main():
         if not ok:
             ui_errs.append(f"未删除页签 {bad}")
     n_tabs = len([x for x in tabs.split(" | ") if x.strip()])
-    print(f"    {'✓' if n_tabs == 5 else '✗'} 页签总数 = {n_tabs} (期望 5)")
-    if n_tabs != 5:
-        ui_errs.append(f"页签数 {n_tabs} != 5")
+    print(f"    {'✓' if n_tabs == 6 else '✗'} 页签总数 = {n_tabs} (期望 6)")
+    if n_tabs != 6:
+        ui_errs.append(f"页签数 {n_tabs} != 6")
 
     drawer = cdp.ev("""(() => {
       const d = document.querySelector('.tp-exc');
