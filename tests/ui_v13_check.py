@@ -39,14 +39,19 @@ def _create_gate_node(cdp, tab, js: str):
         try:
             return cdp.ev(js)
         except UiError as exc:
-            if "Detached" not in str(exc) and "TIMEOUT" not in str(exc):
+            msg = str(exc)
+            # ⚠ 两种都要重试:
+            #   - Detached/TIMEOUT = MV3 worker 被回收
+            #   - "Cannot read properties of undefined" = 页面还没把 window.app 挂上
+            #     (服务端刚重启 / 页面在重载时会这样)
+            if not any(k in msg for k in ("Detached", "TIMEOUT", "undefined")):
                 raise
-            print(f"  建节点被 Detached 打断 (第 {attempt + 1} 次), 等页面回来…")
+            print(f"  建节点被『{msg[:40]}』打断 (第 {attempt + 1} 次), 等页面回来…")
             time.sleep(3)
             wait_app(cdp, tab, 30)
             if cdp.ev("!!window.__tlGateNode", tab):
                 return "node (上一次其实已建)"
-    raise RuntimeError("建测试节点失败: 桥反复掉线")
+    raise RuntimeError("建测试节点失败: 页面/桥反复不就绪")
 
 
 

@@ -74,7 +74,9 @@ def set_theme(cdp, light: bool, tab=None):
 
 
 def check(label, got, cond, errs):
-    ok = cond(got)
+    # ⚠ got=None (探针没拿到元素, 例如页面/服务没起来) 要当成失败报出来,
+    #   别让 cond(None) 抛 AttributeError 把真正的原因盖掉。
+    ok = False if got is None else cond(got)
     print(f"    {'✓' if ok else '✗'} {label}: {got}")
     if not ok:
         errs.append(f"{label}={got}")

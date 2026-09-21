@@ -1,8 +1,9 @@
 name: gates
 
 # 只跑离线门禁 (不依赖运行中的 ComfyUI)。
-# 在线门禁 real_http_test / ui_v13_check / ui_theme_check 需要真机实例 + Edge 远程调试,
-# 请本地用 `python tools/run_gates.py --with-online` 执行。
+# 在线门禁 (real_http / node_output / ui_v13 / ui_theme / ui_dialog_close / feature_e2e)
+# 需要真机 ComfyUI 实例 + huashu-chrome 桥, 本地用:
+#   python tools/run_gates.py --with-online
 
 on:
   push:

@@ -234,5 +234,8 @@ if __name__ == "__main__":
     print(f"\n耗时 {time.time() - t0:.0f}s")
     if ERRORS:
         print(f"❌ 功能端到端 FAIL ({len(ERRORS)} 项)")
+        # ⚠ 逐项列出来: runner 只回传尾部日志, 光报数量会让失败项被截掉
+        for e in ERRORS:
+            print(f"   - {e}")
         sys.exit(1)
     print("✅ 功能端到端全过 (F1~F11)")
