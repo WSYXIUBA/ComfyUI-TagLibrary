@@ -11,7 +11,7 @@ from ._common import (_WEB_DIR, _json_response,  # noqa: F401  (对外保持可�
 from .library_routes import (
     serve_manager_page, get_library, get_subtags, search_tags, get_panel_index,
     save_library, reset_library, backup_library, backup_info, restore_backup,
-    export_library, import_library,
+    export_library, import_library, lookup_tags,
     get_settings, save_settings, dismiss_upgrade_prompt,
 )
 from .conflicts_routes import (
@@ -57,6 +57,7 @@ def register_routes() -> None:
     app.router.add_post("/taglib/api/library/restore-backup", restore_backup)
     app.router.add_get("/taglib/api/library/export", export_library)
     app.router.add_post("/taglib/api/library/import", import_library)
+    app.router.add_post("/taglib/api/tags-lookup", lookup_tags)
     app.router.add_post("/taglib/api/library/upgrade-dismiss", dismiss_upgrade_prompt)
     app.router.add_get("/taglib/api/settings", get_settings)
     app.router.add_post("/taglib/api/settings", save_settings)

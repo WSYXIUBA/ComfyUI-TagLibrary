@@ -138,7 +138,7 @@ def _run(cdp, tab):
     chk("头部常驻按钮数", pv["headButtons"], 4)          # NSFW / 强度 / ⋯ / ＋添加标签 (1.8.1)
     chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
     chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
-    chk("⋯ 菜单项数", pv["menuItems"], 4)                # 标签库管理/预设管理/批量探索/清空
+    chk("⋯ 菜单项数", pv["menuItems"], 4)                # 吸收器/标签库管理/预设管理/批量探索
     chk("⋯ 菜单里有「标签库管理」入口", pv["hasMgrItem"], True)
     # 右上角那个 fixed 悬浮 🏷 按钮 1.8.4 已按用户要求删除 (界面全部收进节点面板) ——
     # 钉一条反向断言, 免得日后有人又"顺手"加回去。
@@ -191,10 +191,10 @@ def _run(cdp, tab):
     sv = json.loads(seg) if isinstance(seg, str) and seg.startswith("{") else {}
     chk("分段: 点第 2 项只有它高亮", sv.get("mid"), [False, True, False])
     chk("分段: 点回第 1 项复原", sv.get("back"), [True, False, False])
-    chk("清空按钮已移入菜单", pv["hasClearBtn"], False)
+    chk("🧹 清空常驻面板 (常用按钮不进 ⋯ 菜单)", pv["hasClearBtn"], True)
     chk("🎲 填充常驻", pv["hasRoll"], True)
     for k, name in [("gender", "面板·性别分段"), ("conflict", "面板·防冲突开关"),
-                    ("lang", "菜单·语言下拉"), ("pv", "菜单·预览下拉")]:
+                    ("lang", "面板·语言下拉"), ("pv", "菜单·预览下拉")]:
         if not pv[k]:
             print(f"    ✗ {name} 无状态文案")
             panel_errs.append(f"{name} 无状态文案")

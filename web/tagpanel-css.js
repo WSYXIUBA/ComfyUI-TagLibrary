@@ -371,8 +371,6 @@ html:not(.dark-theme) .tl-scope,
   border-top: 1px solid var(--tl-border);
 }
 .tl-menu-sec:first-child { border-top: none; }
-.tl-menu .tl-preset-row { display: flex; gap: 4px; align-items: center; padding: 2px 10px 6px; }
-.tl-menu .tl-preset-row .tl-preset-sel { flex: 1; min-width: 0; }
 .tl-menu .tl-nsfw-btn { margin: 2px 10px 6px; }
 .tl-menu-item.danger .tl-mi-k { color: var(--tl-danger); }
 .tl-menu-item.danger:hover { background: rgba(255,71,87,.10); }
@@ -478,26 +476,29 @@ html:not(.dark-theme) .tl-scope,
   background: var(--tl-input-bg); color: var(--tl-text);
   border: 1px solid var(--tl-border-2); border-radius: 7px;
 }
-/* 预设行 (1.11.0): 从 ⋯ 菜单搬到主区, 让预设「可见 + 可选」
-   1.11.1: 压扁成细线 —— 用户反馈「太占位置」: 去掉"📦 预设"文字标签
-   (改由下拉的空态文字承担), 图标按钮与下拉一起缩到 19px 高。 */
-.tl-preset-bar {
-  display: flex; align-items: center; gap: 3px;
-  padding: 0 8px 3px;
-  line-height: 1;
-}
-.tl-preset-bar .tl-preset-sel {
-  flex: 1; min-width: 0; height: 19px;
-  font-size: 10.5px; padding: 0 4px; border-radius: 6px;
-}
-.tl-preset-bar .tl-btn.icon { padding: 0 4px; font-size: 11px; line-height: 17px; }
-/* 有预设生效 → 下拉高亮 + ⚡ 亮起, 一眼看出"现在用的是哪个" */
-.tl-preset-bar.on .tl-preset-sel {
+/* 预设控件 (1.12.2): 并进 .tl-controls 流式区, 半行宽、跟别的控件一起换行 ——
+   不再自己占一整行 (用户:「预设不用管占一行, 数据显示半行就够了」「空间利用率太差」)。
+   有预设生效 → 下拉高亮, 一眼看出"现在用的是哪个"。 */
+.tl-preset-ctl { flex: 0 1 190px; min-width: 118px; max-width: 200px; }
+.tl-preset-ctl .tl-preset-sel { flex: 1 1 auto; min-width: 0; }
+.tl-preset-ctl .tl-btn.icon { padding: 1px 5px; font-size: 11px; }
+.tl-preset-ctl.on .tl-preset-sel {
   border-color: color-mix(in srgb, var(--tl-accent) 55%, transparent);
   color: var(--tl-accent-text);
 }
-.tl-preset-bar [data-act="preset-apply"]:disabled { opacity: .3; }
-.tl-preset-tip { font-size: 10.5px; color: var(--tl-muted); }
+.tl-preset-ctl [data-act="preset-apply"]:disabled { opacity: .3; }
+/* 清空 (1.12.2): 常用按钮, 从 ⋯ 菜单搬到主区 */
+.tl-clear-btn { font-size: 11px; padding: 2px 8px; }
+/* 版本自检条 (1.12.2): 页面跑的是旧 JS 时挂在面板顶部, 点一下刷新 */
+.tl-stale {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 5px 10px; font-size: 11px; line-height: 1.4;
+  color: var(--tl-accent-text);
+  background: color-mix(in srgb, var(--tl-accent) 14%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--tl-accent) 34%, transparent);
+}
+.tl-stale[hidden] { display: none; }
+.tl-stale .tl-btn { padding: 2px 8px; font-size: 11px; }
 .tl-ninten-btn { padding: 3px 8px; font-size: 10px; }
 .tl-ninten-btn.on {
   background: color-mix(in srgb, #e67e22 26%, var(--tl-card));

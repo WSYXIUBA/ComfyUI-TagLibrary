@@ -13,6 +13,7 @@ from __future__ import annotations
 import ast
 import glob
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -47,6 +48,33 @@ def check_common_imports() -> list[str]:
                     bad.append(f"from .{node.module or ''} import ...  (第 {node.lineno} 行)")
             elif (node.module or "").split(".")[0] not in COMMON_ALLOWED_ABS:
                 bad.append(f"from {node.module} import ...  (第 {node.lineno} 行)")
+    return bad
+
+
+def check_versions() -> list[str]:
+    """版本号一致性: pyproject.toml 的 version == web/taglibrary.js 的 TL_BUILD。
+
+    面板拿服务端 panel-index 回来的版本跟自己的 TL_BUILD 比对, 不一致就提示刷新 ——
+    两个数不同号, 这个提示要么永远不出现, 要么永远出现, 等于没有。
+    """
+    bad: list[str] = []
+    try:
+        with open(os.path.join(ROOT, "pyproject.toml"), encoding="utf-8") as f:
+            m = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.M)
+        py_ver = m.group(1) if m else ""
+    except OSError:
+        py_ver = ""
+    try:
+        with open(os.path.join(ROOT, "web", "taglibrary.js"), encoding="utf-8") as f:
+            js_ver = (re.search(r'TL_BUILD\s*=\s*"([^"]+)"', f.read()) or [None, ""])[1]
+    except OSError:
+        js_ver = ""
+    if not py_ver:
+        bad.append("pyproject.toml 里找不到 version")
+    if not js_ver:
+        bad.append("web/taglibrary.js 里找不到 TL_BUILD")
+    elif py_ver and py_ver != js_ver:
+        bad.append(f"pyproject.toml={py_ver}  web/taglibrary.js TL_BUILD={js_ver}")
     return bad
 
 
@@ -93,8 +121,18 @@ def main() -> int:
         print("   业务函数请放到它自己的模块 (如 library/datapaths), 路由模块直接调那个模块。")
         return 1
 
+    ver = check_versions()
+    if ver:
+        print("\n❌ 版本号不一致:")
+        for v in ver:
+            print(f"   - {v}")
+        print("   pyproject.toml / web/taglibrary.js 的 TL_BUILD 必须同号 —— "
+              "面板靠这两个数比对来提示\"插件已更新, 点这里刷新\"。")
+        return 1
+
     print(f"\n✅ 死代码门禁通过 (ruff {SELECT}, 排除 {', '.join(EXCLUDE)})")
     print("✅ _common 导入白名单通过 (只有常量与无业务工具)")
+    print("✅ 版本号一致 (pyproject.toml == TL_BUILD)")
     return 0
 
 

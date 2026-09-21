@@ -182,7 +182,7 @@ def _run(cdp, tab) -> int:
 
     for label, opener in (
         ("批量探索", ".tl-menu-item[data-act='explorer']"),
-        ("吸收器", ".tl-btn.icon[data-act='absorb']"),
+        ("吸收器", "[data-act='absorb']"),   # 1.12.2 起是 .tl-menu-item (原来是小图标按钮)
         ("预设管理", ".tl-menu-item[data-act='preset-mgr']"),
         # ⚠ 保存预设是 .tl-btn.icon 不是 .tl-menu-item (它在菜单里的 .tl-preset-row 内)
         ("保存预设", ".tl-btn.icon[data-act='preset-save']"),

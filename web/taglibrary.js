@@ -21,6 +21,11 @@ import { mountTagPicker } from "./taglib-picker.js";
 
 const NODE_NAME = "TagLibraryNode";
 
+// 面板构建号 —— 必须与 pyproject.toml 的 version 一致 (lint_check 会校验)。
+// 服务端 /taglib/api/panel-index 会回它自己的版本: 两者不一致 = 页面跑的是旧 JS,
+// 面板顶部就显示「插件已更新 → 点这里刷新」, 用户不用自己猜要不要 F5。
+const TL_BUILD = "1.12.2";
+
 /* chip 右键菜单 —— 单例复用。
    旧实现每次右键都 createElement + appendChild + 挂 document 监听,
    频繁右键会在 body 上反复增删节点。这里只建一次, 之后改内容与位置。 */
@@ -93,6 +98,7 @@ export function buildPanelWidget(node, container) {
       <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">＋ 添加</button>
       <button class="tl-btn icon tl-more-btn" data-act="more" title="更多: 场景 / 预设 / 内容过滤 / 显示 / 清空">⋯<i class="tl-more-dot"></i></button>
     </div>
+    <div class="tl-stale" hidden></div>
     <div class="tl-toolbar">
       <input class="tl-search" placeholder="🔍 过滤已添加的标签…" />
     </div>
@@ -130,46 +136,47 @@ export function buildPanelWidget(node, container) {
       <div class="tl-ctl"><span class="tl-ctl-k">排除类目</span>
         <button class="tl-excbtn" data-act="exclude" type="button" aria-label="排除类目设置">无</button>
       </div>
+      <!-- 预设 (1.12.2): 并进这条自适应流式区 —— 跟其它控件一样按节点宽度换行,
+           不再自己占一整行 (用户: 「预设不用管占一行, 数据显示半行就够了」)。
+           选一行 = 召唤: 该预设记下的词进面板并**打钉**, 自动模式不再覆盖它们;
+           ⚡ = 重新召唤当前这条; 换预设会先清掉**上一个预设带来的词**, 不叠加。 -->
+      <div class="tl-ctl tl-preset-ctl">
+        <select class="tl-sel tl-preset-sel" title="召唤预设: 出厂「场景预设」= 载入钉选词+排除域+配置 (约束不锁死, 🎲 继续在预设框内随机); 我的预设 = 把存下的词标签全部打钉, 自动模式不再覆盖它们">
+          <option value="">📦 预设</option>
+        </select>
+        <button class="tl-btn icon" data-act="preset-apply" title="重新召唤当前显示的预设 (把它的词重新写回并全部打钉)" disabled>⚡</button>
+        <button class="tl-btn icon" data-act="preset-save" title="把当前面板的词标签 + 排除域 + 配置存为预设 (召唤时会全部打钉)">💾</button>
+        <button class="tl-btn icon" data-act="preset-del" title="删除当前显示的「我的」预设">🗑</button>
+      </div>
+      <!-- 显示语言 (1.12.2): 常用开关搬出 ⋯ 菜单 (切了立刻影响所有 chip 的显示) -->
+      <div class="tl-ctl">
+        <select class="tl-sel tl-lang-sel" title="标签显示语言 (面板/挑选器/预览一起变)">
+          <option value="bilingual">双语</option><option value="zh">中文</option><option value="en">英文</option>
+        </select>
+      </div>
+      <!-- 清空标签 (1.12.2): 常用按钮搬出 ⋯ 菜单; 变了可撤销 (5 秒内点一下回退) -->
+      <div class="tl-ctl">
+        <button class="tl-btn tl-clear-btn" data-act="clear" title="清空面板全部标签 (可撤销)">🧹 清空</button>
+      </div>
     </div>
     <div class="tl-mode-hint"></div>
-    <!-- 预设 (1.11.0): 从 ⋯ 菜单搬到主区 —— 用户原话「只可用, 不可选, 也不可显」。
-         选一行 = 召唤: 该预设记下的词全部进面板并**打钉**, 自动模式不再覆盖它们。
-         ⚡ = 重新召唤当前显示的这条 (选完下拉**不回位**, 一直显示"现在用的是哪个")。 -->
-    <div class="tl-preset-bar">
-      <select class="tl-preset-sel" title="召唤预设: 出厂「场景预设」= 载入钉选词+排除域+配置 (约束不锁死, 🎲 继续在预设框内随机); 我的预设 = 把存下的词标签全部打钉, 自动模式不再覆盖它们">
-        <option value="">📦 预设</option>
-      </select>
-      <button class="tl-btn icon" data-act="preset-apply" title="重新召唤当前显示的预设 (把它的词重新写回并全部打钉)" disabled>⚡</button>
-      <button class="tl-btn icon" data-act="preset-save" title="把当前面板的词标签 + 排除域 + 配置存为预设 (召唤时会全部打钉)">💾</button>
-      <button class="tl-btn icon" data-act="preset-del" title="删除当前显示的「我的」预设">🗑</button>
-    </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
     <div class="tl-menu" hidden>
-      <div class="tl-menu-sec">预设 / 导入</div>
-      <div class="tl-preset-row">
-        <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库">📥</button>
-        <span class="tl-preset-tip">预设选择框已移到面板主区 (图标 📦 那一行)</span>
-      </div>
       <div class="tl-menu-sec">显示</div>
-      <div class="tl-mi-row"><span class="tl-mi-k">显示语言</span>
-        <select class="tl-sel tl-lang-sel" title="标签显示语言">
-          <option value="bilingual">双语</option><option value="zh">中文</option><option value="en">英文</option>
-        </select>
-      </div>
       <div class="tl-mi-row"><span class="tl-mi-k">预览模式</span>
         <select class="tl-sel tl-pv-sel" title="节点面板底部的预览文本怎么显示">
           <option value="simple">简洁</option><option value="weighted">带权重</option><option value="debug">调试</option>
         </select>
       </div>
       <div class="tl-menu-sec">其他</div>
+      <button class="tl-menu-item" data-act="absorb"><span class="tl-mi-k">📥 吸收器</span><span class="tl-mi-v">粘贴外部 prompt</span></button>
       <button class="tl-menu-item" data-act="manager"><span class="tl-mi-k">🏷 标签库管理</span><span class="tl-mi-v">分类/导入/备份/同步</span></button>
       <button class="tl-menu-item" data-act="preset-mgr"><span class="tl-mi-k">📦 预设管理</span><span class="tl-mi-v">详情/编辑</span></button>
       <button class="tl-menu-item" data-act="explorer"><span class="tl-mi-k">🎲 批量探索</span><span class="tl-mi-v">一次看 N 条</span></button>
-      <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
     </div>
   `;
 
@@ -211,15 +218,21 @@ export function buildPanelWidget(node, container) {
     node.setDirtyCanvas?.(true);
   }
 
-  /* ---------- 清空: 一键清掉当前节点显示的全部标签 ---------- */
+  /* ---------- 清空: 一键清掉当前节点显示的全部标签 (可撤销) ---------- */
   function doClearTags() {
     const st = getState(node);
-    if (!(st.tags || []).length) return toast("当前没有标签可清空");
+    const prev = (st.tags || []).map((t) => ({ ...t }));
+    if (!prev.length) return toast("当前没有标签可清空");
     setState(node, { tags: [] });
     ui.fillGroups = null;
     node._mutexDropped = null;
     renderTags();
-    toast("已清空节点标签");
+    // 1.12.2: 清空按钮搬出 ⋯ 菜单后就在手边, 误点代价变大 → 给 5 秒撤销窗口
+    undoToast(`已清空 ${prev.length} 个标签`, () => {
+      setState(node, { tags: prev });
+      renderTags();
+      toast("已撤销, 标签回来了");
+    });
   };
 
   /* ---------- 预览模式: 简洁 / 带权重 / 调试 (在 ⋯ 菜单里循环) ---------- */
@@ -844,39 +857,61 @@ export function buildPanelWidget(node, container) {
   /* 让"现在用的是哪个预设"看得见: 下拉不回位, 当前这条高亮, ⚡ 只在真有选中时可用。 */
   function markPresetUI() {
     const sel = container.querySelector(".tl-preset-sel");
-    const bar = container.querySelector(".tl-preset-bar");
+    const ctl = container.querySelector(".tl-preset-ctl");
     const apply = container.querySelector('[data-act="preset-apply"]');
     const p = sel ? findPreset(sel.value) : null;
-    if (bar) bar.classList.toggle("on", !!p);
+    if (ctl) ctl.classList.toggle("on", !!p);
     if (apply) apply.disabled = !p;
   }
 
+  // 上一个预设**带进来**的词 (换预设时先清掉它们, 免得多套预设叠在一起)。
+  let _presetWords = [];
+
   async function applyPreset(p) {
-    const st = getState(node);
+    let st = getState(node);
+    // ① 先抹掉上一个预设带进来的词 —— 用户报的"切换上一个预设不会被清理, 导致不同预设重叠"
+    const stale = new Set(_presetWords.map((x) => String(x).toLowerCase()));
+    if (stale.size) st = { ...st, tags: (st.tags || []).filter((t) => !stale.has(String(t.en).toLowerCase())) };
     // 出厂「场景预设」只有 pinned → 约束不锁死 (只钉必要词, 🎲 仍在框内随机)。
     // 我的预设带 tags (当前面板的词标签快照) → 召唤时**全部打钉**, 自动模式不再覆盖它们。
     const snap = (p.tags || []).map((x) => (typeof x === "string" ? { en: x } : x));
     const wantPins = new Set([...(p.pinned || []), ...snap.map((x) => x.en)]
       .map((x) => String(x).toLowerCase()));
-    const tags = st.tags.map((t) =>
+    const tags = (st.tags || []).map((t) =>
       wantPins.has(String(t.en).toLowerCase()) ? { ...t, pinned: true } : t);
     const have = new Set(tags.map((t) => String(t.en).toLowerCase()));
-    for (const w of snap) {                     // 快照里的词不在面板就补进来
-      const lo = String(w.en || "").toLowerCase();
-      if (!lo || have.has(lo)) continue;
-      tags.push({ en: w.en, zh: w.zh || "", pinned: true, enabled: true,
-                  ...(w.cat ? { _cat: w.cat } : {}) });
+    const added = [];
+    const push = (w) => {                        // 预设要的词: 面板没有才补, 有的只打钉
+      const en = String(w.en || "").trim();
+      const lo = en.toLowerCase();
+      if (!lo || have.has(lo)) return;
       have.add(lo);
-    }
-    for (const en of p.pinned || []) {           // 出厂预设的钉选词同理
-      const lo = String(en).toLowerCase();
-      if (have.has(lo)) continue;
-      const t = { en, zh: "", pinned: true, enabled: true };
       const path = LIB_PATH.get(lo);
-      if (path) t._cat = path[0];
+      const t = { en, zh: w.zh || "", pinned: true, enabled: true,
+                  ...(w.cat || path ? { _cat: w.cat || path[0] } : {}) };
       tags.push(t);
-      have.add(lo);
+      added.push(en);
+    };
+    snap.forEach(push);
+    (p.pinned || []).forEach((en) => push({ en }));
+    // ② 显示语言: 快照只存了 en 的词按库补 zh —— 否则「双语」设置下预设带进来的词只出英文
+    const need = added.filter((en) => {
+      const t = tags.find((x) => String(x.en).toLowerCase() === en.toLowerCase());
+      return t && !t.zh;
+    });
+    if (need.length) {
+      const r = await apiJson("/taglib/api/tags-lookup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ens: need }),
+      });
+      for (const en of need) {
+        const hit = r?.tags?.[en.toLowerCase()];
+        if (!hit) continue;
+        const t = tags.find((x) => String(x.en).toLowerCase() === en.toLowerCase());
+        if (t) { if (hit.zh) t.zh = hit.zh; if (!t._cat && hit.cat) t._cat = hit.cat; }
+      }
     }
+    _presetWords = added.slice();                // 记下"这套词是这个预设带进来的"
     const upd = {
       tags: sortByCat(tags).map((t) => ({ ...t, enabled: t.enabled !== false })),
       exclude_categories: (p.exclude || []).slice(),
@@ -924,6 +959,18 @@ export function buildPanelWidget(node, container) {
     };
     dlg.showModal();
     dlg.querySelector("#tl-ps-name").focus();
+  }
+
+  // 服务端版本 ≠ 面板构建号 → 这个页面跑的是旧 JS, 顶部挂一条"点这里刷新"
+  function checkBuild(ver) {
+    const el = $(".tl-stale");
+    if (!el) return;
+    const stale = !!ver && ver !== "unknown" && ver !== TL_BUILD;
+    el.hidden = !stale;
+    if (!stale) return;
+    el.innerHTML = `🔄 插件已更新到 <b>v${escapeHtml(String(ver))}</b>` +
+      ` (面板还是 v${TL_BUILD}) —— <button class="tl-btn primary" data-act="reload">点这里刷新</button>`;
+    el.querySelector('[data-act="reload"]').onclick = () => location.reload();
   }
 
   async function savePreset() {
@@ -1153,16 +1200,6 @@ export function buildPanelWidget(node, container) {
   /* ---------- 语言显示 ---------- */
   function getLang() { return getSetting(SET_LANG, "bilingual"); }
 
-  function cycleLang() {
-    const order = ["bilingual", "en", "zh"];
-    const cur = getLang();
-    const next = order[(order.indexOf(cur) + 1) % order.length];
-    setSetting(SET_LANG, next);
-    container.querySelector(".tl-lang-val").textContent = LANG_LABEL[next];
-    // 全量重渲染: 已选标签 chip、填充分组、预览全部跟随语言
-    renderAll();
-  }
-
   function chipLabel(t) {
     const lang = getLang();
     const tg = tagGender(t);
@@ -1337,18 +1374,17 @@ export function buildPanelWidget(node, container) {
       if (act === "gender") cycleGender();
       else if (act === "conflict") toggleConflict();
       else if (act === "ninten") cycleNsfwIntensity();
-      else if (act === "lang") cycleLang();
       else if (act === "pv") cyclePvMode();
       else if (act === "explorer") openDrawExplorer();
       else if (act === "preset-mgr") openPresetMgr();
-      // 管理页 (分类增删改 / 导入 / 备份 / 批量工具 / 标签文件同步) 的唯一入口就在
-      // 这个菜单里: 原来右上角那个悬浮 🏷 按钮已删 (界面全部收进节点面板)。
+      // 管理页 (分类增删改 / 导入 / 备份 / 批量工具) 的唯一入口就在这个菜单里。
       else if (act === "manager") openManagerDialog();
-      else if (act === "clear") doClearTags();
       // 语言/预览模式改完留在菜单里, 方便看到值的变化
-      if (act !== "lang" && act !== "pv") closeMoreMenu();
+      if (act !== "pv") closeMoreMenu();
     };
   });
+  // 1.12.2: 清空搬到主区 (常用按钮不进 ⋯ 菜单), 这里单独绑 —— 它不再是 .tl-menu-item
+  container.querySelector('.tl-controls [data-act="clear"]').onclick = doClearTags;
 
   // 全局偏好变更 -> 本节点面板实时跟随。
   // 本版本前端 extensionManager 没有 settings change 事件面 (setting/setting.settings
@@ -1700,7 +1736,7 @@ export function buildPanelWidget(node, container) {
   syncModeWidgets();
   // 面板只拉轻量索引 (分类/路径/标记); 含正文的全量库留给挑选器懒加载
   fetchPanelIndex()
-    .then(renderAll)
+    .then((d) => { checkBuild(d && d.version); renderAll(); })
     .catch((err) => { container.innerHTML = `<div class="tl-empty">标签库加载失败: ${err}</div>`; });
 
   return {
@@ -2056,8 +2092,11 @@ app.registerExtension({
             } catch {}
           }
         }
-        // 隐藏内部 widget (selection_state 是面板状态, 不需要显示)
-        for (const name of ["selection_state"]) {
+        // 隐藏内部 widget: selection_state 是面板状态; mode/seed/生成后种子动作 的功能
+        // 已在面板里 (手动/自动切换、🎲 填充、批量探索会写回 seed) → 1.12.2 起不再占节点空间。
+        // ⚠ 种子动作 widget 的真名是 **control_after_generate** (ComfyUI 给种子自动加的),
+        //   不是 ctl —— 名字对不上就白写。值仍照常序列化进工作流 (签名不受影响)。
+        for (const name of ["selection_state", "mode", "seed", "ctl", "control_after_generate"]) {
           const w = node.widgets?.find((x) => x.name === name);
           if (w) {
             w.computeSize = () => [0, -4];

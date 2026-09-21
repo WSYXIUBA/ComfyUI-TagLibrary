@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 from aiohttp import web
 
@@ -27,6 +28,20 @@ async def serve_manager_page(_request: web.Request) -> web.Response:
 
 
 # ---------------------------------------------------------------- api
+
+# 插件版本 (单一真源 = pyproject.toml)。前端面板把它与自己编译进来的 TL_BUILD 比对,
+# 不一致就提示"插件已更新, 点这里刷新" —— 改完 JS 用户不用自己猜要不要刷新。
+def _read_plugin_version() -> str:
+    try:
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with open(os.path.join(root, "pyproject.toml"), encoding="utf-8") as f:
+            m = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.M)
+        return m.group(1) if m else "unknown"
+    except Exception:  # noqa: BLE001 — 版本读不到不该影响服务
+        return "unknown"
+
+
+PLUGIN_VERSION = _read_plugin_version()
 
 # 导出 .json 的 `_说明` (JSON 没有注释, 用保留键; 导入时会被剥掉)
 _EXPORT_DOC = {
@@ -188,6 +203,7 @@ async def get_panel_index(_request: web.Request) -> web.Response:
 
     return _json_response({"ok": True,
                            "mtime": library._mtime(library.USER_PATH),
+                           "version": PLUGIN_VERSION,
                            "cats": cats, "subs": subs, "groups": groups,
                            "caps": caps,
                            "paths": paths, "gender": gender, "nsfw": nsfw,
@@ -383,6 +399,32 @@ async def import_library(request: web.Request) -> web.Response:
     except Exception as exc:  # noqa: BLE001
         return _json_response({"ok": False, "error": f"导入失败: {exc}"}, 500)
     return _json_response({"ok": True, **(result or {})})
+
+
+async def lookup_tags(request: web.Request) -> web.Response:
+    """POST /taglib/api/tags-lookup {ens:[...]} -> {tags:{en:{zh,cat,sub}}}
+
+    预设快照里的词可能只存了 en (出厂预设只有 pinned 词表) → 面板补词时按显示语言
+    需要 zh。这里按 en 现查合并库, 只给点名的那些词, 不整库传中文 (index 已经很肥)。
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "bad json"}, 400)
+    ens = payload.get("ens")
+    if not isinstance(ens, list):
+        return _json_response({"ok": False, "error": "ens 必须是数组"}, 400)
+    want = {str(x).strip().lower() for x in ens[:2000] if str(x).strip()}
+    out: dict[str, dict] = {}
+    for cat in library.get_merged().get("categories", []):
+        cat_name = cat.get("name") or ""
+        for sub in cat.get("subcategories", []):
+            sub_name = sub.get("name") or ""
+            for t in sub.get("tags", []):
+                en = str(t.get("en") or "").strip().lower()
+                if en and en in want and en not in out:
+                    out[en] = {"zh": t.get("zh") or "", "cat": cat_name, "sub": sub_name}
+    return _json_response({"ok": True, "tags": out})
 
 
 async def get_settings(_request: web.Request) -> web.Response:
