@@ -136,7 +136,7 @@ browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme
 
 ## Changelog
 
-Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.12.3**.
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.12.4**.
 
 ## License
 

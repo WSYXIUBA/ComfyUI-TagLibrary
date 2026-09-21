@@ -24,7 +24,7 @@ const NODE_NAME = "TagLibraryNode";
 // 面板构建号 —— 必须与 pyproject.toml 的 version 一致 (lint_check 会校验)。
 // 服务端 /taglib/api/panel-index 会回它自己的版本: 两者不一致 = 页面跑的是旧 JS,
 // 面板顶部就显示「插件已更新 → 点这里刷新」, 用户不用自己猜要不要 F5。
-const TL_BUILD = "1.12.3";
+const TL_BUILD = "1.12.4";
 
 /* chip 右键菜单 —— 单例复用。
    旧实现每次右键都 createElement + appendChild + 挂 document 监听,
@@ -1736,8 +1736,48 @@ export function buildPanelWidget(node, container) {
   syncModeWidgets();
   // 面板只拉轻量索引 (分类/路径/标记); 含正文的全量库留给挑选器懒加载
   fetchPanelIndex()
-    .then((d) => { checkBuild(d && d.version); renderAll(); })
+    .then((d) => { checkBuild(d && d.version); renderAll(); backfillZh(); })
     .catch((err) => { container.innerHTML = `<div class="tl-empty">标签库加载失败: ${err}</div>`; });
+
+  /* 状态里缺 zh 的词按库补齐 (1.12.4)。
+     为什么会缺: 预设快照、旧版本写下的状态、手工拼的状态都可能只存了 en —— 双语/中文模式下
+     就只显示英文, 用户看到的就是"怎么还有缺中文的"。补齐后写回状态, 渲染层不用特殊处理。 */
+  let _zhBackfilling = false;
+  async function backfillZh() {
+    if (_zhBackfilling) return;
+    const seen = new Set();
+    const miss = [];
+    for (const t of (getState(node).tags || [])) {
+      const en = String(t.en || "").trim();
+      const lo = en.toLowerCase();
+      if (!en || t.zh || seen.has(lo)) continue;
+      seen.add(lo);
+      miss.push(en);
+    }
+    if (!miss.length) return;
+    _zhBackfilling = true;
+    try {
+      const r = await apiJson("/taglib/api/tags-lookup", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ens: miss.slice(0, 500) }),
+      });
+      const map = (r && r.tags) || {};
+      const cur = getState(node);
+      let changed = false;
+      const tags = (cur.tags || []).map((t) => {
+        if (t.zh) return t;
+        const hit = map[String(t.en || "").toLowerCase()];
+        if (!hit || !hit.zh) return t;
+        changed = true;
+        return { ...t, zh: hit.zh, ...(hit.cat && !t._cat ? { _cat: hit.cat } : {}) };
+      });
+      if (changed) {
+        setState(node, { ...cur, tags });
+        renderTags();
+      }
+    } catch (e) { /* 补不到就保持原样 —— 不能因为补语言把面板打断 */ }
+    finally { _zhBackfilling = false; }
+  }
 
   return {
     syncMode: syncModeWidgets,  // 工作流加载/外部改 mode 后, 面板按钮与 widget 重新对齐
@@ -1755,6 +1795,7 @@ export function buildPanelWidget(node, container) {
         node._taglibPendingGroups = null;
       }
       renderAll();
+      backfillZh();  // 不 await: 先出画面, 缺 zh 的词补到再刷一次
     },
   };
 }
