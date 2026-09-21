@@ -132,20 +132,26 @@ export function buildPanelWidget(node, container) {
       </div>
     </div>
     <div class="tl-mode-hint"></div>
+    <!-- 预设 (1.11.0): 从 ⋯ 菜单搬到主区 —— 用户原话「只可用, 不可选, 也不可显」。
+         选一行 = 召唤: 该预设记下的词全部进面板并**打钉**, 自动模式不再覆盖它们。 -->
+    <div class="tl-preset-bar">
+      <span class="tl-preset-k">📦 预设</span>
+      <select class="tl-preset-sel" title="召唤预设: 出厂「场景预设」= 载入钉选词+排除域+配置 (约束不锁死, 🎲 继续在预设框内随机); 我的预设 = 把存下的词标签全部打钉, 自动模式不再覆盖它们">
+        <option value="">选择一个预设…</option>
+      </select>
+      <button class="tl-btn icon" data-act="preset-save" title="把当前面板的词标签 + 排除域 + 配置存为预设 (召唤时会全部打钉)">💾</button>
+      <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设">🗑</button>
+    </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
     <div class="tl-menu" hidden>
-      <div class="tl-menu-sec">预设</div>
+      <div class="tl-menu-sec">预设 / 导入</div>
       <div class="tl-preset-row">
-        <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)">
-          <option value="">📦 场景预设…</option>
-        </select>
-        <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设">🗑</button>
-        <button class="tl-btn icon" data-act="preset-save" title="把当前钉选词/排除域/随机配置存为预设">💾</button>
         <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库">📥</button>
+        <span class="tl-preset-tip">预设选择框已移到面板主区 (图标 📦 那一行)</span>
       </div>
       <div class="tl-menu-sec">显示</div>
       <div class="tl-mi-row"><span class="tl-mi-k">显示语言</span>
@@ -800,11 +806,12 @@ export function buildPanelWidget(node, container) {
     const sel = container.querySelector(".tl-preset-sel");
     if (!sel) return;
     const cur = sel.value;
-    sel.innerHTML = '<option value="">📦 场景预设…</option>';
+    sel.innerHTML = '<option value="">选择一个预设…</option>';
     const opt = (p, val) => {
       const o = document.createElement("option");
       o.value = val;
-      o.textContent = `${p.name}${p.kind ? ` · ${p.kind}` : ""}`;
+      const n = (p.tags || []).length;
+      o.textContent = `${p.name}${p.kind ? ` · ${p.kind}` : ""}${n ? ` · ${n} 词` : ""}`;
       o.title = p.note || "";
       sel.appendChild(o);
     };
@@ -834,18 +841,29 @@ export function buildPanelWidget(node, container) {
 
   async function applyPreset(p) {
     const st = getState(node);
-    const wantPins = new Set((p.pinned || []).map((x) => String(x).toLowerCase()));
-    // 已选词命中预设钉选 → 补钉; 未选的 → 新增钉选词
+    // 出厂「场景预设」只有 pinned → 约束不锁死 (只钉必要词, 🎲 仍在框内随机)。
+    // 我的预设带 tags (当前面板的词标签快照) → 召唤时**全部打钉**, 自动模式不再覆盖它们。
+    const snap = (p.tags || []).map((x) => (typeof x === "string" ? { en: x } : x));
+    const wantPins = new Set([...(p.pinned || []), ...snap.map((x) => x.en)]
+      .map((x) => String(x).toLowerCase()));
     const tags = st.tags.map((t) =>
       wantPins.has(String(t.en).toLowerCase()) ? { ...t, pinned: true } : t);
     const have = new Set(tags.map((t) => String(t.en).toLowerCase()));
-    for (const en of p.pinned || []) {
+    for (const w of snap) {                     // 快照里的词不在面板就补进来
+      const lo = String(w.en || "").toLowerCase();
+      if (!lo || have.has(lo)) continue;
+      tags.push({ en: w.en, zh: w.zh || "", pinned: true, enabled: true,
+                  ...(w.cat ? { _cat: w.cat } : {}) });
+      have.add(lo);
+    }
+    for (const en of p.pinned || []) {           // 出厂预设的钉选词同理
       const lo = String(en).toLowerCase();
       if (have.has(lo)) continue;
       const t = { en, zh: "", pinned: true, enabled: true };
       const path = LIB_PATH.get(lo);
       if (path) t._cat = path[0];
       tags.push(t);
+      have.add(lo);
     }
     const upd = {
       tags: sortByCat(tags).map((t) => ({ ...t, enabled: t.enabled !== false })),
@@ -899,9 +917,16 @@ export function buildPanelWidget(node, container) {
   async function savePreset() {
     savePresetDialog(async (name, kind, note) => {
       const st = getState(node);
+      // ★ 1.11.0: 预设 = 当前面板**全部词标签**的快照 (原来只存"已钉选"那几个 ——
+      //   用户报"记不住当前节点词标签")。召唤时这些词全部打钉, 自动模式不再覆盖。
+      const snap = st.tags.map((t) => {
+        const path = LIB_PATH.get(String(t.en).toLowerCase()) || [];
+        return { en: t.en, ...(t.zh ? { zh: t.zh } : {}), ...(path[0] ? { cat: path[0] } : {}) };
+      });
       const preset = {
         id: "u" + Date.now().toString(36),
         name, kind: kind || "场景",
+        tags: snap,
         pinned: st.tags.filter((t) => t.pinned).map((t) => t.en),
         exclude: (st.exclude_categories || []).slice(),
         config: {},
@@ -910,8 +935,8 @@ export function buildPanelWidget(node, container) {
       for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity", "solo_lock", "bg_mode", "focus_mode", "max_props_total"]) {
         if (st[k] !== undefined && st[k] !== null) preset.config[k] = st[k];
       }
-      if (!preset.pinned.length && !preset.exclude.length && !Object.keys(preset.config).length) {
-        alert("当前没有钉选词 / 排除域 / 自定义配置, 没什么可存的");
+      if (!preset.tags.length && !preset.exclude.length && !Object.keys(preset.config).length) {
+        alert("面板还是空的 (没有词标签 / 排除域 / 自定义配置), 没什么可存的");
         return;
       }
       const r = await apiJson("/taglib/api/settings");
@@ -1401,7 +1426,7 @@ export function buildPanelWidget(node, container) {
       + "border-radius:12px;padding:14px;width:min(620px,94vw);max-height:84vh;overflow:auto;";
     dlg.innerHTML = `
       <div style="font-weight:600;margin-bottom:8px;">📦 预设管理
-        <span style="opacity:.6;font-size:11px;">预设 = 钉选词 + 排除域 + 配置 (约束不锁死)</span></div>
+        <span style="opacity:.6;font-size:11px;">预设 = 当前面板的词标签快照 + 排除域 + 配置；召唤时快照里的词全部打钉, 自动模式不再覆盖它们</span></div>
       <div id="tl-pmgr-list" style="font-size:12px;"></div>
       <div style="display:flex;gap:8px;margin-top:10px;position:sticky;bottom:0;background:#15171d;padding:8px 0;">
         <button id="tl-pmgr-new" class="tl-btn primary" style="padding:4px 12px;">💾 把当前面板存为预设</button>
@@ -1415,6 +1440,7 @@ export function buildPanelWidget(node, container) {
 
     const summarize = (p) => {
       const bits = [];
+      if (p.tags?.length) bits.push(`词 ${p.tags.length}`);
       if (p.pinned?.length) bits.push(`钉 ${p.pinned.length}`);
       if (p.exclude?.length) bits.push(`排除 ${p.exclude.length}`);
       if (p.config && Object.keys(p.config).length) bits.push(`配置 ${Object.keys(p.config).length}`);
