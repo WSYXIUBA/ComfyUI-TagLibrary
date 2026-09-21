@@ -24,7 +24,7 @@ const NODE_NAME = "TagLibraryNode";
 // 面板构建号 —— 必须与 pyproject.toml 的 version 一致 (lint_check 会校验)。
 // 服务端 /taglib/api/panel-index 会回它自己的版本: 两者不一致 = 页面跑的是旧 JS,
 // 面板顶部就显示「插件已更新 → 点这里刷新」, 用户不用自己猜要不要 F5。
-const TL_BUILD = "1.12.4";
+const TL_BUILD = "1.13.0";
 
 /* chip 右键菜单 —— 单例复用。
    旧实现每次右键都 createElement + appendChild + 挂 document 监听,
@@ -141,7 +141,7 @@ export function buildPanelWidget(node, container) {
            选一行 = 召唤: 该预设记下的词进面板并**打钉**, 自动模式不再覆盖它们;
            ⚡ = 重新召唤当前这条; 换预设会先清掉**上一个预设带来的词**, 不叠加。 -->
       <div class="tl-ctl tl-preset-ctl">
-        <select class="tl-sel tl-preset-sel" title="召唤预设: 出厂「场景预设」= 载入钉选词+排除域+配置 (约束不锁死, 🎲 继续在预设框内随机); 我的预设 = 把存下的词标签全部打钉, 自动模式不再覆盖它们">
+        <select class="tl-sel tl-preset-sel" title="召唤预设: 载入它的钉选词 + 排除域 + 配置 (约束不锁死, 🎲 继续在预设框内随机); 自己存的预设会把词标签全部打钉, 自动模式不再覆盖它们">
           <option value="">📦 预设</option>
         </select>
         <button class="tl-btn icon" data-act="preset-apply" title="重新召唤当前显示的预设 (把它的词重新写回并全部打钉)" disabled>⚡</button>
@@ -599,6 +599,7 @@ export function buildPanelWidget(node, container) {
         : `<div class="tl-empty">还没有添加标签<br/>点右上「➕ 添加标签」从库中挑选</div>`;
     }
     previewEl.textContent = outputPreview(st.tags, ui.previewMode);
+    markPresetUI();   // 词变了 → 预设高亮跟着重算 (改了词/清空/🎲填充就灭)
   }
 
   // 当前会真正参与输出的标签 (与后端 _build_impl 同规则):
@@ -829,17 +830,12 @@ export function buildPanelWidget(node, container) {
       o.title = p.note || "";
       sel.appendChild(o);
     };
-    if (_presetsCache.factory.length) {
-      const g = document.createElement("optgroup");
-      g.label = "出厂";
-      _presetsCache.factory.forEach((p) => opt(p, "f." + p.id));
-      sel.appendChild(g);
-    }
+    // 不分「内置 / 我的」组 —— 就是一串预设 (用户要的: 只有预设)。自存的排前面 (常用的在上面)。
     if (_presetsCache.user.length) {
-      const g = document.createElement("optgroup");
-      g.label = "我的";
       _presetsCache.user.forEach((p) => opt(p, "u." + p.id));
-      sel.appendChild(g);
+    }
+    if (_presetsCache.factory.length) {
+      _presetsCache.factory.forEach((p) => opt(p, "f." + p.id));
     }
     sel.value = cur || "";
     if (sel.value !== cur) sel.value = "";
@@ -854,13 +850,31 @@ export function buildPanelWidget(node, container) {
     return pool.find((p) => String(p.id) === id) || null;
   }
 
-  /* 让"现在用的是哪个预设"看得见: 下拉不回位, 当前这条高亮, ⚡ 只在真有选中时可用。 */
+  /* 「现在用的是哪个预设」—— 只在面板内容跟这条预设**完全一致**时亮。
+     改了词 / 清空 / 🎲 填充 → 面板变了 → 高亮自动灭 (亮着 = 面板就是这一套)。
+     召唤时另外记一份"召唤后的面板指纹": 面板里本来就有你自己的词时, 刚召唤完也该是亮的。 */
+  let _presetApplied = null;   // {id, fp}
+  const stateFp = (st) =>
+    (st.tags || []).map((t) => String(t.en || "").toLowerCase()).filter(Boolean).sort().join("|");
+  function presetFp(p) {
+    const w = new Set();
+    for (const x of (p.tags || [])) w.add(String(typeof x === "string" ? x : (x && x.en) || "").toLowerCase());
+    for (const x of (p.pinned || [])) w.add(String(x).toLowerCase());
+    w.delete("");
+    return [...w].sort().join("|");
+  }
   function markPresetUI() {
     const sel = container.querySelector(".tl-preset-sel");
     const ctl = container.querySelector(".tl-preset-ctl");
     const apply = container.querySelector('[data-act="preset-apply"]');
     const p = sel ? findPreset(sel.value) : null;
-    if (ctl) ctl.classList.toggle("on", !!p);
+    let same = false;
+    if (p) {
+      const cur = stateFp(getState(node));
+      same = !!cur && !!(_presetApplied && _presetApplied.id === String(p.id) && _presetApplied.fp === cur);
+      if (!same) same = !!cur && cur === presetFp(p);
+    }
+    if (ctl) ctl.classList.toggle("on", same);
     if (apply) apply.disabled = !p;
   }
 
@@ -923,6 +937,8 @@ export function buildPanelWidget(node, container) {
     setState(node, upd);
     ui.fillGroups = null;
     renderAll();
+    _presetApplied = { id: String(p.id), fp: stateFp(getState(node)) };  // 召唤后的面板指纹 → 高亮
+    markPresetUI();
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
   }
 
@@ -1499,10 +1515,12 @@ export function buildPanelWidget(node, container) {
       listEl.innerHTML = "";
       const mkGroup = (label, arr, isUser) => {
         if (!arr.length) return;
-        const h = document.createElement("div");
-        h.style.cssText = "opacity:.6;margin:8px 0 4px;";
-        h.textContent = label;
-        listEl.appendChild(h);
+        if (label) {
+          const h = document.createElement("div");
+          h.style.cssText = "opacity:.6;margin:8px 0 4px;";
+          h.textContent = label;
+          listEl.appendChild(h);
+        }
         for (const p of arr) {
           const row = document.createElement("div");
           row.style.cssText = "border:1px solid #2a2e39;border-radius:8px;padding:8px;margin-bottom:6px;";
@@ -1553,8 +1571,8 @@ export function buildPanelWidget(node, container) {
           listEl.appendChild(row);
         }
       };
-      mkGroup("出厂", _presetsCache.factory, false);
-      mkGroup("我的", _presetsCache.user, true);
+      mkGroup("", _presetsCache.user, true);
+      mkGroup("", _presetsCache.factory, false);
       if (!_presetsCache.factory.length && !_presetsCache.user.length)
         listEl.innerHTML = `<div style="opacity:.6;">还没有预设 — 点下方「存为预设」创建</div>`;
     };

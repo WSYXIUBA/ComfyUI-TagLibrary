@@ -1504,8 +1504,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <div class="tp-exc-hint">预设 = 钉选词 + 排除域 + 配置 (强度/场景开关等) 的一键组合。
         「载入到节点」写进当前节点状态, 约束不锁死 —— 🎲 继续在预设框内随机。</div>
       </div>
-      ${factory.length ? '<div class="tp-sub">出厂预设</div>' + factory.map((p) => rowHtml(p, false)).join("") : ""}
-      ${user.length ? '<div class="tp-sub">我的预设</div>' + user.map((p) => rowHtml(p, true)).join("") : '<div class="tp-sub">我的预设 (空)</div>'}
+      ${user.map((p) => rowHtml(p, true)).join("")}
+      ${factory.map((p) => rowHtml(p, false)).join("")}
+      ${(!user.length && !factory.length) ? '<div class="tp-exc-hint">还没有预设 —— 用下面的表单把当前面板存成一条。</div>' : ""}
       <div class="tp-gitem2">
         <div class="tp-gitem2-h"><b>💾 把当前节点面板存为预设</b></div>
         <div class="tp-erow">
