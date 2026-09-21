@@ -1367,9 +1367,6 @@ ${data.categories.length} 个分类 / ${nTags} 个标签
     if (e.key === "Escape") $("#pasteDialog").classList.add("hidden");
   });
 
-  // 调试/测试钩子 (不参与 UI)
-  window.__taglib = { openConflictsImport, exportLibraryJson, importLibraryJson, getLib: () => lib };
-
   load().catch((err) => toast(`加载失败: ${err.message}`, true));
   checkUpgradePrompt();
 })();

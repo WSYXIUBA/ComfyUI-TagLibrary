@@ -20,7 +20,7 @@ import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SELECT = "F401,F811,F841"
-EXCLUDE = ["tests/_scratch"]  # 历史归档脚本, 不属门禁范围
+EXCLUDE: list[str] = []  # 1.12.2: _scratch 归档已删, 不再需要排除
 
 # ---------------------------------------------------------------- _common 导入白名单
 # api/_common.py 是"路由公共层", 只允许放**常量**与**无业务依赖的工具** (路径 / 响应

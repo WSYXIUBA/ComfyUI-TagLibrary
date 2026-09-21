@@ -186,12 +186,11 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/ui_dialog_close_test.py` | 弹层开关巡检（⋯菜单/挑选器/面板弹层/管理页弹窗） |
 | `tests/feature_e2e_test.py` | 全功能真机端到端（预设/场景条/强度/重摇/批量/吸收/未成年锁/negative） |
 
-> `tests/_scratch/` 是历史一次性诊断脚本的归档，不属门禁，仅作追溯参考。
 > CI 见 `.github/workflows/gates.yml`（只跑离线门禁）。
 
 ## 更新记录
 
-完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.12.0**。
+完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.12.2**。
 
 ## License
 
