@@ -12,6 +12,9 @@ python tests/quality_gate_test.py --long    # 10,000 个种子 (发布前跑)
   Q6 确定性      同 seed 同配置 → 逐词完全相同
   Q7 段位序      输出必须符合 Anima 六段序 (段位不递减) —— §8.3 T3
   Q8 人数语义    "no humans" 时不得出现身份/外貌/服装词
+  Q9 NSFW 往返   同一快照先关后开: 关=零泄漏, 开=能抽出 NSFW 词
+                 (回归: 过滤树曾被喂进快照编译, 而快照缓存键只有文件 mtime,
+                  之后打开 NSFW 开关也拿不回 —— 1.6.5 修复)
 
 为什么需要它: 2026-09-10 实测发现默认配置下插件吐出 200+ 个互相矛盾的词
 (daytime + starry night sky / toddler + middle-aged + elderly / 四双鞋 …)。
@@ -139,6 +142,30 @@ def main() -> int:
         stat["Q6"] += 1
         fails.append("Q6: 同 seed 两次输出不一致")
 
+    # Q9 NSFW 往返: 同一快照先关后开 (同一进程内模拟节点的真实调用次序)
+    nsfw_total = sum(snap.nsfw_flag)
+    if nsfw_total:
+        off_state = {**state, "nsfw": False}
+        on_state = {**state, "nsfw": True}
+        leak = 0
+        for s in range(15):
+            off_picks = engine.run_auto(snap, off_state, s, nsfw_on=False, config=cfg).picks
+            leak += sum(1 for p in off_picks
+                        if p.id is not None and snap.nsfw_flag[p.id])
+        if leak:
+            stat["Q9"] += 1
+            fails.append(f"Q9: nsfw off 泄漏 {leak} 个 NSFW 词")
+        on_hit = 0
+        for s in range(30):
+            on_picks = engine.run_auto(snap, on_state, s, nsfw_on=True, config=cfg).picks
+            on_hit += sum(1 for p in on_picks if p.nsfw)
+        if not on_hit:
+            stat["Q9"] += 1
+            fails.append("Q9: nsfw on 30 个 seed 抽不到任何 NSFW 词 "
+                         "(快照被过滤树污染 or 池构建回归)")
+    else:
+        print("  (库里没有 NSFW 词, Q9 跳过)")
+
     counts.sort()
     print(f"跑 {n_seeds} 个种子 | 词数 最小{counts[0]} 中位{counts[len(counts) // 2]} "
           f"最大{counts[-1]} 均值{sum(counts) / len(counts):.1f}")
@@ -146,7 +173,7 @@ def main() -> int:
     print()
     for tag, desc in [("Q1", "词数带"), ("Q2", "槽位配额"), ("Q3", "互斥槽位组"),
                       ("Q4", "人数唯一"), ("Q5", "无畸形词"), ("Q6", "确定性"),
-                      ("Q7", "段位序"), ("Q8", "no humans 语义")]:
+                      ("Q7", "段位序"), ("Q8", "no humans 语义"), ("Q9", "NSFW 往返")]:
         print(f"  {'✓' if not stat[tag] else '✗'} {tag} {desc}: {stat[tag]} 次违规")
     if fails:
         print("\n前几条失败:")

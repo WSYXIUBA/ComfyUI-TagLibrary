@@ -2,6 +2,57 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.6.5 — 全仓体检修复：一个隐藏 bug、一处从未生效的设置、热路径减负（2026-09-12）
+
+全仓通读体检（后端 ~4.5k 行 / 前端 ~5k 行）后修复四个缺陷、清理死代码，并补两条门禁防回归。
+
+### 修了什么
+
+1. **快照被过滤树污染（后端，最重）** `nodes.py`
+   auto 模式曾把 `_apply_nsfw` 过滤后的库喂给 `get_snapshot()`，而快照缓存键只有文件
+   mtime —— 后果：同一进程先以 NSFW 关生成过一次，之后打开 NSFW 开关**也抽不出任何
+   NSFW 词**（旧快照永久命中）。现在 auto 一律喂全量库，NSFW/性别由引擎在池层面处理
+   （`pools_nonsfw` / `pools_nofemale` / `pools_nomale` 本来就是为此设计的）。
+
+2. **「新节点的默认模式」设置从未生效（前端）** `web/taglibrary.js`
+   旧判断 `Object.values(modeW.options).includes(defMode)`：新前端 combo widget 的
+   options 是 `{values:[...]}` 对象，`Object.values` 拿到 `[[...]]`，includes 永远
+   不命中。因默认值恰好也是 manual 一直没暴露。现按数组/对象两种形态取值判断。
+
+3. **NSFW 开关的 null 语义前后端不一致（前端）** `web/taglibrary.js`
+   `state.nsfw=null` 时面板按全局设置显示（可能开）、后端按 false 过滤 —— 预览≠生成。
+   现在 `getState()` 就地物化成显式布尔；工作流载入（onConfigure）与新建节点两个入口
+   都写回显式值，state 自带语义。
+
+4. **README/README_EN 停在 v1.3.0** —— "8 页签挑选器"/"分类树+轴双视图"等均已是
+   前几个版本的旧账。两份 README 重写到当前口径（5 页签 / 单一视图 / 12 轴 66 槽位
+   4458 词 / 画师轴 / 12+4 门禁）。
+
+### 热路径减负
+
+- **手动模式不再每次生成做全库过滤拷贝**：原流程每轮 `_apply_nsfw` 深拷贝整棵树 +
+  三次全库遍历建 `full_by_en`/`en_path`/`by_en`。现在 NSFW/性别/排除全部在 chosen 层
+  复核（与原出口级过滤同规则），en/id 查表索引按库 mtime + dict 身份缓存，库没变就
+  零扫描。
+- **死代码清理**：`min_tags`/`max_tags` 解析块（v3 签名后无人读取）、`_apply_nsfw`
+  （随 1/3 项退役）、`_build_auto` 的 `mode` 形参、前端 `(getState(node).seed|0)`
+  （`state.seed` 从未被写入过）。
+- **面板/挑选器 HTML 注入面收口**：`chipLabel` / 挑选器 `chipEl` / 侧栏 `mkRow` /
+  排除抽屉卡片原先把库内 en/zh/分类名原文塞 `innerHTML`，统一走转义（库内容来自
+  可导入的 .md/JSON，不能信）。
+
+### 门禁
+
+- `quality_gate_test` 新增 **Q9 NSFW 往返**：同一快照先关后开 —— 关=零泄漏，
+  开=30 seed 内必能抽出 NSFW 词（正是缺陷 1 的回归特征）。
+- `ui_v13_check` 新增 **默认模式生效断言**：设置 `TagLibrary.default_mode=auto` 后
+  新建节点 mode 必须是 auto（正是缺陷 2 的回归特征；设置 API 不可用时显式跳过）。
+
+### 验证
+
+`tools/run_gates.py` 12 项离线全过（smoke_test 覆盖手动双路径 + NSFW 三态 +
+排除 + 权重 + 去重，行为与改前逐项一致）。
+
 ## v1.6.4 — 真机节点输出测试：补上一直缺的一层（2026-09-10）
 
 ### 起因：用户问"节点输出你就测了几次？"

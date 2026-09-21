@@ -2,45 +2,46 @@
 
 [中文文档](README.md) | **English**
 
-1.3.0 core refactor: assembly axes + entry profiles + resource-budget engine + natural-language tail.
-9 categories / 65 subcategories / 4300+ tags / 18 weapon & object profiles / 34 NL sentence families.
+Structured tag-library node: assembly axes + weapon & object profile bundles + resource-budget conflict engine + natural-language tail.
+12 axes / 66 slots / 4458 tags / 18 weapon & object profiles / 50 mutex domains / 36 NL sentence families.
 Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input on any workflow's `CLIPTextEncode.text`. 1-4ms per generation.
 
 ![license](https://img.shields.io/badge/license-MIT-green) ![comfyui](https://img.shields.io/badge/ComfyUI-custom--node-blue) ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
 
-## The 1.3.0 Architecture (four pillars)
+## Core Architecture (four pillars)
 
-- **Assembly axes**: the real skeleton of the library is no longer the 2-level tree — all 4356 tags are re-aggregated onto 12 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …). The tree becomes a browsing skin: the picker toggles between "🌲 Category tree" and "🎯 Assembly axes", and every chip shows both its axis and tree origin on hover.
-- **Weapon & object profiles (⚔ bundles)**: weapon poses no longer live in a global pool. 7 weapon profiles (katana/sword/greatsword/gun/bow/staff/polearm) + 11 everyday-object profiles (phone/book/umbrella/guitar/cup/camera/mic/flower/binoculars/snack/pen) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
-- **Resource-budget conflict model**: most of the old 81 hand-written anti-conflict rules are retired. Same-axis/same-group mutex + hands/gaze ledgers + state slots + 50 global mutex domains (🧬 inspectable & editable) derive conflicts structurally; `conflicts.json` keeps only cross-pool rules. Gender lock and mouth-domain double-occupation are enforced at pool level AND exit level.
-- **Natural-language tail (✍ NL)**: after the tag body, 1-3 English sentences compiled from 34 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
+- **Assembly axes**: the real skeleton of the library is not a 2-level tree — all 4458 tags are re-aggregated onto 12 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …), then grouped into six output sections following the official Anima tag order. The picker is a **single view**: section → axis → slot, each row with an enable toggle (off = written to exclusions, the whole row is skipped when rolling).
+- **Weapon & object profiles (⚔ bundles)**: 18 profiles (katana/sword/greatsword/gun/bow/staff/polearm + phone/book/umbrella/guitar/cup/camera/…) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
+- **Resource-budget conflict model**: same-axis/same-group mutex + hands/gaze ledgers + state slots + 50 global mutex domains (🧬 inspectable & editable) derive conflicts structurally; cross-pool rules live on in `conflicts.json`. Gender lock and mouth-domain double-occupation are enforced at pool level AND exit level.
+- **Natural-language tail (✍ NL)**: after the tag body, 1-4 English sentences compiled from 36 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
 
 ## Features
 
-- **In-node panel**: category-grouped chips, drag-to-reorder, 📌 pinning, bilingual EN/中文, NSFW toggle, 🗑 clear; 🎲 fill runs the real server-side engine — preview ≡ output
+- **In-node panel**: drag-to-reorder, 📌 pinning, bilingual EN/中文, NSFW toggle, gender filter (⚥/♀/♂); 🎲 fill calls the server-side `/taglib/api/draw` — the exact engine the node executes, so preview ≡ output
 - **Two modes**
-  - `Manual` — pick by hand, or 🎲 fill with per-subcategory count ranges
+  - `Manual` — pick by hand, or 🎲 fill with a fresh roll
   - `Auto` — every generation rolls a fresh combination; the echo only replaces engine-rolled tags, manual picks are never wiped
-- **➕ Add Tags picker (8 tabs)**: Pick (axis/tree views) / ⚔ Profiles / 🧬 Mutex domains / ✍ NL families / Exclusions / Library manager / Conflicts / Settings — the three new tabs render fully bilingual with a 文A toggle
-- **Profile visualization**: per-card identity tags, full pose table (tags / hands / state slot / exclusions), mount diagnostics badge (unmounted weapon words flagged red), JSON editor with instant save
-- **Standalone manager page**: `http://127.0.0.1:8188/taglib` or the 🏷 topbar button — full CRUD, custom icons, chip flow, batch paste import
+- **➕ Add Tags picker (5 tabs)**: Pick / ⚔ Profiles / 🧬 Mutex domains (incl. cross-pool rules) / ✍ NL families / ⚙ Settings; exclusions live in a sidebar drawer with axis/slot/subgroup granularity
+- **Artist axis (🎨)**: empty + off by default — artists are *chosen*, not rolled; fill in a name or flip the sidebar toggle when wanted. Names are stored bare and the Anima-required `@` prefix is added on output
+- **Profile visualization**: per-card identity tags, full pose table (tags / hands / state slot / exclusions), mount diagnostics badge (unmounted weapon words flagged), all fields editable inline, JSON editor with instant save
+- **Standalone manager page**: `http://127.0.0.1:8188/taglib` or the 🏷 topbar button — full CRUD, custom icons, chip flow, batch paste import, full-text search
 - **NSFW tiers**: explicit tags shown in red, gated for display and output
-- **Folder-based storage (hot sync)**: the library IS a folder tree, synced both ways in real time
+- **Folder-based storage (hot sync)**: the library IS a folder tree (`axis/slot/slot.md`), synced both ways in real time; one-way / two-way deletion switchable
 - **AI collaboration loop**: export templates (basic/full/conflicts), extend with your AI, import back with auto-placement, dedupe and confirm preview
-- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library
+- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting the full template first)
 - **Pin semantics**: 📌 pinned tags always survive rolls and echoes; pinned weapons birth with bundles too
 - **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt), reproducible per seed
 - **Translator immunity**: tag English is never rewritten by ComfyUI-DD-Translation or similar
-- **Performance**: 1-4ms per execution; 10k-tag snapshot build p50 1.1ms; 3300 profile draws in 13.6s
+- **Performance**: 1-4ms per execution; p50 <3ms for a 10k-tag snapshot build; manual-mode en/id lookups cached per library revision
 - **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
 
 ## UI Preview
 
-| 1.3.0 axis view (⚔ bundle chips / axis+tree toggle) | 1.3.0 weapon & object profiles (pose tables / mount diagnostics) |
+| Picker single view (section → axis → slot, ⚔ bundle chips) | Weapon & object profiles (pose tables / mount diagnostics / inline editing) |
 |---|---|
 | ![Axis view](docs/screenshot_axis_view.png) | ![Profiles](docs/screenshot_profiles.png) |
 
-| Node panel (pick / grouped fill / NSFW toggle) | Library manager (CRUD / import-export / backups) |
+| Node panel (pick / 🎲 fill / NSFW toggle) | Library manager (CRUD / import-export / backups) |
 |---|---|
 | ![Node panel](docs/screenshot_node_panel.png) | ![Library manager](docs/screenshot_manager.png) |
 
@@ -94,14 +95,14 @@ Restart ComfyUI. No pip dependencies.
 |---|---|
 | `data/default/tag_library.json` | factory default library (updated with the plugin) |
 | `data/default/tag_library.user.json` | user snapshot (survives upgrades) |
-| `data/default/taglib/` | folder-style library (hot sync) |
-| `data/default/taglib/profiles.json` | **1.3.0 weapon & object profiles** (bundles / resources / state slots / NL) |
-| `data/default/taglib/grouprules.json` | **1.3.0 global mutex domains** (50 groups) |
-| `data/default/taglib/nl_flavors.json` | **1.3.0 NL families** (34 families + pose_map + object pools) |
-| `data/default/taglib/conflicts.json` | legacy cross-pool rules (kept for compatibility) |
+| `data/default/taglib/` | folder-style library (hot sync, `axis/slot/slot.md`) |
+| `data/default/taglib/profiles.json` | weapon & object profiles (bundles / resources / state slots / NL) |
+| `data/default/taglib/grouprules.json` | global mutex domains (50 groups) |
+| `data/default/taglib/nl_flavors.json` | NL families (36 families + pose_map + object pools) |
+| `data/default/taglib/conflicts.json` | cross-pool rules (kept for compatibility) |
 | `data/default/backups/` | backups |
 
-## Conflict Model (1.3.0)
+## Conflict Model
 
 | Mechanism | Example | Source of truth |
 |---|---|---|
@@ -115,21 +116,27 @@ Restart ComfyUI. No pip dependencies.
 ## Tests
 
 ```bash
-python tests/m1_engine_test.py        # engine core (axes/groups/cross-pool/determinism)
-python tests/m2_weapon_slice_test.py  # weapon bundles + repro-defect regression
-python tests/m3_nl_test.py            # NL compiler + anti-stitch assertions
-python tests/m4_objects_test.py       # object profiles + 10k-seed stress (--long)
-python tests/quality_audit.py         # 30 full-prompt audit
-python tests/smoke_test.py            # backend full-chain
-python tests/perf_build_test.py       # perf gate (10k tags, p50 < 3ms)
-python tests/real_http_test.py        # real ComfyUI HTTP queue acceptance
-python tests/ui_v13_check.py          # CDP browser UI walkthrough (screenshots + asserts)
+python tools/run_gates.py               # 12 offline gates
+python tools/run_gates.py --with-online # + 4 gates that need a running ComfyUI
+python tools/run_gates.py --list
+python tools/run_gates.py m1 m3         # run a subset
 ```
+
+Offline gates (12): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
+backend smoke chain, conflict engine, folder hot-sync, .md parser, perf build,
+output quality (word band / quotas / mutex / count / malformed / section order / NSFW round-trip),
+full-prompt heavy test.
+
+Online gates (4, need a running ComfyUI; `ui_*` also need Edge remote debugging on 9222):
+real HTTP queue acceptance, real-node output test (60 generations × text-level asserts),
+browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme consistency.
+
+> `tests/_scratch/` is an archive of one-off diagnostic scripts, not part of the gates.
+> CI: `.github/workflows/gates.yml` (offline gates only).
 
 ## Changelog
 
-Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.3.0** — core refactor:
-assembly axes, weapon & object profiles with pose bundles, resource-budget conflict model, NL tail compiler.
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.6.5**.
 
 ## License
 
