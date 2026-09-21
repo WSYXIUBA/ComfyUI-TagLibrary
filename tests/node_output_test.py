@@ -74,7 +74,18 @@ def build_wf(state, mode, seed, prefix="", suffix=""):
 
 def run_one(state, mode, seed, prefix="", suffix="", poll=120):
     pid = req("/prompt", "POST", {"prompt": build_wf(state, mode, seed, prefix, suffix),
-                                 "client_id": "taglib-node-output-test"})["prompt_id"]
+                                 "client_id": "taglib-node-output-test",
+                                 # 工作流里有 ShowText 节点 → 不带 extra_pnginfo 时节点收到
+                                 # [None], 每发一条 prompt 刷一行
+                                 # "extra_pnginfo[0] is not a dict or missing 'workflow' key"。
+                                 # ⚠ 必须放**顶层 extra_data 里面**: ComfyUI 的 /prompt 只读
+                                 # json_data["extra_data"] (server.py), 放顶层会被静默忽略
+                                 # (实测: 顶层写法 2 行错误照旧, extra_data 里 0 行)。
+                                 # workflow 要给 nodes/links —— 只写 {} 会让 ShowText 走到
+                                 # workflow["nodes"] 那条路。
+                                 "extra_data": {"extra_pnginfo":
+                                                {"workflow": {"nodes": [], "links": []}}}
+                                 })["prompt_id"]
     for _ in range(poll):
         time.sleep(0.25)
         h = req(f"/history/{pid}")

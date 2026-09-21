@@ -198,36 +198,52 @@ def check_engine_semantics(snap, state, seed, picks, rep: Report, tag_prefix="E"
 def check_hands_budget(snap, state, seed, picks, profiles, rep: Report):
     """独立复算档案束的手数/视线/状态槽预算。
 
-    ⚠ 必须**按档案归组**再累加。第一版按"词→所有匹配束"求和, 而
-    `holding weapon two-handed` 被 6 份档案的束共享 → 单条输出被算成 8 只手,
-    43 次全是假阳性。
-    状态槽同理: 引擎的 state_slot_keys 是 f"{pid}:{k}={v}", **按档案隔离** ——
-    两把武器各有一个 weapon_state, 一把 held 一把 on_back 完全合法。
+    ⚠ 判据必须**按引擎真正提交的束**算, 即 picks 上的 `bundle` 字段
+    (`f"{pid}:{pose_id}"`) —— 引擎的账本本来就是按束计一次。
+
+    历史教训 (两次都是判据错, 不是引擎错):
+      1. 第一版按"词 → 所有匹配束"求和: `holding weapon two-handed` 被 6 份档案共享
+         → 单条输出算成 8 只手, 43 次全是假阳性。
+      2. 第二版"按档案归组"仍不够: 同一档案里**一个姿势的 tag 集可能是另一个的超集**
+         (扛剑 ⊃ 持剑、盾击 ⊃ 持盾、投掷飞刀 ⊃ 持飞刀), 两个姿势的 tags 都 ⊆ 输出
+         → 同一束被算两次 (实测 seed2 算成 3 手, 而引擎的束是 2 手); 跨档案共享词
+         (`throwing`) 也会互相带出。改成按 `bundle` 归组后与引擎口径一致。
+    状态槽同理, 用 bundle 里的 pid/pose_id 反查该姿势的 state_slot。
     """
     rep.ok("E8 手数预算")
     rep.ok("E9 视线预算")
-    ens = {nz(p.en) for p in picks}
     hands = gaze = 0
     slots: dict[str, set] = defaultdict(set)
-    for prof in profiles:
-        if not ({nz(t) for t in prof.get("tags") or []} & ens):
+    # bundle -> 该束的手/视线/状态槽 (同束多条成员词只算一次)
+    seen: dict[str, dict] = {}
+    for p in picks:
+        b = getattr(p, "bundle", None)
+        if not b:
             continue
+        rec = seen.setdefault(b, {"h": 0, "g": 0, "name": str(b)})
+        rec["h"] = max(rec["h"], int(getattr(p, "hands", 0) or 0))
+        rec["g"] = max(rec["g"], int(getattr(p, "gaze", 0) or 0))
+    for _b, rec in seen.items():
+        hands += rec["h"]
+        gaze += rec["g"]
+    # 状态槽: 从 bundle 的 pid:pose_id 反查 (引擎按 pid 隔离, 同 pid 同 key 不可多值)
+    by_id: dict[str, dict] = {}
+    for prof in profiles:
         for kind in ("poses", "extras"):
             for x in prof.get(kind) or []:
-                xs = {nz(t) for t in x.get("tags") or []}
-                if not xs or not (xs <= ens):
-                    continue
-                hands += int(x.get("hands") or 0)
-                gaze += int(x.get("gaze") or 0)
-                for k, v in (x.get("state_slot") or {}).items():
-                    slots[f"{prof.get('id')}:{k}"].add(v)
+                by_id[f"{prof.get('id')}:{x.get('id')}"] = (prof.get("id"), x)
+    for b in seen:
+        hit = by_id.get(b)
+        if not hit:
+            continue
+        pid, x = hit
+        for k, v in (x.get("state_slot") or {}).items():
+            slots[f"{pid}:{k}"].add(v)
     if hands > 2:
-        rep.fail("E8 手数预算", f"seed{seed}: 束占用 {hands} 只手 (>2)")
+        rep.fail("E8 手数预算", f"seed{seed}: 束占用 {hands} 只手 (>2) 束={list(seen)}")
     if gaze > 1:
-        rep.fail("E9 视线预算", f"seed{seed}: 束占用 {gaze} 条视线 (>1)")
+        rep.fail("E9 视线预算", f"seed{seed}: 束占用 {gaze} 条视线 (>1) 束={list(seen)}")
     # ⚠ E10 只作**信息项**, 不判失败:
-    #   从外部无法判断"这个词是哪个档案的哪条姿势贡献的" —— 姿势词大量跨档案共享
-    #   (实测 11 个词被 2~6 份档案的束共用), 于是同一档案会出现"两个姿势都像被选中"。
     #   真正的状态槽冲突由引擎内部账本 (state_slot_keys, pid 前缀隔离) +
     #   m2_weapon_slice_test / nsfw_pack_test 守, 不在这一层判。
     rep.soft.setdefault("E10 状态槽(仅信息)", 0)

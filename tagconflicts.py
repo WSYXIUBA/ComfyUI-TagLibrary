@@ -237,7 +237,11 @@ def save_rules(rules: list[dict], doc: str | None = None) -> dict:
     payload = {"_说明": doc or _DOC_TEXT, "version": 1, "rules": clean}
     with _lock:
         _write_file(payload)
-        _cache, _cache_key = {"rules": clean}, (_lib_key(), _mtime_c())
+        # ⚠ 绝不能把刚写的 clean 塞进缓存: clean 里**没有**扩展包规则 (ext.* 由
+        #   nsfw_conflicts.json 提供), 塞进去会让本进程的合并视图少掉那一批, 直到
+        #   下次文件变更才恢复。实测: 就地加一条规则后 GET 由 45 条变 35 条
+        #   (2026-09-21)。缓存置空 = 下次 load_rules 重新合并两个文件。
+        _cache, _cache_key = None, None
     return {"ok": True, "count": len(clean)}
 
 

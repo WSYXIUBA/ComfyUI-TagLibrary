@@ -18,7 +18,7 @@ import { renderPipeline, disposePipeline } from "./taglib-pipeline.js";
 /* --------------------------------------------- tag picker (全库挑选器) */
 
 function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChange, getExisting, getExcluded, setExcluded, node }) {
-  const ui = { activeCat: null, filter: "", picked: [], tab: "pick", libTouched: false };  // pick | exclude | settings
+  const ui = { activeCat: null, filter: "", picked: [], tab: "pick", libTouched: false, mxFrom: null };  // pick | exclude | settings; mxFrom = 就地互斥选中的第一个词下标
 
   rootEl.innerHTML = `
     <style>
@@ -74,6 +74,14 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-picked-item .en { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
       .tp-picked-item .rm { cursor:pointer; opacity:.5; padding:0 3px; }
       .tp-picked-item .rm:hover { opacity:1; color:var(--tl-danger); }
+      /* 就地互斥 (1.9.2): 挑选现场直接把两个词设为互斥, 不必去互斥域页手写成员 */
+      .tp-picked-item .mx { cursor:pointer; opacity:.42; padding:0 2px; }
+      .tp-picked-item .mx:hover { opacity:1; color:var(--tl-warn); }
+      .tp-picked-item.mx-from { background:color-mix(in srgb, var(--tl-warn) 16%, transparent); }
+      .tp-mx-hint { font-size:11px; line-height:1.5; padding:6px 7px; margin:2px 0 5px;
+                    border-radius:6px; color:var(--tl-warn);
+                    background:color-mix(in srgb, var(--tl-warn) 12%, transparent); }
+      .tp-mx-hint .cancel { cursor:pointer; text-decoration:underline; }
       /* ---------- 已挑选区 (1.9.0): 段位分组 + 权重入口 + 批量操作 + 手数预算 ----------
          手动用户挑完 30 个词后, 旧界面只给一串平铺词 + 逐个 ✕ —— 看不出落在哪一段、
          调不了权重、清不掉一批。这一块是那三条缺口的落点。 */
@@ -98,17 +106,22 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                     border:1px solid color-mix(in srgb, var(--tl-warn) 40%, transparent);
                     background:color-mix(in srgb, var(--tl-warn) 10%, transparent); padding:6px 8px; }
       .tp-warnbox button { margin-top:5px; }
-      /* ---------- 窄屏 (1.9.0): 右栏下沉 + 左栏收窄 ----------
-         旧样式右栏固定 238px 且不换行, 弹窗窄到 min(92vw,1440px) 时中栏被挤没。 */
+      /* ---------- 窄屏 (1.9.0; 1.9.2 重做) ----------
+         第一版在 ≤980px 让 .tp-cols 换行 + 右栏 flex:1 0 100% 下沉。真窄窗口复验发现
+         **换行是坏的**: 左栏(轴导航)没有高度约束, 实高 2119px, 换行后中栏被压到
+         top=2213、右栏 top=2550 —— 手动用户的主路径(右栏)等于看不见 (876px 视口实测)。
+         改成三栏一起收窄、**不换行**: 左 150→132 / 右 204→176, 中栏 flex:1 1 auto
+         + min-width:0 (这才是"中栏被挤没"的真正解法, 不靠换行)。
+         ⚠ 顺序要紧: ≤980 的规则必须写在 ≤1180 之后 —— 两个媒体查询在 876px 同时命中,
+           同权重时后者胜, 写反了 132/176 会被 168/204 盖掉。 */
       @media (max-width:1180px) {
         .tp-cats { flex:0 0 168px; width:168px; }
         .tp-side { flex:0 0 204px; width:204px; }
       }
       @media (max-width:980px) {
-        .tp-cols { flex-wrap:wrap; }
-        .tp-cats { flex:0 0 150px; width:150px; }
-        .tp-side { flex:1 0 100%; width:auto; max-height:38%; border-left:0;
-                   border-top:1px solid var(--tl-border); }
+        .tp-cats { flex:0 0 132px; width:132px; }
+        .tp-chips { flex:1 1 auto; min-width:0; }
+        .tp-side { flex:0 0 176px; width:176px; }
       }
       .tp-sub { font-size:11px; color:var(--tl-muted); margin:10px 0 6px; letter-spacing:.03em; }
       .tp-grid { display:flex; flex-wrap:wrap; gap:5px; }
@@ -934,12 +947,24 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   /* 当前槽位里「还没有档案」的道具词 —— 用户报"很多道具分错了/没分类",
-     这些词点了不会出姿势, 必须直接暴露出来而不是让他自己一个个试。 */
+     这些词点了不会出姿势, 必须直接暴露出来而不是让他自己一个个试。
+
+     ⚠ 「被档案覆盖」必须连**姿势/配件词**一起算: 只查身份词(tags)会把
+     `quiver`(弓的配件) `sniper scope`(枪械配件) `dual swords`(剑的双持姿势)
+     `katana on back`(武士刀的背负配件) 这类误报成「无档案」。
+     2026-09-21 实测: 原先报 10 个, 其中 6 个是这种误报。 */
   function uncoveredInSlot() {
     if (!ui.activeSlot) return [];
     const covered = new Set();
+    const add = (t) => {
+      const k = String(t || "").trim().toLowerCase();
+      if (k) covered.add(k);
+    };
     for (const a of archivesForActiveSlot()) {
-      for (const t of a.tags || []) covered.add(String(t).trim().toLowerCase());
+      for (const t of a.tags || []) add(t);
+      for (const arr of [a.poses || [], a.extras || []]) {
+        for (const x of arr) for (const t of x.tags || []) add(t);
+      }
     }
     const out = [];
     for (const c of (LIB_CACHE && LIB_CACHE.categories) || []) {
@@ -952,6 +977,29 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       }
     }
     return out;
+  }
+
+  /* 就地加互斥规则 (1.9.2) —— 挑选现场写一条「A ⟂ B」。
+     ⚠ 只回写**主文件**那份规则: GET 返回的是「主文件 + 扩展包(ext.*)」合并表,
+       原样回写会把扩展规则抄进主文件 (服务端 save_rules 已加护栏, 这里再过滤一次)。
+     ⚠ right 侧不许用 kind:"tags" —— _valid_shape 只放行 tag/sub/cat 单数,
+       写成 tags 会被**静默丢弃**(连 invalid 都不报), 必须回读校验。 */
+  async function addMutexRule(a, b) {
+    const cur = await fetch("/taglib/api/conflicts").then((r) => r.json());
+    const base = (cur.rules || []).filter((r) => !String(r.id || "").startsWith("ext."));
+    const rule = {
+      id: `cf.${Date.now().toString(36)}.${Math.floor(Math.random() * 999)}`,
+      note: "挑选现场就地添加",
+      left: { kind: "tag", value: a },
+      right: [{ kind: "tag", value: b }],
+    };
+    const res = await fetch("/taglib/api/conflicts", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rules: [...base, rule] }),
+    });
+    const out = await res.json();
+    if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
+    return out.count;
   }
 
   function renderSideLane() {
@@ -1038,6 +1086,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         + `<button type="button" class="tp-pick-tool" data-bulk="all">🗑 全部清空</button>`
         + `<button type="button" class="tp-pick-tool" data-bulk="loose" title="清掉逐个点的散词, 只留档案姿势词 (⚔)">只留姿势</button>`
         + `</div>`;
+      // 就地加互斥 (1.9.2): 点了第一个词的 ⟂ 之后, 这里明说下一步点谁。
+      if (ui.mxFrom !== null && ui.picked[ui.mxFrom]) {
+        html += `<div class="tp-mx-hint">⟂ 再点一个词的 ⟂, 让「`
+          + esc(String(ui.picked[ui.mxFrom].en))
+          + `」和它永远不同时出现 (自动/填充生效) · <span class="cancel" data-mx-cancel="1">取消</span></div>`;
+      }
       if (over) {
         html += `<div class="tp-warnbox">⚠ 手数/视线已超预算：引擎在自动模式下会拦这类组合，`
           + `手动模式会照你选的出。多个道具姿势同时选中时记得取舍。</div>`;
@@ -1050,9 +1104,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           + `<span class="clr" data-bulk-axis="${esc(ax)}" title="清掉这一段 (${list.length} 个)">✕ 本段</span></div>`;
         for (const { p, i } of list) {
           const w = Number(p.weight) || 1;
-          html += `<div class="tp-picked-item"><span class="en" title="${esc(p.en)}">${esc(p.en)}`
+          html += `<div class="tp-picked-item${ui.mxFrom === i ? " mx-from" : ""}">`
+            + `<span class="en" title="${esc(p.en)}">${esc(p.en)}`
             + (p._bundle ? `<span class="tl-bsym" title="${esc(String(p._bundle))}">⚔</span>` : "")
             + `</span>`
+            + `<span class="mx" data-mx="${i}" title="让这个词和另一个已挑选词互斥（点它，再点第二个词的 ⟂）">⟂</span>`
             + `<input class="tp-w" type="number" step="0.05" min="0" max="3" value="${w}"`
             + ` data-w="${i}" title="权重: 输出成 (词:权重)。需要在节点上开启「权重语法」">`
             + `<span class="rm" data-rm="${i}" title="移除">✕</span></div>`;
@@ -1082,11 +1138,34 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     for (const x of sideBox.querySelectorAll(".rm")) {
       x.onclick = () => {
         ui.picked.splice(Number(x.dataset.rm), 1);
+        ui.mxFrom = null;                 // 下标会串位, 直接取消就地互斥的选中态
         setPickedCount();
         renderChips();
         renderSideLane();
       };
     }
+    /* 就地加互斥 (1.9.2) —— 挑选现场两次点击写规则: 点 A 的 ⟂ → 点 B 的 ⟂。
+       §5.2-7 的缺口是「看见两个词不该同时出现, 却只能去互斥域页手写成员」。 */
+    for (const x of sideBox.querySelectorAll("[data-mx]")) {
+      x.onclick = async () => {
+        const i = Number(x.dataset.mx);
+        if (ui.mxFrom === null) { ui.mxFrom = i; renderSideLane(); return; }
+        if (ui.mxFrom === i) { ui.mxFrom = null; renderSideLane(); return; }
+        const a = ui.picked[ui.mxFrom];
+        const b = ui.picked[i];
+        ui.mxFrom = null;
+        if (!a || !b) { renderSideLane(); return; }
+        try {
+          const n = await addMutexRule(a.en, b.en);
+          toast(`✅ 已互斥: ${a.en} ⟂ ${b.en} (共 ${n} 条规则 · 自动/填充生效)`);
+        } catch (err) {
+          toast(`加规则失败: ${err.message}`, true);
+        }
+        renderSideLane();
+      };
+    }
+    const mxc = sideBox.querySelector("[data-mx-cancel]");
+    if (mxc) mxc.onclick = () => { ui.mxFrom = null; renderSideLane(); };
     // 权重入口: 每个已挑选词一个数字框 (change 而非 input —— 输入中途重渲染会抢焦点)
     for (const wEl of sideBox.querySelectorAll(".tp-w")) {
       wEl.onchange = () => {

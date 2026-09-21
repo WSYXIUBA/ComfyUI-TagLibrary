@@ -1545,6 +1545,138 @@
     }
    ],
    "extras": []
+  },
+  {
+   "id": "weapon.shield",
+   "zh": "盾",
+   "mount_sub": "道具武器/武器装备",
+   "tags": [
+    "shield"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持盾",
+     "tags": [
+      "holding shield"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She braces the shield on her forearm, rim angled toward the light.",
+      "The shield hangs steady at her side, ready to come up."
+     ]
+    },
+    {
+     "id": "bash",
+     "zh": "盾击",
+     "tags": [
+      "shield bash",
+      "holding shield"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She drives the shield forward in a short, heavy bash.",
+      "The rim of her shield slams into the space ahead of her."
+     ]
+    }
+   ],
+   "extras": []
+  },
+  {
+   "id": "weapon.shuriken",
+   "zh": "手里剑",
+   "mount_sub": "道具武器/武器装备",
+   "tags": [
+    "shuriken"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持苦无",
+     "tags": [
+      "holding shuriken"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She pinches a shuriken between two fingers, wrist loose.",
+      "A shuriken turns idly between her fingers."
+     ]
+    },
+    {
+     "id": "throw",
+     "zh": "投掷",
+     "tags": [
+      "throwing",
+      "holding shuriken"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She snaps her arm out and the shuriken leaves her hand mid-spin.",
+      "The shuriken slices away from her fingertips."
+     ]
+    }
+   ],
+   "extras": []
+  },
+  {
+   "id": "weapon.knives",
+   "zh": "飞刀",
+   "mount_sub": "道具武器/武器装备",
+   "tags": [
+    "throwing knives"
+   ],
+   "poses": [
+    {
+     "id": "hold",
+     "zh": "持飞刀",
+     "tags": [
+      "holding knife"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She fans a throwing knife flat along her palm.",
+      "A knife rests lightly in her grip, tip forward."
+     ]
+    },
+    {
+     "id": "throw",
+     "zh": "投掷",
+     "tags": [
+      "throwing",
+      "holding knife"
+     ],
+     "hands": 1,
+     "gaze": 0,
+     "state_slot": {},
+     "conflicts_with": [],
+     "implies": [],
+     "nl": [
+      "She whips a knife across the frame in a flat, fast arc.",
+      "The knife leaves her hand end over end."
+     ]
+    }
+   ],
+   "extras": []
   }
  ]
 }

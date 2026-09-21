@@ -121,6 +121,10 @@ def f4_portrait():
 
 def f5_intensity():
     print("F5 NSFW 强度三档")
+    # ⚠ 样本量不能小: 均值本身只有 ~0.3 词/条, 30 seed 时"纯欲/标准"这个比值实测在
+    #   1.73~2.81 之间抖 (同一份数据换个 seed 窗口就从过变成不过)。100 seed 下稳定在
+    #   2.8~3.2。判据 (≥2×) 不动 —— 只是把噪声压下去, 别用放宽阈值来"修"它。
+    SEEDS = 100
     EXPLICIT = {"sex", "missionary", "doggystyle", "vaginal", "oral", "fellatio",
                 "cowgirl position", "girl on top", "paizuri", "handjob", "fingering",
                 "anal", "orgasm", "female orgasm", "cum", "nude", "completely nude",
@@ -131,12 +135,13 @@ def f5_intensity():
     for inten in (0, 1, 2):
         st = {**BASE_ST, "nsfw_intensity": inten} if inten else dict(BASE_ST)
         counts = []
-        for seed in range(30):
+        for seed in range(SEEDS):
             d = draw(st, 80000 + seed)
             ws = WORDS(d)
             counts.append(len(ws & EXPLICIT))
         means.append(statistics.mean(counts))
-    print(f"    显式词均值: 标准 {means[0]:.2f} / 强调 {means[1]:.2f} / 纯欲 {means[2]:.2f}")
+    print(f"    显式词均值 ({SEEDS} seed): 标准 {means[0]:.3f} / 强调 {means[1]:.3f} / "
+          f"纯欲 {means[2]:.3f} | 纯欲/标准 = {means[2] / means[0]:.2f}")
     check(means[2] >= means[0] * 2, "纯欲档显式词 ≥ 标准×2")
     check(means[1] >= means[0], "强调档不低于标准")
 

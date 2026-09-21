@@ -105,9 +105,17 @@ def main() -> int:
         check(tag["axis"] == "prop", "axis 推到 prop")
         check(tag["priority"] == 50 and tag["rarity"] == "common", "priority/rarity 走默认")
         check(bool(tag.get("id")), f"自动生成 id ({tag.get('id')})")
-        check((hints.get("profile") or {}).get("id") == "weapon.sword",
-              "词形 knives→knife 命中 weapon.sword (单复数还原生效)")
-        check(bool(hints.get("needs")), f"给出待登记提示 {hints.get('needs')}")
+        # ⚠ 这条词现在是 weapon.knives 的身份词 → 精确命中, 不再走 knives→knife 形态兜底;
+        #   `needs` 也应为空 (已建档的词再给"登记提示"是噪音)。形态兜底那条路径
+        #   换一个真正的库外词守 (splitting maul)。
+        check((hints.get("profile") or {}).get("id") == "weapon.knives",
+              "身份词精确命中 weapon.knives (不再走 knives→knife 形态兜底)")
+        check(not hints.get("needs"), f"已建档的词不再给待登记提示 ({hints.get('needs')})")
+        _t2, h2 = derive.derive_tag("splitting maul", "劈木大锤", "prop", "武器装备",
+                                    sub_id=slot_id)
+        check((h2.get("profile") or {}).get("id") == "weapon.greatsword",
+              "库外词走形态兜底命中 weapon.greatsword (兜底路径仍有人守)")
+        check(bool(h2.get("needs")), f"库外词给出待登记提示 {h2.get('needs')}")
 
         print("\n  B. POST /tag/derive 预览")
         r = body(run(ter.preview_derive(_Req({"en": "zzz nothing", "zh": "无",

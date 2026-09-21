@@ -40,7 +40,12 @@ def build_wf(state, mode, seed):
 
 def run_one(name, state, mode, seed):
     pid = req("/prompt", "POST", {"prompt": build_wf(state, mode, seed),
-                                  "client_id": "hermes-real-test"})["prompt_id"]
+                                  "client_id": "hermes-real-test",
+                                  # 同 node_output_test: extra_pnginfo 必须在**顶层 extra_data** 里,
+                                  # 否则 ShowText 节点每发一条 prompt 刷一行错误日志
+                                  "extra_data": {"extra_pnginfo":
+                                                 {"workflow": {"nodes": [], "links": []}}}
+                                  })["prompt_id"]
     for _ in range(60):
         time.sleep(0.5)
         h = req(f"/history/{pid}")
