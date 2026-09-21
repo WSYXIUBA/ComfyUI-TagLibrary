@@ -60,6 +60,11 @@ CONTRADICTIONS: list[tuple[str, str, str]] = [
     ("赤足与鞋并存", "barefoot", "high heels"),
     ("赤足与靴并存", "bare feet", "boots"),
     ("全裸与穿着并存", "nude", "school uniform"),
+    # 未成年 × 成人内容 (1.7.0: 引擎已做词级锁定, 这里文本层端到端复核)
+    ("未成年与裸露并存", "toddler", "nude"),
+    ("未成年与内衣并存", "preteen", "panties"),
+    ("未成年与泳装并存", "child", "swimsuit"),
+    ("未成年与成人氛围并存", "teenage girl", "erotic mood"),
 ]
 
 # 负向提示词的词绝不该出现在正片段 (Anima 官方负向模板里的那些)
@@ -177,6 +182,20 @@ def main() -> int:
                 stat[f"P8·{tag}"] += 1
                 if len(fails) < 15:
                     fails.append(f"P8({tag}) seed{seed}: 负向词漏入 {leak}")
+            # P9 NL 人称与人数词一致 (1.7.0: "large group + She has" 实测回归)
+            if nl_on and cw and "\n\n" in prompt:
+                tail = prompt.split("\n\n", 1)[1]
+                exp_s = nl._PRONOUN.get(cw[0].en.strip().lower(), ("She", "her"))[0]
+                forbidden = {"They": ("She", "He", "her", "his"),
+                             "She": ("He", "his", "They"),
+                             "He": ("She", "her", "They")}[exp_s]
+                bad_p = [f for f in forbidden
+                         if re.search(r"\b" + f + r"\b", tail)]
+                if bad_p:
+                    stat["P9"] += 1
+                    if len(fails) < 15:
+                        fails.append(f"P9 seed{seed}: 人数词 {cw[0].en!r} 应为 "
+                                     f"{exp_s}, 尾段出现 {bad_p}")
             if not nl_on and len(samples) < args.samples and seed <= 5:
                 samples.append(prompt)
 
@@ -196,6 +215,9 @@ def main() -> int:
     v7 = stat["P7"]
     total_bad += v7
     print(f"  {'✓' if not v7 else '✗'} P7 NL 尾段 ≥2 句: {v7}")
+    v9 = stat["P9"]
+    total_bad += v9
+    print(f"  {'✓' if not v9 else '✗'} P9 NL 人称与人数词一致: {v9}")
 
     if samples:
         print("\n=== 完整提示词样本 ===")
