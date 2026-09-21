@@ -90,7 +90,7 @@ def main() -> int:
         print("\n❌ api/_common.py 引入了业务依赖 (路由公共层约束):")
         for b in bad:
             print(f"   - {b}")
-        print("   业务函数请放到它自己的模块 (如 library/tagfiles), 路由模块直接调那个模块。")
+        print("   业务函数请放到它自己的模块 (如 library/datapaths), 路由模块直接调那个模块。")
         return 1
 
     print(f"\n✅ 死代码门禁通过 (ruff {SELECT}, 排除 {', '.join(EXCLUDE)})")

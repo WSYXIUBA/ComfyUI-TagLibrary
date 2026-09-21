@@ -655,75 +655,6 @@
     toast(`批量导入 ${added} 条${skipped ? `, 跳过 ${skipped} 条空行` : ""}`);
   }
 
-  /* ---------- 📤 导出模板 (基础/全量两种, 文件内嵌 AI 使用说明) ----------
-     按当前库的分类结构实时生成 .md; 说明写在 HTML 注释里 (导入解析时被忽略)。 */
-  function fmtTag(t) {
-    let s = t.en || "";
-    const hasCJK = (x) => /[一-鿿]/.test(x || "");
-    if (t.zh && hasCJK(t.zh)) s += `(${t.zh})`;
-    if (t.weight && t.weight !== 1.0) s += `{${t.weight}}`;
-    if (t.nsfw) s += "[nsfw]";
-    if (t.gender === "female") s += "[♀]";
-    else if (t.gender === "male") s += "[♂]";
-    return s;
-  }
-
-  const TPL_RULES = ` 1. 保持「# 大分类」「## 子分类」两级标题结构 (全量模板重构分类时除外, 见下)
- 2. 每行写多个标签, 用逗号分隔; 单个标签语法:
-      english(中文翻译){权重}[nsfw][♀|♂]
-    - 中文翻译尽量填写; 权重可省略 (默认 1.0)
-    - [nsfw]: NSFW/裸露类词必须带此标记 (节点 NSFW 开关控制显示与输出)
-    - [♀] / [♂]: 绝对性别专属词标记 (女性专属如 1girl/milf 标 [♀]; 男性专属如
-      1boy/hunky 标 [♂])。只标绝对性别词! 比基尼/女仆装/连裤袜等双性可穿的不要标。
-      节点性别开关(♀模式剔男性词/♂模式剔女性词)按此标记过滤
-    - 例: smile(微笑){1.1}, 1girl(单女孩)[♀], hunky(健硕男性)[♂],
-          some_word(某描述){1.0}[nsfw]
- 3. 完成后把整个文件内容直接输出返回 (保持 Markdown 格式)
-导入: 回填的文件 → 管理页「📥 导入」, 自动按分类归位+去重, 预览确认后入库`;
-
-  function buildTemplateMd(full) {
-    const SAMPLES = 5;
-    const scope = full
-      ? `任务: 本文件包含标签库的全部标签。你可以:
- - 在任意「## 子分类」下继续补充新标签 (不要与现有标签重复)
- - 配合「🗑 清空标签库」后导入本文件, 即可重构一二级分类 (增删改标题、重新组织标签)
- - 直接把本文件分享给别人, 对方导入即可获得整库`
-      : `任务: 为每个「## 子分类」补充 8~15 个高质量、互相不重复的新标签。
-已有标签只是格式示例 (每个子分类最多展示 ${SAMPLES} 个), 原样保留不要改。`;
-    const head = `<!--
-==================================================================
-🏷 ComfyUI-TagLibrary 标签模板 (${full ? "全量" : "基础"}) —— 标签库管理页自动生成, 与当前库分类结构实时一致
-
-【使用说明 —— 直接把本文件发给 AI, 并附一句: "请按文件内说明处理"】
-
-${scope}
-规则:
-${TPL_RULES}
-==================================================================
--->`;
-    const parts = [head];
-    for (const cat of lib.categories || []) {
-      parts.push(``, `# ${cat.name}`);
-      const subs = cat.subcategories || [];
-      if (!subs.length) parts.push(`<!-- (此大分类暂无子分类) -->`);
-      for (const sub of subs) {
-        parts.push(``, `## ${sub.name}`);
-        const tags = (sub.tags || []);
-        const shown = full ? tags : tags.slice(0, SAMPLES);
-        if (!shown.length) {
-          parts.push(`<!-- (此子分类暂无标签, 请在下方补充) -->`);
-        } else {
-          for (let i = 0; i < shown.length; i += 6)
-            parts.push(shown.slice(i, i + 6).map(fmtTag).join(", "));
-          if (!full && tags.length > SAMPLES)
-            parts.push(`<!-- (另有 ${tags.length - SAMPLES} 个已有标签未展示, 补充时避免与其重复) -->`);
-        }
-      }
-    }
-    parts.push("");
-    return parts.join("\n");
-  }
-
   function downloadText(text, filename) {
     const blob = new Blob([text], { type: "text/markdown" });
     const a = document.createElement("a");
@@ -733,239 +664,55 @@ ${TPL_RULES}
     URL.revokeObjectURL(a.href);
   }
 
-  async function exportTemplate(full) {
-    await ensureAllLoaded();   // 模板覆盖整库, 未加载的子分类先拉正文
-    downloadText(buildTemplateMd(full), full ? "taglib_模板_全量.md" : "taglib_模板.md");
-    toast(full ? "全量模板已下载" : "基础模板已下载: 发给 AI, 回填后从「📥 导入」预览入库");
-    $("#templateDialog").classList.add("hidden");
+  /* ---------- 📤 导出 .json / 📥 导入 .json ----------
+     1.12.0: 原文件直接进出 —— 导出的是库 .json 本身 (带 `_说明`), 不再生成 .md 模板。
+     导入只覆盖「我的」层, 出厂库与扩展包不动。 */
+
+  function exportLibraryJson(scope) {
+    const a = document.createElement("a");
+    a.href = `/taglib/api/library/export?scope=${scope === "user" ? "user" : "merged"}`;
+    a.download = scope === "user" ? "tag_library_user.json" : "tag_library_full.json";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    toast(scope === "user" ? "「我的」层已导出 (.json)" : "整库已导出 (.json, 含 _说明)");
   }
 
-  function importJson(file) {
-    const reader = new FileReader();
-    reader.onload = async () => {
-      try {
-        const incoming = JSON.parse(reader.result);
-        if (!Array.isArray(incoming.categories)) throw new Error("缺少 categories 数组");
-        if (dirty && !confirm("当前有未保存修改, 导入将覆盖工作树。继续?")) return;
-        // 合并策略: 按 id 去重追加 (同名覆盖属性)
-        const exist = new Map(lib.categories.map((c) => [c.id, c]));
-        for (const icat of incoming.categories) {
-          for (const s of icat.subcategories || []) s._loaded = true;
-          if (exist.has(icat.id)) {
-            Object.assign(exist.get(icat.id), icat);  // 整体替换该分类
-          } else {
-            lib.categories.push(icat);
-            exist.set(icat.id, icat);
-          }
-        }
-        keepSelection();
-        markDirty(); renderAll();
-        toast("导入完成 (工作树已更新, 记得保存)");
-      } catch (err) {
-        toast(`导入失败: ${err.message}`, true);
-      }
-    };
-    reader.readAsText(file, "utf-8");
-  }
-
-  /* ---------------- 导入预览: dry-run -> 确认弹窗 -> 真正入库 ---------------- */
-  let pendingPayload = null;   // 确认后原样发给 /import 的请求体
-
-  function renderPreview(out) {
-    $("#pvCount").textContent = out.total_new;
-    $("#pvDup").textContent = out.duplicates_removed;
-    const box = $("#previewList");
-    box.innerHTML = "";
-    for (const g of out.groups || []) {
-      const head = document.createElement("div");
-      head.className = "pv-group";
-      head.textContent = `${g.cat_icon || "🗂"} ${g.cat} / ${g.sub}`;
-      box.appendChild(head);
-      const flow = document.createElement("div");
-      flow.className = "pv-flow";
-      for (const t of g.tags) {
-        const chip = document.createElement("span");
-        chip.className = "pv-tag" + (t.nsfw ? " nsfw" : "");
-        chip.textContent = t.en + (t.zh ? ` ${t.zh}` : "") +
-          (t.weight && t.weight !== 1.0 ? ` {${t.weight}}` : "");
-        flow.appendChild(chip);
-      }
-      box.appendChild(flow);
-    }
-  }
-
-  async function openImportPreview(payload) {
-    const res = await fetch("/taglib/api/tagfiles/preview-import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
-      body: JSON.stringify(payload),
-    });
-    const out = await res.json();
-    if (!res.ok || !out.ok) { toast(`解析失败: ${out.error || "HTTP " + res.status}`, true); return; }
-    if (!out.total_new) {
-      toast(`没有新增标签 (跳过已有 ${out.duplicates_removed} 个), 无需导入`);
+  async function importLibraryJson(file) {
+    let obj;
+    try {
+      obj = JSON.parse(await file.text());
+    } catch (err) {
+      toast(`不是合法 .json: ${err.message}`, true);
       return;
     }
-    pendingPayload = payload;
-    renderPreview(out);
-    $("#previewDialog").classList.remove("hidden");
-  }
+    const data = obj && obj.library && Array.isArray(obj.library.categories) ? obj.library : obj;
+    if (!data || !Array.isArray(data.categories)) {
+      toast("文件里没有 categories 数组, 不是库文件", true);
+      return;
+    }
+    const nTags = data.categories.reduce(
+      (n, c) => n + (c.subcategories || []).reduce((m, s) => m + (s.tags || []).length, 0), 0);
+    if (!confirm(`导入「${file.name}」
 
-  async function confirmImport() {
-    if (!pendingPayload) return;
-    $("#pvOk").disabled = true;
+${data.categories.length} 个分类 / ${nTags} 个标签
+
+`
+                 + "只会覆盖「我的」层, 出厂库与扩展包不动。确定导入?")) return;
+    if (dirty && !confirm("有未保存修改, 导入会整体覆盖。继续?")) return;
     try {
-      const res = await fetch("/taglib/api/tagfiles/import", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-TagLib-Mtime": String(serverMtime) },
-        body: JSON.stringify(pendingPayload),
+      const res = await fetch("/taglib/api/library/import", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ library: data }),
       });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      toast(`✅ 已新增 ${out.imported_new_tags} 个标签, 跳过已有 ${out.duplicates_removed} 个`);
-      $("#previewDialog").classList.add("hidden");
-      pendingPayload = null;
+      toast(`✅ 已导入 ${data.categories.length} 个分类 / ${nTags} 个标签`);
       await load();
-      refreshFileList();
     } catch (err) {
       toast(`导入失败: ${err.message}`, true);
-    } finally {
-      $("#pvOk").disabled = false;
     }
   }
-
-  /* ---------------- 标签文件导入 (两级文件夹 = 两级分类) ---------------- */
-  let lastFiles = [];   // 最近一次列表, 供「全部导入」使用
-  let libraryDir = "";
-
-  function filePayload(files) {
-    // files: [{path, cat_dir, sub_dir}] -> 请求体 (items + 可选外置目录)
-    const dir = $("#extDirInput").value.trim();
-    const body = { items: files.map((f) => ({ path: f.path, cat_dir: f.cat_dir || null, sub_dir: f.sub_dir || null })) };
-    if (dir) body.external_dir = dir;
-    return body;
-  }
-
-  async function refreshFileList() {
-    const dir = $("#extDirInput").value.trim();
-    const r = await fetch("/taglib/api/tagfiles" + (dir ? `?dir=${encodeURIComponent(dir)}` : ""));
-    const data = await r.json();
-    if (!data.ok) return;
-    libraryDir = data.library_dir || "";
-    $("#builtinDir").textContent = libraryDir;
-    lastFiles = data.files || [];
-    const box = $("#fileList");
-    box.innerHTML = "";
-    // 按文件夹归属分组: 大类 / 子分类 / 散文件
-    const groups = new Map();   // "cat/sub" -> files[]
-    const loose = [];
-    for (const f of lastFiles) {
-      if (f.cat_dir) {
-        const key = `${f.cat_dir}/${f.sub_dir || ""}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key).push(f);
-      } else {
-        loose.push(f);
-      }
-    }
-    const mkRow = (f, indent) => {
-      const row = document.createElement("div");
-      row.className = "file-row";
-      const src = f.source === "builtin" ? "内置" : "外置";
-      const loc = f.cat_dir ? `${f.cat_dir}${f.sub_dir ? " / " + f.sub_dir : ""}` : "散文件 (按文件内标题)";
-      row.style.paddingLeft = indent ? "26px" : "";
-      row.innerHTML = `<span class="f-src ${f.source}">${src}</span>
-        <span class="f-name">${escapeHtml(f.file_name)}</span>
-        <span class="muted">${escapeHtml(loc)} · ${(f.size / 1024).toFixed(1)} KB</span>`;
-      const btn = document.createElement("button");
-      btn.className = "btn small primary";
-      btn.textContent = "⬇ 导入";
-      btn.onclick = () => openImportPreview(filePayload([f]));
-      row.appendChild(btn);
-      return row;
-    };
-    for (const [key, files] of groups) {
-      const [c, s] = key.split("/");
-      const head = document.createElement("div");
-      head.className = "file-group";
-      head.textContent = `📁 ${c}${s ? ` / 📁 ${s}` : ""}`;
-      box.appendChild(head);
-      for (const f of files) box.appendChild(mkRow(f, true));
-    }
-    if (loose.length) {
-      const head = document.createElement("div");
-      head.className = "file-group";
-      head.textContent = "📄 散文件";
-      box.appendChild(head);
-      for (const f of loose) box.appendChild(mkRow(f, false));
-    }
-    if (!lastFiles.length)
-      box.innerHTML = `<div class="empty">目录里没有 .md/.txt 文件。点「📁 同步当前库到文件夹」生成结构。</div>`;
-  }
-
-  async function importAllFiles() {
-    if (!lastFiles.length) return toast("没有可导入的文件", true);
-    await openImportPreview(filePayload(lastFiles));
-  }
-
-  async function syncToFolder() {
-    const dir = $("#extDirInput").value.trim();
-    if (dirty && !confirm("有未保存修改, 同步的是已保存的库内容。先保存再同步? (确定=继续同步)")) return;
-    // 外部目录是敏感操作: 镜像会覆盖/删除目标位置库结构内的 .md, 让用户明确确认
-    if (dir && !confirm(`将把当前整库镜像导出到外部目录:\n${dir}\n\n目标位置库结构内的 .md 会被覆盖或删除。确定?`)) return;
-    try {
-      const res = await fetch("/taglib/api/tagfiles/export-folder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dir ? { dir, confirm: true } : {}),
-      });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      toast(`✅ 已导出 ${out.categories} 个分类 / ${out.subcategories} 个子分类 / ${out.tags} 标签 → ${out.folder}`);
-      await refreshFileList();
-    } catch (err) {
-      toast(`同步失败: ${err.message}`, true);
-    }
-  }
-
-  function openFilesDialog() {
-    $("#filesDialog").classList.remove("hidden");
-    refreshFileList();
-  }
-
-  async function uploadFiles(files) {
-    // .md/.txt → 标签导入预览; .json → 自动识别: 反冲突文件 or 库结构合并
-    const texts = [];
-    for (const file of files) {
-      if (file.name.toLowerCase().endsWith(".json")) {
-        const text = await file.text();
-        let obj = null;
-        try { obj = JSON.parse(text); } catch {}
-        if (obj && Array.isArray(obj.rules)) {
-          await openConflictsImport(obj.rules);   // 反冲突文件
-        } else {
-          importJson(file);                        // 库结构 JSON
-        }
-        continue;
-      }
-      texts.push({ text: await file.text() });
-    }
-    if (texts.length) await openImportPreview({ items: texts });
-    await load();
-    refreshFileList();
-  }
-
-  $("#btnFiles").onclick = openFilesDialog;
-  $("#filesCancel").onclick = () => $("#filesDialog").classList.add("hidden");
-  $("#extDirInput").onchange = refreshFileList;
-  $("#btnImportAll").onclick = importAllFiles;
-  $("#btnSyncFolder").onclick = syncToFolder;
-  $("#mdFileInput").onchange = (e) => {
-    if (e.target.files.length) uploadFiles([...e.target.files]);
-    e.target.value = "";
-  };
-  $("#pvOk").onclick = confirmImport;
-  $("#pvCancel").onclick = () => { $("#previewDialog").classList.add("hidden"); pendingPayload = null; };
 
   /* ---------------- 🧷 反冲突机制 (conflicts.json) ---------------- */
 
@@ -1261,24 +1008,9 @@ ${TPL_RULES}
   $("#btnPaste").onclick = openPasteDialog;
   $("#pasteOk").onclick = doPasteImport;
   $("#pasteCancel").onclick = () => $("#pasteDialog").classList.add("hidden");
-  $("#btnTemplate").onclick = () => $("#templateDialog").classList.remove("hidden");
-  $("#tplBasic").onclick = () => exportTemplate(false);
-  $("#tplFull").onclick = () => exportTemplate(true);
-  $("#tplConflicts").onclick = async () => {
-    $("#templateDialog").classList.add("hidden");
-    await exportConflicts();
-    toast("反冲突文件 conflicts.json 已下载 (可自由导入/替换)");
-  };
-  $("#tplConflictsFull").onclick = async () => {
-    $("#templateDialog").classList.add("hidden");
-    await exportConflicts();
-    exportTemplate(true);
-    toast("已导出两个文件: conflicts.json + taglib_模板_全量.md, 一起发给 AI 即可生成反冲突文件");
-  };
-  $("#tplCancel").onclick = () => $("#templateDialog").classList.add("hidden");
   $("#btnImport").onclick = () => $("#importChoiceDialog").classList.remove("hidden");
   $("#importChoiceCancel").onclick = () => $("#importChoiceDialog").classList.add("hidden");
-  $("#importTags").onclick = () => { $("#importChoiceDialog").classList.add("hidden"); $("#fileInput").click(); };
+  $("#importTags").onclick = () => { $("#importChoiceDialog").classList.add("hidden"); $("#libraryFileInput").click(); };
   $("#importConflicts").onclick = () => { $("#importChoiceDialog").classList.add("hidden"); $("#conflictsFileInput").click(); };
   $("#conflictsFileInput").onchange = async (e) => {
     const file = e.target.files?.[0];
@@ -1292,10 +1024,13 @@ ${TPL_RULES}
       toast(`反冲突文件读取失败: ${err.message}`, true);
     }
   };
-  $("#fileInput").onchange = (e) => {
-    if (e.target.files.length) uploadFiles([...e.target.files]);
+  $("#libraryFileInput").onchange = (e) => {
+    const f = e.target.files?.[0];
     e.target.value = "";
+    if (f) importLibraryJson(f);
   };
+  $("#btnExportFull").onclick = () => exportLibraryJson("merged");
+  $("#btnExportUser").onclick = () => exportLibraryJson("user");
 
   /* ---------- 备份库 / 清空标签库 ---------- */
   async function backupSave() {
@@ -1349,11 +1084,11 @@ ${TPL_RULES}
 
   async function clearLibrary(withExport) {
     $("#clearDialog").classList.add("hidden");
-    if (withExport) exportTemplate(true);
+    if (withExport) exportLibraryJson("merged");
     try {
       const r = await fetch(API, { method: "DELETE" });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      toast(withExport ? "全量模板已导出, 标签库已完全清空 (等待导入)" : "标签库已完全清空 (等待导入)");
+      toast(withExport ? "整库已导出, 标签库已完全清空 (等待导入)" : "标签库已完全清空 (等待导入)");
       await load();
     } catch (err) {
       toast(`清空失败: ${err.message}`, true);
@@ -1366,32 +1101,6 @@ ${TPL_RULES}
   $("#clearOk").onclick = () => clearLibrary(false);
   $("#clearExport").onclick = () => clearLibrary(true);
   $("#clearCancel").onclick = () => $("#clearDialog").classList.add("hidden");
-  /* ---------- 单向删除开关 (库 settings.one_way_delete, 默认开) ---------- */
-  let oneWayDelete = true;
-  function renderOneWay() {
-    const b = $("#btnOneWay");
-    b.textContent = oneWayDelete ? "🔒 单向删除" : "🔄 双向同步";
-    b.classList.toggle("on", oneWayDelete);
-    b.title = oneWayDelete
-      ? "单向删除 (开): 只能从管理页删分类/标签, 直接删文件夹会被自动回填。点击切换为双向同步"
-      : "双向同步 (关): 在文件夹里删除分类文件, 库里同步删除 (快照存入 备份库/_trash 可找回)。点击切回单向";
-  }
-  $("#btnOneWay").onclick = async () => {
-    const next = !oneWayDelete;
-    if (!next && !confirm("切换为双向同步?\n\n之后在文件夹里删除分类/标签文件, 库里会同步删除 (快照存入 备份库/_trash 可手动找回)。")) return;
-    try {
-      const res = await fetch("/taglib/api/settings", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ settings: { one_way_delete: next } }) });
-      const out = await res.json();
-      if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      oneWayDelete = !!out.settings.one_way_delete;
-      renderOneWay();
-      toast(oneWayDelete ? "🔒 单向删除已开启 (文件夹删除不删库)" : "🔄 双向同步已开启 (文件夹删除同步删库, 进 _trash)");
-    } catch (err) {
-      toast(`切换失败: ${err.message}`, true);
-    }
-  };
   /* ---------------- 1.8.0 批量工具 (全部客户端操作, 改工作树后统一保存) ---------------- */
 
   function bulkIterSubs(scopeSub) {
@@ -1590,14 +1299,6 @@ ${TPL_RULES}
   }
   $("#btnBulkTools").onclick = openBulkTools;
 
-  (async () => {
-    try {
-      const out = await (await fetch("/taglib/api/settings")).json();
-      oneWayDelete = out.settings?.one_way_delete !== false;
-    } catch {}
-    renderOneWay();
-  })();
-
   $("#btnSave").onclick = save;
   $("#btnCancel").onclick = async () => {
     if (dirty && !confirm("放弃当前全部未保存修改?")) return;
@@ -1667,7 +1368,7 @@ ${TPL_RULES}
   });
 
   // 调试/测试钩子 (不参与 UI)
-  window.__taglib = { openImportPreview, openConflictsImport, getLib: () => lib };
+  window.__taglib = { openConflictsImport, exportLibraryJson, importLibraryJson, getLib: () => lib };
 
   load().catch((err) => toast(`加载失败: ${err.message}`, true));
   checkUpgradePrompt();

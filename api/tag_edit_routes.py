@@ -176,7 +176,6 @@ def _commit(lib: dict) -> tuple[dict | None, web.Response | None]:
     except Exception as exc:  # noqa: BLE001
         return None, _json_response({"ok": False, "error": f"保存失败: {exc}"}, 500)
     runtime_snapshot.invalidate_snapshot()
-    library.mirror_folder_now()
     return result, None
 
 

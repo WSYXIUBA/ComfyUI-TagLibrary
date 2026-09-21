@@ -24,11 +24,9 @@ from typing import Any
 
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import jsonio
-    from . import tagfiles
     from . import schema
 except ImportError:  # pragma: no cover
     import jsonio
-    import tagfiles
     import schema
 
 _PKG_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -88,8 +86,6 @@ _migrate_legacy_layout()
 _ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,79}$")
 
 _lock = threading.RLock()
-_last_hot_sync = 0.0          # monotonic 时间戳: 指纹扫描节流
-HOT_SYNC_MIN_INTERVAL = 1.5   # 秒; 队列内多次 get_merged 只扫一次磁盘  # 可重入: save_user_library 持锁期间还会调 invalidate_cache/get_merged
 _cache: dict[str, Any] | None = None
 _cache_key: tuple[float, float] | None = None
 
@@ -421,9 +417,6 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
 
 # ---------------------------------------------------------------- cache
 
-_sync_busy = False
-
-
 def _user_settings_value(key: str, default):
     """读用户库 settings 开关 (不经缓存, 避免同步循环)。"""
     try:
@@ -433,176 +426,11 @@ def _user_settings_value(key: str, default):
         return default
 
 
-def _apply_folder_deletions(base: dict, missing_rels: list[str]) -> int:
-    """双向删除模式: 文件夹里被删除的文件 → 同步删除库里的分类/子分类。
-
-    删除前快照到 data/备份库/_trash/ (带时间戳), 可手动找回。
-    返回删除的分类数 (整分类删才计 1; 子分类删除随文件处理)。
-    """
-    trash = os.path.join(os.path.dirname(DEFAULT_PATH), "backups", "_trash")
-    n_cat = 0
-    touched_cats = set()
-    for rel in missing_rels:
-        parts = rel.replace("/", os.sep).split(os.sep)
-        if len(parts) < 2:
-            continue
-        cat_name = parts[0]
-        touched_cats.add(cat_name)
-        # 快照原文件内容无法找回 (已删), 但库侧数据会体现在被删的分类树里 —
-        # 把受影响分类的 JSON 快照存档
-        try:
-            os.makedirs(trash, exist_ok=True)
-            stamp = time.strftime("%Y%m%d_%H%M%S")
-            for cat in base.get("categories", []):
-                if cat.get("name") == cat_name:
-                    safe = re.sub(r'[^\w\-（）()·]', '_', cat_name)[:40]
-                    dst = os.path.join(trash, f"{stamp}_{safe}.json")
-                    if not os.path.exists(dst):
-                        with open(dst, "w", encoding="utf-8") as f:
-                            json.dump(cat, f, ensure_ascii=False, indent=1)
-                    break
-        except OSError:
-            pass
-    # 整个分类文件夹被删 → 删分类; 只删了子分类文件 → 删对应子分类
-    for cat_name in sorted(touched_cats):
-        cat = next((c for c in base.get("categories", []) if c.get("name") == cat_name), None)
-        if cat is None:
-            continue
-        cat_dir = os.path.join(tagfiles.LIBRARY_DIR, cat_name)
-        if not os.path.isdir(cat_dir):
-            # 整分类没了
-            base["categories"] = [c for c in base["categories"] if c.get("name") != cat_name]
-            n_cat += 1
-            continue
-        # 分类还在: 删掉没有对应 md 的子分类
-        remaining = set()
-        for fn in os.listdir(cat_dir):
-            if fn.lower().endswith((".md", ".txt")):
-                remaining.add(os.path.splitext(fn)[0])
-        kept_subs = []
-        for s in cat.get("subcategories", []):
-            sub_name = s.get("name") or ""
-            own = tagfiles.sanitize_fsname(sub_name)
-            safe_sub = None
-            for fn in remaining:
-                # md 文件名 = sanitize_fsname(子分类名)。只认精确匹配:
-                # 原名 / 净化名 / 净化名(n) (同名净化冲突时 _uniq 追加的去重后缀)。
-                # ⚠ 不能用包含式模糊匹配 —— 子分类名互为子串时 (如 "凉鞋" 匹配进
-                #   "凉鞋"、"上装" 被 "上装细节.md" 顶替) 会把"文件已删"误判成
-                #   "还在", 双向删除静默失效。
-                if fn == sub_name or fn == own or (
-                        own and fn.startswith(own + "(") and fn.endswith(")")
-                        and fn[len(own) + 1:-1].isdigit()):
-                    safe_sub = fn
-                    break
-            if safe_sub or not remaining:
-                kept_subs.append(s)
-            else:
-                # 找不到对应文件 → 该子分类被删除
-                pass
-        cat["subcategories"] = kept_subs
-    return n_cat
-
-
-def _folder_hot_sync() -> None:
-    """热同步: data/taglib/ 与库双向实时一致。
-
-    - baseline: 无清单 -> 以当前库镜像文件夹并建基线 (自动修复两侧漂移)
-    - pull: 文件夹新增/修改 .md -> 吸入用户库; 文件夹删除 -> 按「单向删除」开关:
-        开 (默认) = 库为权威, 镜像回填 (mirror)
-        关 (双向) = 库同步删除 (先快照进 _trash 可找回)
-    - mirror: 库在清单之后变过 -> 重新镜像
-    任何同步失败都不阻塞主流程。
-    """
-    global _sync_busy, _last_hot_sync
-    now = time.monotonic()
-    if _sync_busy or (now - _last_hot_sync) < HOT_SYNC_MIN_INTERVAL:
-        return
-    _sync_busy = True
-    try:
-        lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
-        action, changed, missing = tagfiles.folder_sync_plan(tagfiles.LIBRARY_DIR, lib_key)
-        if action != "none":
-            print(f"[TagLibrary] 🔄 热同步动作: {action}"
-                  + (f" (+{len(changed)} 文件)" if changed else "")
-                  + (f" (-{len(missing)} 缺失)" if missing else ""))
-        if action in ("baseline", "mirror"):
-            sync_to_folder_snapshot(lib_key)
-        elif action == "pull" and (changed or missing):
-            one_way = bool(_user_settings_value("one_way_delete", True))
-            user_now = load_user_raw()
-            if user_now.get("_cleared") and not missing:
-                # 空库状态: 新增文件照常吸入 (用户在文件夹里建新分类准备导入场景)
-                pass
-            merged = deep_merge(merged_base(), user_now) if not user_now.get("_cleared") \
-                else {"version": 1, "categories": []}
-            base = json.loads(json.dumps(merged))
-            base.pop("_meta", None)
-            if changed:
-                stats = tagfiles.import_files_into(base, changed)
-            else:
-                stats = {"total_new": 0}
-            deleted_cats = 0
-            if missing and not one_way:
-                deleted_cats = _apply_folder_deletions(base, missing)
-            if stats.get("total_new") or deleted_cats:
-                save_user_library(base)
-            elif missing and one_way:
-                # 单向删除: 不改库, 走 mirror 把文件夹补回来
-                sync_to_folder_snapshot(lib_key)
-                return
-            # 吸入后镜像一次: 文件内容规范化 (含新标签), 并刷新清单
-            sync_to_folder_snapshot(lib_key)
-    except Exception:  # noqa: BLE001 — 同步失败不影响读库
-        pass
-    finally:
-        _last_hot_sync = time.monotonic()
-        _sync_busy = False
-
-
-def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
-    """把当前合并库镜像到 data/标签库/ 并记录同步基线。
-
-    ⚠ 必须经 get_merged() 取库 — 它处理 _cleared 空库标记 (清空后镜像应为空)。
-    """
-    try:
-        merged = get_merged()
-        # 1.8.0: 扩展包词不进镜像 (露骨词不落被 git 跟踪的 .md, 发布合规)
-        skip_ens: set[str] = set()
-        skip_subs: set[str] = set()
-        try:
-            ext = load_ext_raw()
-            for c in ext.get("categories", []) or []:
-                for s in c.get("subcategories", []) or []:
-                    if str(s.get("id") or "").startswith("ext."):
-                        skip_subs.add(str(s.get("id")))
-                    for t in s.get("tags", []) or []:
-                        en = str(t.get("en") or "").strip().lower()
-                        if en:
-                            skip_ens.add(en)
-        except Exception:  # noqa: BLE001
-            pass
-        tagfiles.sync_to_folder(merged, skip_ens=skip_ens, skip_sub_ids=skip_subs)
-        tagfiles.mark_synced(lib_key=lib_key or (_mtime(DEFAULT_PATH), _mtime(USER_PATH)))
-    except Exception:  # noqa: BLE001
-        pass
-
 def get_merged() -> dict[str, Any]:
-    """合并视图 (纯读)。
+    """合并视图 (纯读, 1.12.0 起也不写盘)。
 
-    ⚠ **这里绝对不能再调 `_folder_hot_sync()`**（2026-09-19 修）。
-    它原来是"读路径写盘"的元凶, 实测后果:
-
-      - 热同步被 `HOT_SYNC_MIN_INTERVAL` 节流, 绝大多数调用是 0.0ms;
-        但节流窗口一到就会跑一遍 `folder_sync_plan` → pull → `save_user_library`
-        → 全量镜像 66 个 .md。**活进程里这一步要 3.7~4.0 秒**。
-      - 而 `.md` 镜像**不幂等**（重写会改内容, 例如 `thong(丁字裤)` 补成
-        `thong(丁字裤)[nsfw]`）→ 指纹永远在变 → **永不收敛, 每次都重跑全量**。
-      - 于是 `TagLibraryNode.build()` 会偶发卡 2.5~4 秒, 且随运行次数"越跑越多"
-        （连续 100 次输出的中位耗时从 0.02s 涨到 1.8s, 倍率 20~85x）。
-
-    热同步改由**显式触发点**驱动: `save_user_library` 之后、以及管理页的
-    `/taglib/api/tagfiles*` 入口 (见 `hot_sync_now`)。
+    历史上它曾在读路径里触发 .md 镜像热同步, 导致 build() 偶发卡 2.5~4 秒 (镜像不幂等
+    → 指纹永不收敛 → 每次都重跑全量)。1.12.0 删掉 .md 镜像层后, 读库与磁盘写入彻底解耦。
     """
     global _cache, _cache_key
     key = (_mtime(DEFAULT_PATH), _mtime(EXT_PATH), _mtime(USER_PATH))
@@ -625,29 +453,6 @@ def get_merged() -> dict[str, Any]:
                 pass
         _cache, _cache_key = merged, key
         return merged
-
-
-def hot_sync_now() -> None:
-    """显式执行一次文件夹热同步 (外部 .md 改动 → 吸入; 库改动 → 镜像回文件)。
-
-    只在**用户主动路径**上调用: 保存库之后 / 管理页打开标签文件页 / 手动同步入口。
-    读库 (`get_merged`) 不再触发它。
-    """
-    _folder_hot_sync()
-
-
-def mirror_folder_now() -> None:
-    """库 -> 文件夹实时同步 (分类/子分类增删改名、导入、重置后调用)。失败不影响请求。
-
-    以前挂在 `api/_common.py` 里, 让"路由公共层"背上了业务依赖 (§3.2): 它本来就只调
-    library + tagfiles, 挪回 library 之后 `_common` 里只剩常量和无业务工具。
-    """
-    try:
-        lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
-        tagfiles.sync_to_folder(get_merged())
-        tagfiles.mark_synced(lib_key=lib_key)
-    except Exception:  # noqa: BLE001
-        pass
 
 
 def invalidate_cache() -> None:

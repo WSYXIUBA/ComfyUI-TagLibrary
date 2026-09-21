@@ -10,7 +10,6 @@ from aiohttp import web
 from .. import jsonio
 from .. import library
 from .. import slotpolicy
-from .. import tagfiles
 from ._common import (
     _WEB_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
     UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, _json_response,
@@ -28,6 +27,20 @@ async def serve_manager_page(_request: web.Request) -> web.Response:
 
 
 # ---------------------------------------------------------------- api
+
+# 导出 .json 的 `_说明` (JSON 没有注释, 用保留键; 导入时会被剥掉)
+_EXPORT_DOC = {
+    "格式": "categories[].subcategories[].tags[] 三级树。标签字段: en(英文词,必填) / zh(中文) / "
+            "weight(权重) / enabled(是否可用) / priority(优先级) / rarity(稀有度) / aliases(别名) / "
+            "groups(分组) / requires(需同现) / mutex_with(互斥) / nsfw / minor_block",
+    "合并顺序": "出厂库 → 扩展包(ext.*) → 我的层; 分类/子分类按 name 合并, 标签按 en 合并, 后者覆盖前者",
+    "scope": "merged = 三级归并后的整库 (含出厂内容); user = 只有「我的」层的增删改, 可叠加到别人的库上",
+    "导入": "只覆盖「我的」层, 出厂库与扩展包不动。导入整库文件时它整体成为「我的」层 (等于换一套库); "
+            "导入前建议先在管理页点「💾 存为默认库」留个备份",
+    "规则不在本文件": "互斥域见 data/default/taglib/conflicts.json, 分组域见 grouprules.json, "
+                "NL 风味见 nl_flavors.json, 道具档案见 profiles.json, 出厂预设见 presets.json",
+    "保留键": "_说明 = 本说明 (导入时自动剥掉); _cleared = 空库标记; _tombstones = 删除墓碑 (防旧文件回魂)",
+}
 
 
 def _skeleton(lib: dict) -> dict:
@@ -210,7 +223,6 @@ async def save_library(request: web.Request) -> web.Response:
             payload,
             client_mtime=float(client_mtime) if client_mtime else None,
         )
-        library.mirror_folder_now()  # 实时镜像: 分类/子分类增删改名即刻落到 data/taglib/
         return _json_response(result)
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
@@ -228,22 +240,6 @@ async def reset_library(_request: web.Request) -> web.Response:
         cleared = {"version": 1, "categories": [], "_cleared": True, "_tombstones": []}
         jsonio.atomic_write_json(library.USER_PATH, cleared)
         library.invalidate_cache()
-        # taglib 镜像文件夹同步清空 (删除全部分类文件夹, 保留 _ 开头文件与 conflicts.json)
-        keep = {"conflicts.json", "_sync_state.json", "_说明.md"}
-        lib_dir = tagfiles.LIBRARY_DIR
-        if os.path.isdir(lib_dir):
-            for entry in os.listdir(lib_dir):
-                p = os.path.join(lib_dir, entry)
-                if entry in keep or entry.startswith("_"):
-                    continue
-                import shutil
-                if os.path.isdir(p):
-                    shutil.rmtree(p, ignore_errors=True)
-                else:
-                    try: os.remove(p)
-                    except OSError: pass
-        # 重建空基线, 防止热同步把清空前状态判定为 pull
-        library.sync_to_folder_snapshot()
         return _json_response({"ok": True})
     except OSError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 500)
@@ -326,7 +322,6 @@ async def restore_backup(_request: web.Request) -> web.Response:
         if not isinstance(data.get("categories"), list):
             raise ValueError("备份文件缺少 categories")
         library.save_user_library(data)
-        library.mirror_folder_now()
         # 恢复成功 → 升级弹窗使命完成, 销毁标记
         try:
             if os.path.isfile(UPGRADE_PROMPT_PATH):
@@ -341,12 +336,59 @@ async def restore_backup(_request: web.Request) -> web.Response:
         return _json_response({"ok": False, "error": f"恢复失败: {exc}"}, 500)
 
 
+async def export_library(request: web.Request) -> web.Response:
+    """GET /taglib/api/library/export?scope=merged|user -> 下载一份库 .json。
+
+    merged (默认): 出厂库 + 扩展包 + 我的层 三级归并后的整库 —— 拿去导入即得完整一套。
+    user: 只有「我的」层 (增删改), 文件小, 可叠加到别人的库存上。
+
+    JSON 不支持注释, 所以用保留键 `_说明` 写清格式与规则 (导入时会被剥掉, 不进库)。
+    """
+    scope = (request.query.get("scope") or "merged").strip()
+    if scope == "user":
+        data = library.load_user_raw()
+        name = "tag_library_user.json"
+    else:
+        data = json.loads(json.dumps(library.get_merged()))
+        name = "tag_library_full.json"
+    data.pop("_meta", None)
+    body = json.dumps({"_说明": _EXPORT_DOC, **data}, ensure_ascii=False, indent=1)
+    return web.Response(
+        text=body, content_type="application/json", charset="utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"',
+                 "Cache-Control": "no-store"},
+    )
+
+
+async def import_library(request: web.Request) -> web.Response:
+    """POST /taglib/api/library/import {library} -> 把一份库 .json 导进「我的」层。
+
+    **只覆盖用户层**: 出厂库与扩展包不动 (最安全)。导入的是整库文件时, 这份内容整体
+    成为「我的」层 → 盖住出厂层, 效果等于换一套库; 导入的是「我的」导出时, 就是原样还魂。
+    """
+    try:
+        payload = await request.json()
+    except Exception:
+        return _json_response({"ok": False, "error": "bad json"}, 400)
+    data = payload.get("library") if isinstance(payload.get("library"), dict) else payload
+    if not isinstance(data, dict) or not isinstance(data.get("categories"), list):
+        return _json_response({"ok": False, "error": "文件里没有 categories 数组, 不是库文件"}, 400)
+    clean = json.loads(json.dumps(data))
+    clean.pop("_说明", None)
+    clean.pop("_meta", None)
+    try:
+        result = library.save_user_library(clean)
+    except library.LibraryError as exc:
+        return _json_response({"ok": False, "error": str(exc)}, 409)
+    except Exception as exc:  # noqa: BLE001
+        return _json_response({"ok": False, "error": f"导入失败: {exc}"}, 500)
+    return _json_response({"ok": True, **(result or {})})
+
+
 async def get_settings(_request: web.Request) -> web.Response:
-    """GET /taglib/api/settings -> 合并后的 settings (含 one_way_delete 等开关)。"""
+    """GET /taglib/api/settings -> 合并后的 settings。"""
     lib = library.get_merged()
-    settings = dict(lib.get("settings") or {})
-    settings.setdefault("one_way_delete", True)
-    return _json_response({"ok": True, "settings": settings})
+    return _json_response({"ok": True, "settings": dict(lib.get("settings") or {})})
 
 
 async def save_settings(request: web.Request) -> web.Response:
@@ -372,9 +414,7 @@ async def save_settings(request: web.Request) -> web.Response:
         client_mtime = request.headers.get("X-TagLib-Mtime")
         library.save_user_library(merged, float(client_mtime) if client_mtime else None)
     lib = library.get_merged()
-    settings = dict(lib.get("settings") or {})
-    settings.setdefault("one_way_delete", True)
-    return _json_response({"ok": True, "settings": settings})
+    return _json_response({"ok": True, "settings": dict(lib.get("settings") or {})})
 
 
 async def dismiss_upgrade_prompt(_request: web.Request) -> web.Response:
@@ -386,5 +426,3 @@ async def dismiss_upgrade_prompt(_request: web.Request) -> web.Response:
     except OSError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 500)
 
-
-# ------------------------------------------------------------ tagfiles

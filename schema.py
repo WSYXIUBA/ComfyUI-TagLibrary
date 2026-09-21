@@ -108,7 +108,7 @@ def spawn_rate_of(rarity: str) -> float:
 
 # .md 往返缺陷的产物: zh 含括号时 en 与 zh 被粘成一串, 例如
 #   en="1other(单人(其他))"  (真实身份: en="1other", zh="单人(其他)")
-# 2026-09-10: tagfiles._TAG_RE 已允许 zh 内一层嵌套括号, 旧数据由这里就地还原。
+# 2026-09-10: 解析器已允许 zh 内一层嵌套括号, 旧数据由这里就地还原。
 _MALFORMED_EN_RE = re.compile(r"^(?P<base>.+?)\((?P<zh>[^()]*\([^()]*\))\)$")
 
 

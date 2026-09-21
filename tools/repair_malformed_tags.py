@@ -1,7 +1,7 @@
 """一次性数据修复: 清除 .md 往返缺陷产生的畸形标签 (2026-09-10)。
 
 ## 缺陷
-`tagfiles._TAG_RE` 的 zh 组原先只允许 `[^)]*`, 于是
+解析器的 `_TAG_RE` 的 zh 组原先只允许 `[^)]*`, 于是
 `1other(单人(其他))` 被整体当成 en 解析 —— 库中因此混入 6 个畸形标签:
     1other(单人(其他))            multiple others(多人(其他))
     jiangshi(僵尸(跳尸))          lap pillow(膝枕(被枕))
@@ -10,9 +10,9 @@
 后果: 畸形词会被引擎抽中并写进输出 (实测 300 个种子里 32 轮命中)。
 
 ## 本脚本
-`tagfiles._TAG_RE` 已修 (允许 zh 内一层嵌套括号), `schema.migrate_subcategory`
+解析器的 `_TAG_RE` 已修 (允许 zh 内一层嵌套括号), `schema.migrate_subcategory`
 也会在读取时就地修复 + 同槽位按 en 去重。本脚本把修复**落到磁盘**:
-重写 data/default/tag_library.json 与 tag_library.user.json, 并重建 .md 镜像。
+重写 data/default/tag_library.json 与 tag_library.user.json。
 
 用法:
     python tools/repair_malformed_tags.py            # 报告
@@ -87,15 +87,8 @@ def main() -> int:
         print("(dry-run; 加 --apply 落盘)")
         return 0
 
-    # 重建 .md 镜像 (镜像内容来自合并库, 修复后自然变干净)
     library.invalidate_cache()
     library.get_merged()
-    try:
-        # 优先走 library 的正式入口 (会同时维护 _sync_state.json 指纹)
-        library.sync_to_folder_snapshot()
-        print("✅ .md 镜像已重建 (含 _sync_state.json 指纹)")
-    except Exception as e:  # noqa: BLE001
-        print(f"⚠ 镜像重建失败: {e}")
     return 0
 
 

@@ -16,14 +16,14 @@ import os
 import random as _random
 
 try:
-    from . import tagfiles
+    from . import datapaths
 except ImportError:  # pragma: no cover
-    import tagfiles
+    import datapaths
 
-FLAVORS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nl_flavors.json")
+FLAVORS_PATH = os.path.join(datapaths.LIBRARY_DIR, "nl_flavors.json")
 # 1.8.0: NSFW flavor 扩展包 (ext 配套, 不入 git/发布)。
 # families/env/light/words 同名键 → 列表拼接 (素材池扩容), 其余键 → 覆盖。
-NSFW_FLAVORS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nsfw_nl.json")
+NSFW_FLAVORS_PATH = os.path.join(datapaths.LIBRARY_DIR, "nsfw_nl.json")
 
 _cache: dict | None = None
 _cache_mtime: float = -1.0

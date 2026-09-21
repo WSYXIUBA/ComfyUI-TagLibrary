@@ -2,6 +2,40 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.12.0 — 删掉 .md 镜像层：库只留 .json，导出/导入走原文件（2026-09-21）
+
+用户原话：「`data/default/taglib` 为镜像库，几乎没有意义，就是用来看的，我觉得这个可以删掉了…
+`.json` 文件就行了。这设置相关功能就可以去掉了，比如单向删除…导出导入文件就直接原文件导出就行了，
+`.json` 文件，内部带有规则注释」。
+
+**删除（5 模块 + 1 路由文件 + 1 管理页段落 + 4 门禁）**
+- `tagparse.py`(.md 解析) / `tagmirror.py`(写出镜像) / `tagsync.py`(双向同步) /
+  `tagmeta.py`(编辑层 sidecar) / `tagfiles.py`(兼容壳) / `api/tagfiles_routes.py`(导入/预览/导出到文件夹)。
+- `library.py`：`_folder_hot_sync()`、`_apply_folder_deletions()`(就是"文件没了→库里分类跟着删"的
+  **单向删除**)、`sync_to_folder_snapshot()`、`mirror_folder_now()`、`hot_sync_now()` 及节流常量
+  —— 库读写与磁盘镜像彻底解耦（-7.5KB）。
+- 管理页：「📂 标签文件」弹窗、「📤 导出模板(.md)」、「🔒 单向删除/🔄 双向同步」开关、
+  .md 导入预览弹窗（-13.6KB JS / -2.5KB HTML）。
+- 门禁：`folder_template_test` / `parser_conflict_test` / `tagmeta_roundtrip_test` / `sync_idempotent_test`
+  随功能下线（19 项 → 15 项离线）。
+- 数据：`data/default/taglib/` 下 13 个分类文件夹 + 67 个 .md + `_说明.md` / `_sync_state.json` /
+  `_tagmeta.json` 全删（**目录里只剩 8 个规则 .json**；`_tagmeta.json` 本就是空的，编辑层字段一直在库 .json 里，
+  无数据丢失）。顺手清掉 3 个我早前改动时留下的 `.bak`。
+- `tagparse.LIBRARY_DIR` 是路径真源（`grouprules`/`nl`/`profiles`/`tagconflicts`/`api` 都靠它定位规则 .json）
+  → 搬进新的 `datapaths.py`，两个门禁的沙箱一起改指。
+
+**新增**
+- `GET /taglib/api/library/export?scope=merged|user` → 直接下载库 .json：
+  `merged` = 出厂 + 扩展包 + 我的 三级归并整库；`user` = 只有「我的」层。
+- `POST /taglib/api/library/import` → 把一份库 .json 导进**「我的」层**（出厂库与扩展包不动；无 categories 直接 400）。
+- 导出文件里的 `_说明` 保留键写清格式/合并顺序/保留键语义（JSON 不支持注释），导入时自动剥掉。
+- 管理页顶栏：`📤 导出整库` / `📤 导出我的` / `📥 导入 .json`。
+
+**验证**：真机验收 —— 两个导出按钮点下去分别落 `/library/export?scope=merged|user` +
+`tag_library_full.json`/`tag_library_user.json`；已下线的按钮/弹窗在页面上确实不存在；
+「我的」导出（13 分类 / 4753 标签 / 2.3MB）原样导回去 → HTTP 200，内容与 settings 完全一致。
+门禁全量重跑见下。
+
 ## v1.11.0 — 预设重做：可见可选 + 记住当前面板全部词标签（2026-09-21）
 
 用户原话：「预设功能是只可用，不可选，也不可显」+「预设功能可以记住当前节点词标签，

@@ -8,14 +8,8 @@
   E. /taglib/api/axes-overview 六段分组与真实计数
   F. /tag/incomplete 三类缺口报告
 
-⚠ 沙箱手法 (三层都得挡, 少一层就会写真实数据):
-   1. `library.USER_PATH` / `library.DATA_DIR` → 临时目录 (库写入)
-   2. `library._folder_hot_sync` → 空操作。**必须挡** —— `get_merged()` 内部会调它,
-      它会往真实 `data/default/taglib/**/*.md` 重新镜像 (实测把
-      `服装/腿袜与内衣/腿袜与内衣.md` 的 `thong(丁字裤)` 改成了 `thong(丁字裤)[nsfw]`)。
-      不能靠改 `tagfiles.LIBRARY_DIR` 绕过: `sync_to_folder(lib, folder=LIBRARY_DIR)`
-      的默认值是**定义时**求值的, 改模块属性无效。
-   3. `library.mirror_folder_now` → 空操作 (端点自带的写后镜像)
+⚠ 沙箱手法: `library.USER_PATH` / `library.DATA_DIR` → 临时目录 (库写入)。
+   1.12.0 删掉 .md 镜像层后, 读库/写库都不再碰 data/default/taglib/, 一层就够。
 """
 
 from __future__ import annotations
@@ -78,13 +72,9 @@ def body(resp) -> dict:
 def main() -> int:
     tmp = tempfile.mkdtemp(prefix="taglib_edit_")
     saved = (library.USER_PATH, library.DATA_DIR)
-    real_mirror = library.mirror_folder_now
-    real_hot_sync = library._folder_hot_sync
     try:
         library.USER_PATH = os.path.join(tmp, "tag_library.user.json")
         library.DATA_DIR = tmp
-        library.mirror_folder_now = lambda: None   # 不落 .md 镜像
-        library._folder_hot_sync = lambda: None    # 读库不再触发真实镜像重写
         library.invalidate_cache()
 
         lib = library.get_merged()
@@ -199,8 +189,6 @@ def main() -> int:
 
     finally:
         library.USER_PATH, library.DATA_DIR = saved
-        library.mirror_folder_now = real_mirror
-        library._folder_hot_sync = real_hot_sync
         library.invalidate_cache()
         shutil.rmtree(tmp, ignore_errors=True)
 

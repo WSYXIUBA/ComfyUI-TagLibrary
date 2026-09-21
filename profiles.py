@@ -30,12 +30,12 @@ import os
 
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
     from . import jsonio
-    from . import tagfiles
+    from . import datapaths
 except ImportError:  # pragma: no cover
     import jsonio
-    import tagfiles
+    import datapaths
 
-PROFILES_PATH = os.path.join(tagfiles.LIBRARY_DIR, "profiles.json")
+PROFILES_PATH = os.path.join(datapaths.LIBRARY_DIR, "profiles.json")
 
 # 全身资源预算 (方案 §十一: hands=2 arms=2 legs=2 gaze=1)
 BODY_RESOURCES = {"hands": 2, "arms": 2, "legs": 2, "gaze": 1}

@@ -353,14 +353,25 @@ def ensure_bridge(session_id: str = "taglib-gates") -> UiBridge:
 
 
 def wait_app(ui: UiBridge, tab_id: int, timeout: float = 60) -> bool:
-    """等 ComfyUI 前端就绪 (window.app.graph 出来)。"""
+    """等 ComfyUI 前端就绪 (window.app.graph 出来)。
+
+    ⚠ 只查一次不够 (2026-09-21 假红): 服务端刚重启后首次打开页面时, 前端可能
+    在资产指纹比对后**再自动 reload 一次** —— 那一瞬间 `window.app` 已经存在过、
+    随后又被清空, 于是紧随其后的 `ev()` 报 `Cannot read properties of undefined`。
+    所以要求「app 在 + 文档加载完」连续两次都成立 (间隔 2s) 才算就绪。
+    """
     deadline = time.time() + timeout
+    stable = 0
     while time.time() < deadline:
         try:
-            if ui.ev("!!(window.app && window.app.graph)", tab_id):
-                return True
+            if ui.ev("!!(window.app && window.app.graph && document.readyState === 'complete')", tab_id):
+                stable += 1
+                if stable >= 2:
+                    return True
+            else:
+                stable = 0
         except UiError:
-            pass
+            stable = 0
         time.sleep(2)
     return False
 

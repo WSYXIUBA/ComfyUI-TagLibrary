@@ -16,11 +16,9 @@ python tests/api_security_test.py
 from __future__ import annotations
 
 import asyncio
-import copy
 import importlib.util
 import os
 import sys
-import tempfile
 import types
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -49,11 +47,7 @@ def _load(name: str, path: str):
 
 api_pkg = _load(f"{_PARENT}.api", os.path.join(ROOT, "api", "__init__.py"))
 library = importlib.import_module(f"{_PARENT}.library")  # noqa: E402
-tagfiles = importlib.import_module(f"{_PARENT}.tagfiles")  # noqa: E402
-tagparse = importlib.import_module(f"{_PARENT}.tagparse")  # noqa: E402
 taglib_csrf_middleware = api_pkg.taglib_csrf_middleware  # noqa: E402
-_export_dir_error = importlib.import_module(
-    f"{_PARENT}.api.tagfiles_routes")._export_dir_error  # noqa: E402
 
 
 async def _csrf_checks() -> list[str]:
@@ -107,121 +101,42 @@ async def _csrf_checks() -> list[str]:
     return errs
 
 
-def _export_dir_checks() -> list[str]:
+class _FakeReq:
+    """最小 web.Request 替身: 只喂 json() 给导入端点。"""
+
+    def __init__(self, payload):
+        self._payload = payload
+
+    async def json(self):
+        return self._payload
+
+
+async def _import_checks() -> list[str]:
+    """📥 导入 .json 的防呆 (1.12.0 新端点)。
+
+    老的两组检查 (导出目录确认 / 双向删除精确匹配) 随 .md 镜像层一起下线:
+    新导出是纯 JSON 下载 (不落任意路径), 新导入只写库本身 (无外部路径参数),
+    于是真正要守住的是「垃圾载荷必须被拒」。
+    """
     errs: list[str] = []
-    data_root = os.path.realpath(os.path.join(ROOT, "data"))
-    inside = os.path.join(data_root, "default", "taglib")
-    outside = os.path.join(tempfile.gettempdir(), "taglib_sec_external")
-    cases = [
-        ("相对路径拒绝", "relative/path", {}, True),
-        ("data/ 内放行", inside, {}, False),
-        ("data/ 根放行", data_root, {}, False),
-        ("外部目录无 confirm 拒绝", outside, {}, True),
-        ("外部目录 confirm 放行", outside, {"confirm": True}, False),
-    ]
-    for name, folder, payload, want_err in cases:
-        err = _export_dir_error(folder, payload)
-        if want_err and not err:
-            errs.append(f"S2 {name}: 期望报错, 实际放行")
-        if not want_err and err:
-            errs.append(f"S2 {name}: 期望放行, 实际 {err}")
-    return errs
-
-
-def _deletion_checks() -> list[str]:
-    errs: list[str] = []
-    old_lib_dir, old_default_path = tagfiles.LIBRARY_DIR, library.DEFAULT_PATH
-    tmp = tempfile.mkdtemp(prefix="taglib_sec_")
-    try:
-        # _trash 快照跟着 DEFAULT_PATH 走 → 全部落进沙箱, 不碰真实 data/
-        library.DEFAULT_PATH = os.path.join(tmp, "tag_library.json")
-        tagfiles.LIBRARY_DIR = tmp
-        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
-        tagparse.LIBRARY_DIR = tmp
-
-        def cat_dir(name: str) -> str:
-            p = os.path.join(tmp, name)
-            os.makedirs(p, exist_ok=True)
-            return p
-
-        def touch(folder: str, filenames: list[str]) -> None:
-            for fn in filenames:
-                with open(os.path.join(cat_dir(folder), fn), "w",
-                          encoding="utf-8") as f:
-                    f.write("")
-
-        def run(lib: dict, missing: list[str]) -> list[str]:
-            lib = copy.deepcopy(lib)
-            library._apply_folder_deletions(lib, missing)
-            return [s["name"] for s in lib["categories"][0]["subcategories"]]
-
-        # S3a 回归: 子分类名互为子串 —— 上装细节.md 已删, 但上装.md 还在,
-        # 旧包含式匹配用 "上装" in "上装细节" 把已删的子分类误判成还在
-        lib_a = {"categories": [{"id": "c1", "name": "服装", "subcategories": [
-            {"id": "c1.a", "name": "上装", "tags": []},
-            {"id": "c1.b", "name": "上装细节", "tags": []},
-        ]}]}
-        touch("服装", ["上装.md"])
-        got = run(lib_a, ["服装/上装细节/上装细节.md"])
-        if got != ["上装"]:
-            errs.append(f"S3a 子串误匹配回归: 期望 ['上装'] 实际 {got}")
-
-        # S3b 常规: 凉鞋.md 已删, 不该被别的文件顶替保命
-        lib_b = {"categories": [{"id": "c2", "name": "服装", "subcategories": [
-            {"id": "c2.a", "name": "上装", "tags": []},
-            {"id": "c2.b", "name": "凉鞋", "tags": []},
-        ]}]}
-        touch("服装", ["上装.md"])
-        got = run(lib_b, ["服装/凉鞋/凉鞋.md"])
-        if got != ["上装"]:
-            errs.append(f"S3b 已删子分类未删: 期望 ['上装'] 实际 {got}")
-
-        # S3c 净化名: 子分类名带非法字符 → 文件名是 sanitize 后的
-        lib_c = {"categories": [{"id": "c3", "name": "场景", "subcategories": [
-            {"id": "c3.a", "name": "室内/场景", "tags": []},
-        ]}]}
-        touch("场景", ["室内_场景.md"])
-        got = run(lib_c, [])
-        if got != ["室内/场景"]:
-            errs.append(f"S3c 净化名匹配失效: 期望 ['室内/场景'] 实际 {got}")
-
-        # S3d 同名净化冲突的去重后缀: _uniq 写出的 "写实(2).md" 也要能对上
-        lib_d = {"categories": [{"id": "c4", "name": "风格", "subcategories": [
-            {"id": "c4.a", "name": "写实", "tags": []},
-        ]}]}
-        touch("风格", ["写实(2).md"])
-        got = run(lib_d, [])
-        if got != ["写实"]:
-            errs.append(f"S3d (n) 去重后缀匹配失效: 期望 ['写实'] 实际 {got}")
-    finally:
-        tagfiles.LIBRARY_DIR = old_lib_dir
-        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
-        tagparse.LIBRARY_DIR = old_lib_dir
-        library.DEFAULT_PATH = old_default_path
-        # 逐文件清理 (避免 rmtree 触发宿主批量删除保护)
-        for root, _dirs, files in os.walk(tmp, topdown=False):
-            for fn in files:
-                try:
-                    os.remove(os.path.join(root, fn))
-                except OSError:
-                    pass
-            try:
-                os.rmdir(root)
-            except OSError:
-                pass
+    resp = await api_pkg.import_library(_FakeReq({"library": {"nope": 1}}))
+    if resp.status != 400:
+        errs.append(f"S4 非库文件载荷: 期望 400, 实际 {resp.status}")
+    resp = await api_pkg.import_library(_FakeReq({"library": {"categories": "不是数组"}}))
+    if resp.status != 400:
+        errs.append(f"S4 categories 非数组: 期望 400, 实际 {resp.status}")
     return errs
 
 
 def main() -> int:
     errs = asyncio.run(_csrf_checks())
-    errs += _export_dir_checks()
-    errs += _deletion_checks()
+    errs += asyncio.run(_import_checks())
     if errs:
         print(f"❌ API 安全门禁失败 ({len(errs)} 项):")
         for e in errs:
             print("   -", e)
         return 1
-    print("✅ API 安全门禁通过 (CSRF 中间件 / 导出目录确认 / 双向删除精确匹配)")
+    print("✅ API 安全门禁通过 (CSRF 中间件 / 导入 .json 载荷防呆)")
     return 0
 
 

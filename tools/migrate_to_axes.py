@@ -16,7 +16,7 @@ appearance 934 / clothing 38 / prop 265 = 1381 词) —— 大类这一级在最
 1. 生成 `axes.SUB_TO_AXIS_V2` ("轴中文名/槽位名" → (轴 id, 次序)) 并写回 axes.py
 2. 重排两个库文件的 categories: 12 轴 × 各自槽位; 每个标签补 `facet` = 原大类名
 3. 迁移 `conflicts.json` 里 `kind: cat/sub` 的旧路径引用 → 新路径
-4. 重建 .md 镜像 (目录结构随之变成 `轴/槽位/槽位.md`)
+4. 落盘并失效缓存
 
 用法:
     python tools/migrate_to_axes.py            # dry-run (只报告, 含逐词校验)
@@ -231,10 +231,7 @@ def main() -> int:
     open(sp, "w", encoding="utf-8", newline="\n").write(spsrc)
     print(f"✅ slotpolicy.py: 槽位键改写 {renamed} 处")
 
-    # ---------- 5) 重建 .md 镜像 ----------
     library.invalidate_cache()
-    library.sync_to_folder_snapshot()
-    print("✅ .md 镜像已按 轴/槽位/ 结构重建")
     return 0
 
 

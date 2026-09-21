@@ -26,13 +26,6 @@ def clean_user_lib() -> None:
     shutil.copy(library.DEFAULT_PATH, os.path.join(_SANDBOX, "tag_library.json"))
     library.DEFAULT_PATH = os.path.join(_SANDBOX, "tag_library.json")
     library.USER_PATH = os.path.join(_SANDBOX, "tag_library.user.json")
-    try:
-        import tagfiles
-        tagfiles.LIBRARY_DIR = os.path.join(_SANDBOX, "标签库")
-        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
-        tagparse.LIBRARY_DIR = os.path.join(_SANDBOX, "标签库")
-    except Exception:
-        pass
     library.invalidate_cache()
 
 
@@ -352,10 +345,7 @@ def main() -> None:
 
     rebuilt = False
     try:
-        for f in _req("/taglib/api/tagfiles")["files"]:
-            if f["file_name"].startswith("00_"):
-                continue
-            _req("/taglib/api/tagfiles/import", "POST", {"path": f["path"]})
+        _req("/taglib/api/library?mode=skeleton")   # 1.12.0: .md 标签文件入口已下线, 用读接口探活
         rebuilt = True
     except Exception:
         pass  # 无服务器时跳过大库测试 (CI 场景)

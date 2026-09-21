@@ -26,9 +26,8 @@ Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input
 - **Profile visualization**: per-card identity tags, full pose table (tags / hands / state slot / exclusions), mount diagnostics badge (unmounted weapon words flagged), all fields editable inline, JSON editor with instant save
 - **Standalone manager page**: `http://127.0.0.1:8188/taglib` or the 🏷 topbar button — full CRUD, custom icons, chip flow, batch paste import, full-text search
 - **NSFW tiers**: explicit tags shown in red, gated for display and output
-- **Folder-based storage (hot sync)**: the library IS a folder tree (`axis/slot/slot.md`), synced both ways in real time; one-way / two-way deletion switchable
-- **AI collaboration loop**: export templates (basic/full/conflicts), extend with your AI, import back with auto-placement, dedupe and confirm preview
-- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting the full template first)
+- **Plain JSON data**: the whole library is just `tag_library.json` + `tag_library.user.json` (plus the `taglib/*.json` rule files) — no mirror folder, no .md layer. The manager exports/imports those exact files (📤 Full / 📤 Mine / 📥 Import .json); each export carries a `_说明` key documenting the format and rules (JSON has no comments, so a reserved key is used)
+- **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting the full .json first)
 - **Pin semantics**: 📌 pinned tags always survive rolls and echoes; pinned weapons birth with bundles too
 - **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt), reproducible per seed
 - **Translator immunity**: tag English is never rewritten by ComfyUI-DD-Translation or similar
@@ -95,11 +94,10 @@ Restart ComfyUI. No pip dependencies.
 |---|---|
 | `data/default/tag_library.json` | factory default library (updated with the plugin) |
 | `data/default/tag_library.user.json` | user snapshot (survives upgrades) |
-| `data/default/taglib/` | folder-style library (hot sync, `axis/slot/slot.md`) |
+| `data/default/taglib/` | rule files only (**all .json**: conflicts / group rules / NL flavours / profiles / factory presets) |
 | `data/default/taglib/profiles.json` | weapon & object profiles (bundles / resources / state slots / NL) |
 | `data/default/taglib/grouprules.json` | global mutex domains (50 groups) |
 | `data/default/taglib/nl_flavors.json` | NL families (36 families + pose_map + object pools) |
-| `data/default/taglib/_tagmeta.json` | edit-layer field mirror (aliases/priority/rarity/enabled), survives folder rebuilds |
 | `data/default/taglib/conflicts.json` | cross-pool rules (kept for compatibility) |
 | `data/default/backups/` | backups |
 
@@ -123,13 +121,13 @@ python tools/run_gates.py --list
 python tools/run_gates.py m1 m3         # run a subset
 ```
 
-Offline gates (14): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
-backend smoke chain, conflict engine, folder hot-sync, .md parser, perf build,
+Offline gates (15): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
+backend smoke chain, conflict engine, perf build,
 output quality (word band / quotas / mutex / count / malformed / section order / NSFW round-trip),
-full-prompt heavy test, API security (CSRF middleware / export-dir confirm / precise two-way deletion),
-edit-layer sidecar round-trip (aliases / priority / rarity / enabled).
+full-prompt heavy test, API security (CSRF middleware / .json import payload guard),
+dead-code lint, NSFW pack, heavy prompt matrix.
 
-Online gates (4, need a running ComfyUI; `ui_*` also need Edge remote debugging on 9222):
+Online gates (6, need a running ComfyUI; `ui_*` drive the real browser over the huashu-chrome bridge):
 real HTTP queue acceptance (incl. CSRF protection), real-node output test (60 generations × text-level asserts),
 browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme consistency.
 
@@ -138,7 +136,7 @@ browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme
 
 ## Changelog
 
-Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.7.0**.
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.12.0**.
 
 ## License
 

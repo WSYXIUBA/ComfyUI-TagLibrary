@@ -12,8 +12,7 @@ import tempfile
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tagconflicts
-import tagfiles
-import tagparse
+import datapaths
 
 PASS, FAIL = [], []
 
@@ -47,9 +46,7 @@ def make_lib():
 def main():
     tmp = tempfile.mkdtemp(prefix="taglib_conf_")
     # 沙箱: 指到临时目录
-    tagfiles.LIBRARY_DIR = tmp
-    # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
-    tagparse.LIBRARY_DIR = tmp
+    datapaths.LIBRARY_DIR = tmp
     tagconflicts.CONFLICTS_PATH = os.path.join(tmp, "conflicts.json")
     tagconflicts.LEGACY_GROUPS_PATH = os.path.join(tmp, "legacy_groups.json")  # 沙箱, 不碰真实旧文件
     tagconflicts.invalidate()

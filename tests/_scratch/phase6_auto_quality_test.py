@@ -26,13 +26,7 @@ import random_engine  # noqa: E402
 
 N_RUNS = 50
 
-# ---------- 沙箱化: 只读真实库, 但不碰热同步 ----------
-library.HOT_SYNC_MIN_INTERVAL = 1e9
-try:
-    import tagfiles
-    tagfiles.LIBRARY_DIR = os.path.join(ROOT, "data", "taglib")  # 只读
-except Exception:
-    pass
+# ---------- 沙箱化: 只读真实库 ----------
 
 # 手写语义对冲表 (规则文件没覆盖的硬对冲; en 全小写)
 SEMANTIC_CLASH = [

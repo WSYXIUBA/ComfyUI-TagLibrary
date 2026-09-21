@@ -11,10 +11,8 @@ from ._common import (_WEB_DIR, _json_response,  # noqa: F401  (对外保持可�
 from .library_routes import (
     serve_manager_page, get_library, get_subtags, search_tags, get_panel_index,
     save_library, reset_library, backup_library, backup_info, restore_backup,
+    export_library, import_library,
     get_settings, save_settings, dismiss_upgrade_prompt,
-)
-from .tagfiles_routes import (
-    list_tagfiles, preview_import, import_tagfile, export_folder,
 )
 from .conflicts_routes import (
     get_conflicts, save_conflicts, preview_conflicts_import,
@@ -57,13 +55,11 @@ def register_routes() -> None:
     app.router.add_post("/taglib/api/library/backup", backup_library)
     app.router.add_get("/taglib/api/library/backup", backup_info)
     app.router.add_post("/taglib/api/library/restore-backup", restore_backup)
+    app.router.add_get("/taglib/api/library/export", export_library)
+    app.router.add_post("/taglib/api/library/import", import_library)
     app.router.add_post("/taglib/api/library/upgrade-dismiss", dismiss_upgrade_prompt)
     app.router.add_get("/taglib/api/settings", get_settings)
     app.router.add_post("/taglib/api/settings", save_settings)
-    app.router.add_get("/taglib/api/tagfiles", list_tagfiles)
-    app.router.add_post("/taglib/api/tagfiles/import", import_tagfile)
-    app.router.add_post("/taglib/api/tagfiles/preview-import", preview_import)
-    app.router.add_post("/taglib/api/tagfiles/export-folder", export_folder)
     app.router.add_get("/taglib/api/conflicts", get_conflicts)
     app.router.add_post("/taglib/api/conflicts", save_conflicts)
     app.router.add_post("/taglib/api/conflicts/check", check_conflicts)

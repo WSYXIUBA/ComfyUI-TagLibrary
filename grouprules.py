@@ -18,16 +18,16 @@ import threading
 
 try:
     from . import jsonio
-    from . import tagfiles
+    from . import datapaths
 except ImportError:  # pragma: no cover
     import jsonio
-    import tagfiles
+    import datapaths
 
-GROUPRULES_PATH = os.path.join(tagfiles.LIBRARY_DIR, "grouprules.json")
+GROUPRULES_PATH = os.path.join(datapaths.LIBRARY_DIR, "grouprules.json")
 # 1.8.0: NSFW 互斥域扩展文件 (ext 扩展包配套, 不入 git/发布)。
 # 与出厂文件同名 id 的域按**并集**合并 —— 口部域 (legacy.mouth) 等资源账本
 # 由两侧词共同守护, 而不必把 NSFW 词写进出厂文件。
-NSFW_GROUPS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nsfw_grouprules.json")
+NSFW_GROUPS_PATH = os.path.join(datapaths.LIBRARY_DIR, "nsfw_grouprules.json")
 
 _lock = threading.Lock()
 _cache: dict | None = None

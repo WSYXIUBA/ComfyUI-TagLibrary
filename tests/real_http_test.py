@@ -4,7 +4,6 @@ python tests/real_http_test.py
 """
 import json
 import sys
-import tempfile
 import time
 import urllib.error
 import urllib.request
@@ -143,30 +142,26 @@ def raw_status(path, method, headers, body=b"{}"):
         return e.code
 
 csrf_fails = []
-# 跨站 Origin → 403 (preview-import 无副作用, 拿它当靶子最安全)
-got = raw_status("/taglib/api/tagfiles/preview-import", "POST",
+# 跨站 Origin → 403 (拿导入端点当靶子; 会被中间件先拦下, 不会真写库)
+got = raw_status("/taglib/api/library/import", "POST",
                  {"Origin": "https://evil.example"})
 if got != 403:
     csrf_fails.append(f"跨站 Origin 未拦: {got}")
 # 不透明 Origin → 403
-got = raw_status("/taglib/api/tagfiles/preview-import", "POST", {"Origin": "null"})
+got = raw_status("/taglib/api/library/import", "POST", {"Origin": "null"})
 if got != 403:
     csrf_fails.append(f"null Origin 未拦: {got}")
-# 同源 Origin → 放行 (200/400 均可, 不能是 403)
-got = raw_status("/taglib/api/tagfiles/preview-import", "POST",
+# 同源 Origin → 放行 (400 也行: 空载荷本就该被业务层拒; 不能是 403)
+got = raw_status("/taglib/api/library/import", "POST",
                  {"Origin": BASE})
 if got == 403:
     csrf_fails.append("同源 Origin 被误拦")
 # 无 Origin (脚本客户端) → 放行
-got = raw_status("/taglib/api/tagfiles/preview-import", "POST", {})
+got = raw_status("/taglib/api/library/import", "POST", {})
 if got == 403:
     csrf_fails.append("无 Origin 被误拦 (会弄坏测试脚本/第三方工具)")
-# 导出 data/ 之外无 confirm → 403 (同源但缺确认语义; dir 必须在请求体里)。
-# (confirm=True 的放行路径无副作用需求不高, 离线门禁 api_security_test S2 已覆盖)
-got = raw_status("/taglib/api/tagfiles/export-folder", "POST", {"Origin": BASE},
-                 body=json.dumps({"dir": tempfile.gettempdir()}).encode())
-if got != 403:
-    csrf_fails.append(f"外目录导出无 confirm 未拦: {got}")
+# 1.12.0: .md 导出到外部目录的 confirm 语义随 tagfiles 端点下线 (新导出是纯 JSON 下载,
+# 不带路径参数), 那条检查没有对应实现, 不再假装覆盖。
 
 if csrf_fails:
     print("❌ CSRF:", csrf_fails)

@@ -7,14 +7,12 @@
     python tools/run_gates.py --list       # 列出所有门禁
 
 为什么要经过这个脚本而不是逐个 python tests/xxx.py:
-  1. 自动快照/还原 data/default/taglib/ —— 部分门禁 (folder_template_test 等) 会
-     真实写入文件夹镜像与 _sync_state.json, 直接跑会污染工作区, 让 git status
-     出现与代码无关的改动。
+  1. 自动快照/还原 data/default/taglib/ —— 门禁会写该目录下的规则 .json
+     (互斥域 / 档案等), 直接跑会污染工作区, 让 git status 出现与代码无关的改动。
   2. 统一汇总 + 失败时打印尾部日志, 退出码可直接用于 CI。
 
-⚠ 若 ComfyUI 正在运行, 它的热同步会在还原之后再次触碰 _sync_state.json
-   (插件在 get_merged 里做文件夹双向同步)。提交前请先停掉 ComfyUI, 或再
-   执行一次 `git checkout -- data/`。
+1.12.0 起该目录只有规则 .json (没有 .md 镜像、没有热同步), 上面第 1 条仍防的是
+规则文件被测试改写这种真实污染。
 
 返回码: 0 = 全部通过; 1 = 有失败。
 """
@@ -41,15 +39,11 @@ OFFLINE = [
     ("quality_audit", "30 条完整提示词人工级审计"),
     ("smoke_test", "后端全链路 (沙箱)"),
     ("conflicts_test", "反冲突引擎"),
-    ("folder_template_test", "文件夹热同步"),
-    ("parser_conflict_test", ".md 解析器"),
     ("perf_build_test", "性能门禁 (10k 库 p50<3ms)"),
     ("quality_gate_test", "输出质量门禁 (词数/配额/互斥/人数/畸形词/确定性)"),
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
-    ("api_security_test", "API 安全门禁 (CSRF 中间件/导出目录确认/双向删除精确匹配)"),
-    ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
+    ("api_security_test", "API 安全门禁 (CSRF 中间件/导入 .json 载荷防呆)"),
     ("tag_edit_test", "标签就地编辑 (推导/新增/改字段/校验拒绝/首页分段/待完善)"),
-    ("sync_idempotent_test", "文件夹镜像幂等性 (.md 收敛 / 标记往返不丢字段)"),
     ("lint_check", "死代码门禁 (ruff: 死导入 / 重复定义 / 死变量)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
     ("heavy_prompt_test", "重度提示词矩阵 (708 条 × 模式/NSFW档/性别/场景/排除 + 3000 次压力)"),

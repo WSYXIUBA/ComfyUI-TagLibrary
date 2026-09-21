@@ -18,7 +18,7 @@
 
 ## 本脚本
 按"槽位 → 词表"的显式清单补齐（**只用 Danbooru 真实标签，不生成组合**），
-幂等：已存在的词跳过。落盘前自动备份，写完重建 .md 镜像。
+幂等：已存在的词跳过。落盘前自动备份。
 
 同时支持**归位**（`MOVES`）：把放错槽位导致语义失效的词搬到正确槽位。
 
@@ -331,11 +331,6 @@ def main() -> int:
               f"性别标记 {gfixed} 词 (备份 {os.path.basename(bak)})")
 
     library.invalidate_cache()
-    try:
-        library.sync_to_folder_snapshot()
-        print("✅ .md 镜像已重建")
-    except Exception as e:  # noqa: BLE001
-        print(f"⚠ 镜像重建失败: {e}")
     return 0
 
 

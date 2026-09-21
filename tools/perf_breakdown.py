@@ -69,12 +69,9 @@ def main() -> int:
               "mode": "auto", "seed": 42}
     bench("TagLibraryNode.build()", lambda: n.build(**kwargs), 5)
 
-    print("\n[镜像写出]  (热门怀疑点: 读路径上的整目录 .md 镜像)")
-    bench("sync_to_folder_snapshot()", library.sync_to_folder_snapshot, 2)
-
     print("\n[结论提示]")
     print("  若 get_merged() 冷 ≈ 热, 说明缓存每次都失效 (有东西在改那 3 个 json 的 mtime)")
-    print("  若 sync_to_folder_snapshot 很贵, 说明读路径写盘就是瓶颈 (方案里的 P0-1)")
+    print("  1.12.0 起没有 .md 镜像层, 读路径不再写盘; 这里只剩 build() 与 get_merged() 两组基准")
     return 0
 
 

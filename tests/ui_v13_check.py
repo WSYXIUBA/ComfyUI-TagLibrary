@@ -24,7 +24,29 @@ OUT = HERE
 # 浏览器层 = huashu-chrome 桥 (驱动用户自己的 Edge), 不再自己拉调试用 Edge。
 # 为什么换、有哪些坑, 见 tests/_ui_bridge.py 顶部。
 sys.path.insert(0, HERE)
-from _ui_bridge import ensure_bridge, wait_app  # noqa: E402
+from _ui_bridge import UiError, ensure_bridge, wait_app  # noqa: E402
+
+
+def _create_gate_node(cdp, tab, js: str):
+    """建测试节点; 桥掉线时重试。
+
+    MV3 的 service worker 会被浏览器随时回收 → 探测会话偶发
+    `Detached while handling command`。
+    ⚠ 重发前必须先查 `window.__tlGateNode`: 上一次可能其实**执行成功了、只是响应丢了**,
+    直接重发会建出第二个 `__tl_gate__` 节点污染用户的工作流草稿。
+    """
+    for attempt in range(3):
+        try:
+            return cdp.ev(js)
+        except UiError as exc:
+            if "Detached" not in str(exc) and "TIMEOUT" not in str(exc):
+                raise
+            print(f"  建节点被 Detached 打断 (第 {attempt + 1} 次), 等页面回来…")
+            time.sleep(3)
+            wait_app(cdp, tab, 30)
+            if cdp.ev("!!window.__tlGateNode", tab):
+                return "node (上一次其实已建)"
+    raise RuntimeError("建测试节点失败: 桥反复掉线")
 
 
 
@@ -40,7 +62,7 @@ def _run(cdp, tab):
     # 3) 建测试节点 (带一把钉选 katana)
     # ⚠ ComfyUI 会恢复上次打开的工作流, 里面可能已有若干 TagLibraryNode ——
     # 不清场的话后面 `_nodes.find(...)` 会读到第一个(旧的空节点), 断言全部错位。
-    r = cdp.ev("""(() => {
+    node_probe_js = """(() => {
       const g = window.app.graph;
       // ⚠ 只在画布上另建一个带标记的节点, 不动用户工作流里已有的 TagLibraryNode
       //   (跑完删掉自己这个)。断言一律通过 window.__tlGateNode 定位它。
@@ -60,7 +82,8 @@ def _run(cdp, tab):
       if (sw) sw.value = JSON.stringify({tags:[{en:'katana',pinned:true,enabled:true}],
         fill_master:true, fill_master_min:2, fill_master_max:3, nl_tail:true});
       return 'node';
-    })()""")
+    })()"""
+    r = _create_gate_node(cdp, tab, node_probe_js)
     print("node:", r)
     # 等面板真正就绪 (库是异步拉取的, 固定 sleep 会偶发"元素还没渲染出来")
     for _ in range(25):

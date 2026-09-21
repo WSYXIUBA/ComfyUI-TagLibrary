@@ -50,9 +50,8 @@ NSFW 词表体系以扩展包形式分发（`tag_library.ext.json` / `nsfw_group
 - **档案可视化**：每份档案卡片=身份词、全部姿势（标签/吃几只手/状态槽/排斥词）表格、挂载诊断徽章（哪些武器词没挂上直接标红），全部字段行内可编辑，JSON 编辑保存即生效
 - **独立管理页**：浏览器直达 `http://127.0.0.1:8188/taglib` 或顶栏 🏷 按钮；分类/子分类/标签全级 CRUD、图标自定义、chip 流、批量粘贴导入、全文搜索
 - **NSFW 分级**：裸露/露骨类标签红色显示、开关控制隐藏与输出
-- **文件夹式存储（热同步）**：标签库即文件夹结构（`轴/槽位/槽位.md`），管理页与磁盘双向实时同步，单向/双向删除可切换
-- **AI 协作闭环**：导出模板（基础/全量/反冲突）→ AI 补充/重构 → 导入自动归位、去重、预览确认
-- **备份机制**：💾 存为默认库 / ↺ 恢复备份库 / 🗑 清空标签库（清空前可顺手导出全量模板）
+- **库文件即数据（.json）**：整库就 `tag_library.json` + `tag_library.user.json` 两个文件（外加 `taglib/*.json` 规则文件），没有镜像目录、没有 .md 中间层；管理页「📤 导出整库 / 📤 导出我的 / 📥 导入 .json」直接进出原文件，文件里带 `_说明` 写清格式与规则（JSON 无注释，用保留键）
+- **备份机制**：💾 存为默认库 / ↺ 恢复备份库 / 🗑 清空标签库（清空前可顺手导出整库 .json）
 - **钉选语义**：📌 钉选标签随机/填充/生成回显必含且不被覆盖；钉选武器同样带束出生
 - **出图元数据**：PNG 信息自动写入 `TagLibrary` 键（节点/模式/种子/实际出词），同 seed 可复现
 - **翻译扩展免疫**：面板/挑选器/管理页标签英文永不被翻译插件改写
@@ -126,11 +125,10 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 |---|---|
 | `data/default/tag_library.json` | 出厂默认库（随插件更新） |
 | `data/default/tag_library.user.json` | 用户库快照（管理页保存；升级永不丢失） |
-| `data/default/taglib/` | 文件夹式标签库（双向热同步，`轴/槽位/槽位.md`） |
+| `data/default/taglib/` | 规则文件目录（**只有 .json**：互斥域 / 分组域 / NL 风味 / 档案 / 出厂预设） |
 | `data/default/taglib/profiles.json` | 武器·物品档案（姿势束/手视资源/状态槽/NL 声明真源） |
 | `data/default/taglib/grouprules.json` | 全局互斥域（50 组） |
 | `data/default/taglib/nl_flavors.json` | NL 句式素材（36 族 + pose_map + 宾语词池） |
-| `data/default/taglib/_tagmeta.json` | 编辑层字段镜像（aliases/priority/rarity/enabled），文件夹重建库不丢字段 |
 | `data/default/taglib/conflicts.json` | 跨池反冲突规则（兼容保留） |
 | `data/default/backups/` | 备份位置 |
 
@@ -158,7 +156,7 @@ python tools/run_gates.py --list        # 列出所有门禁
 python tools/run_gates.py m1 m3         # 只跑名字匹配的
 ```
 
-离线门禁（14 项）：
+离线门禁（15 项）：
 
 | 脚本 | 覆盖 |
 |---|---|
@@ -169,15 +167,15 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/quality_audit.py` | 30 条完整提示词人工级审计 |
 | `tests/smoke_test.py` | 后端全链路（沙箱） |
 | `tests/conflicts_test.py` | 反冲突引擎 |
-| `tests/folder_template_test.py` | 文件夹热同步 |
-| `tests/parser_conflict_test.py` | .md 解析器 |
 | `tests/perf_build_test.py` | 性能门禁 |
 | `tests/quality_gate_test.py` | 输出质量门禁（词数/配额/互斥/人数/畸形词/段位/NSFW 往返） |
 | `tests/prompt_quality_test.py` | 完整提示词重度测试（文本层语义/段位/性别/负向词） |
-| `tests/api_security_test.py` | API 安全门禁（CSRF 中间件/导出目录确认/双向删除精确匹配） |
-| `tests/tagmeta_roundtrip_test.py` | 编辑层字段 sidecar 往返（aliases/priority/rarity/enabled） |
+| `tests/api_security_test.py` | API 安全门禁（CSRF 中间件 / 导入 .json 载荷防呆） |
+| `tests/lint_check.py` | 死代码门禁（ruff F401/F811/F841） |
+| `tests/nsfw_pack_test.py` | NSFW 扩展包门禁 |
+| `tests/heavy_prompt_test.py` | 重度提示词矩阵（708 条 × 模式/NSFW档/性别/场景/排除 + 3000 次压力） |
 
-需先启动 ComfyUI（在线组 4 项，`ui_*` 还需 Edge 远程调试 9222）：
+需先启动 ComfyUI（在线组 6 项，`ui_*` 走 huashu-chrome 桥）：
 
 | 脚本 | 覆盖 |
 |---|---|
@@ -185,13 +183,15 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/node_output_test.py` | 真机节点输出测试（60 次生成 × 文本层断言） |
 | `tests/ui_v13_check.py` | 浏览器 UI 巡检（逐 tab 截图 + 断言 + 默认模式设置生效） |
 | `tests/ui_theme_check.py` | 主题一致性巡检（深色 / 浅色 / 管理页） |
+| `tests/ui_dialog_close_test.py` | 弹层开关巡检（⋯菜单/挑选器/面板弹层/管理页弹窗） |
+| `tests/feature_e2e_test.py` | 全功能真机端到端（预设/场景条/强度/重摇/批量/吸收/未成年锁/negative） |
 
 > `tests/_scratch/` 是历史一次性诊断脚本的归档，不属门禁，仅作追溯参考。
 > CI 见 `.github/workflows/gates.yml`（只跑离线门禁）。
 
 ## 更新记录
 
-完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.7.0**。
+完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.12.0**。
 
 ## License
 
