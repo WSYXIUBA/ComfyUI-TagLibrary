@@ -13,7 +13,7 @@ from .. import library
 from .. import slotpolicy
 from ._common import (
     _WEB_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
-    UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, _json_response,
+    UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, USER_AUTO_BACKUP_PATH, _json_response,
 )
 
 
@@ -325,8 +325,13 @@ async def restore_backup(_request: web.Request) -> web.Response:
         path = USER_BACKUP_PATH
     elif source == "factory":
         path = FACTORY_BACKUP_PATH
-    else:  # auto: 用户备份优先
-        path = USER_BACKUP_PATH if os.path.isfile(USER_BACKUP_PATH) else FACTORY_BACKUP_PATH
+    else:  # auto: 手动备份 > 自动滚动备份 > 出厂备份
+        for cand in (USER_BACKUP_PATH, USER_AUTO_BACKUP_PATH, FACTORY_BACKUP_PATH):
+            if os.path.isfile(cand):
+                path = cand
+                break
+        else:
+            path = FACTORY_BACKUP_PATH
         if not os.path.isfile(path) and os.path.isfile(LEGACY_BACKUP_PATH):
             path = LEGACY_BACKUP_PATH  # v1.x 旧单备份兼容
     if not os.path.isfile(path):
@@ -344,8 +349,8 @@ async def restore_backup(_request: web.Request) -> web.Response:
                 os.remove(UPGRADE_PROMPT_PATH)
         except OSError:
             pass
-        return _json_response({"ok": True, "source": "user" if path == USER_BACKUP_PATH
-                               else "factory"})
+        return _json_response({"ok": True, "source": ("user" if path == USER_BACKUP_PATH
+                               else "auto" if path == USER_AUTO_BACKUP_PATH else "factory")})
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
     except Exception as exc:  # noqa: BLE001

@@ -130,7 +130,7 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 | `data/default/taglib/grouprules.json` | 全局互斥域（50 组） |
 | `data/default/taglib/nl_flavors.json` | NL 句式素材（36 族 + pose_map + 宾语词池） |
 | `data/default/taglib/conflicts.json` | 跨池反冲突规则（兼容保留） |
-| `data/default/backups/` | 备份位置 |
+| `data/default/backups/` | 备份位置（`user_backup.json` 手动「存为默认库」；`user_auto.json` 每次保存自动滚动；`factory_backup.json` 出厂） |
 
 ## 反冲突模型
 
@@ -190,7 +190,7 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 
 ## 更新记录
 
-完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.12.2**。
+完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.12.3**。
 
 ## License
 

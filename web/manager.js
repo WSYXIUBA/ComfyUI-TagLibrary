@@ -1060,7 +1060,7 @@ ${data.categories.length} 个分类 / ${nTags} 个标签
         body: JSON.stringify({ source: hasUser ? "user" : "factory" }) });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
-      toast(`✅ 已恢复默认库 (${out.source === "user" ? "用户基准" : "出厂"})`);
+      toast(`✅ 已恢复默认库 (${out.source === "user" ? "用户基准" : out.source === "auto" ? "自动滚动备份" : "出厂"})`);
       await load();
     } catch (err) {
       toast(`恢复失败: ${err.message}`, true);

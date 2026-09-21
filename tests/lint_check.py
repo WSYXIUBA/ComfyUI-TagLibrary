@@ -130,7 +130,8 @@ def main() -> int:
               "面板靠这两个数比对来提示\"插件已更新, 点这里刷新\"。")
         return 1
 
-    print(f"\n✅ 死代码门禁通过 (ruff {SELECT}, 排除 {', '.join(EXCLUDE)})")
+    scope = f", 排除 {', '.join(EXCLUDE)}" if EXCLUDE else ""
+    print(f"\n✅ 死代码门禁通过 (ruff {SELECT}{scope})")
     print("✅ _common 导入白名单通过 (只有常量与无业务工具)")
     print("✅ 版本号一致 (pyproject.toml == TL_BUILD)")
     return 0

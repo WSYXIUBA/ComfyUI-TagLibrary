@@ -25,6 +25,8 @@ FACTORY_BACKUP_PATH = os.path.join(BACKUP_DIR, "factory_backup.json")
 
 
 USER_BACKUP_PATH = os.path.join(BACKUP_DIR, "user_backup.json")
+# 1.12.3: 每次保存自动刷新的滚动备份 (用户库是唯一不进 git 的活数据)
+USER_AUTO_BACKUP_PATH = os.path.join(BACKUP_DIR, "user_auto.json")
 
 
 # 升级弹窗标记: 插件包内自带; 恢复/取消后销毁; 下次升级随包重新出现

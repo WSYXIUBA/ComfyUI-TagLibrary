@@ -411,8 +411,25 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
         out.pop("_meta", None)
 
         jsonio.atomic_write_json(USER_PATH, out)
+        _auto_backup_user(out)
         invalidate_cache()
         return {"ok": True, "mtime": _mtime(USER_PATH), "tombstones": len(new_tombs)}
+
+
+def _auto_backup_user(payload: dict) -> None:
+    """每次保存都留一份滚动备份 (data/default/backups/user_auto.json)。
+
+    为什么: 用户库是唯一不進 git 的活数据 (gitignore 了), 丢一次就是全丢 —— 2026-09-21 真发生过
+    (文件在门禁跑到一半时消失, 7 条自建预设差点没了, 靠浏览器内存里的副本才捞回来)。
+    手动「💾 存为默认库」是用户主动行为, 覆盖不到"最近一次自动保存"; 这里每存一次就刷一份。
+    失败不影响保存本身。
+    """
+    try:
+        dst = os.path.join(os.path.dirname(DEFAULT_PATH), "backups", "user_auto.json")
+        os.makedirs(os.path.dirname(dst), exist_ok=True)
+        jsonio.atomic_write_json(dst, payload)
+    except Exception:  # noqa: BLE001 — 备份失败不能挡保存
+        pass
 
 
 # ---------------------------------------------------------------- cache
