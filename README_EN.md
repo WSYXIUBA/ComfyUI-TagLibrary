@@ -116,19 +116,19 @@ Restart ComfyUI. No pip dependencies.
 ## Tests
 
 ```bash
-python tools/run_gates.py               # 12 offline gates
+python tools/run_gates.py               # 13 offline gates
 python tools/run_gates.py --with-online # + 4 gates that need a running ComfyUI
 python tools/run_gates.py --list
 python tools/run_gates.py m1 m3         # run a subset
 ```
 
-Offline gates (12): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
+Offline gates (13): engine core, weapon bundles, NL compiler, object profiles, 30-prompt audit,
 backend smoke chain, conflict engine, folder hot-sync, .md parser, perf build,
 output quality (word band / quotas / mutex / count / malformed / section order / NSFW round-trip),
-full-prompt heavy test.
+full-prompt heavy test, API security (CSRF middleware / export-dir confirm / precise two-way deletion).
 
 Online gates (4, need a running ComfyUI; `ui_*` also need Edge remote debugging on 9222):
-real HTTP queue acceptance, real-node output test (60 generations × text-level asserts),
+real HTTP queue acceptance (incl. CSRF protection), real-node output test (60 generations × text-level asserts),
 browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme consistency.
 
 > `tests/_scratch/` is an archive of one-off diagnostic scripts, not part of the gates.

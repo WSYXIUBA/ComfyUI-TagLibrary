@@ -911,11 +911,13 @@ ${TPL_RULES}
   async function syncToFolder() {
     const dir = $("#extDirInput").value.trim();
     if (dirty && !confirm("有未保存修改, 同步的是已保存的库内容。先保存再同步? (确定=继续同步)")) return;
+    // 外部目录是敏感操作: 镜像会覆盖/删除目标位置库结构内的 .md, 让用户明确确认
+    if (dir && !confirm(`将把当前整库镜像导出到外部目录:\n${dir}\n\n目标位置库结构内的 .md 会被覆盖或删除。确定?`)) return;
     try {
       const res = await fetch("/taglib/api/tagfiles/export-folder", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(dir ? { dir } : {}),
+        body: JSON.stringify(dir ? { dir, confirm: true } : {}),
       });
       const out = await res.json();
       if (!res.ok || !out.ok) throw new Error(out.error || `HTTP ${res.status}`);
