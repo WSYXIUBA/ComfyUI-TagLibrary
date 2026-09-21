@@ -6,11 +6,6 @@
 
 from __future__ import annotations
 
-try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
-    from .. import library
-except ImportError:  # pragma: no cover
-    import library
-
 from ._common import (_WEB_DIR, _json_response,  # noqa: F401  (对外保持可用)
                       taglib_csrf_middleware)
 from .library_routes import (

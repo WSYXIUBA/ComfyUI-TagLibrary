@@ -5,7 +5,6 @@ python tests/m1_engine_test.py
 
 import json
 import os
-import random
 import sys
 import time
 
@@ -15,8 +14,6 @@ sys.path.insert(0, ROOT)
 import library            # noqa: E402
 import runtime_snapshot   # noqa: E402
 import engine             # noqa: E402
-import profiles           # noqa: E402
-import axes               # noqa: E402
 
 FAILS = []
 

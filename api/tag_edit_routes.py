@@ -34,7 +34,7 @@ from .. import library
 from .. import profiles as _profiles
 from .. import runtime_snapshot
 from .. import schema
-from ._common import _json_response, _mirror_folder
+from ._common import _json_response
 
 
 # 可就地编辑的字段白名单。`id` 与 `axis` 不在内:
@@ -176,7 +176,7 @@ def _commit(lib: dict) -> tuple[dict | None, web.Response | None]:
     except Exception as exc:  # noqa: BLE001
         return None, _json_response({"ok": False, "error": f"保存失败: {exc}"}, 500)
     runtime_snapshot.invalidate_snapshot()
-    _mirror_folder()
+    library.mirror_folder_now()
     return result, None
 
 

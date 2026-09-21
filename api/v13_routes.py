@@ -7,6 +7,7 @@ import os
 
 from aiohttp import web
 
+from .. import jsonio
 from .. import library
 from .. import runtime_snapshot
 from .. import profiles as _profiles
@@ -116,10 +117,7 @@ async def save_nl(request: web.Request) -> web.Response:
     if os.path.exists(_nl.FLAVORS_PATH):
         import shutil
         shutil.copy2(_nl.FLAVORS_PATH, _nl.FLAVORS_PATH + ".bak")
-    tmp = _nl.FLAVORS_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, _nl.FLAVORS_PATH)
+    jsonio.atomic_write_json(_nl.FLAVORS_PATH, data)
     _nl._cache = None
     return _json_response({"ok": True})
 

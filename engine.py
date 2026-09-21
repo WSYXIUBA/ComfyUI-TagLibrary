@@ -226,6 +226,388 @@ def _trim_to_budget(picks: list, tmax: int, snap, *, protect_nsfw=False) -> list
     return [p for p in picks if id(p) not in drop]
 
 
+class _Extraction:
+    """一次抽取的全部状态与步骤 (从 run_auto 的闭包群提取, 行为不变)。
+
+    为什么提取: 12 个闭包挤在一个 527 行的函数里, 读的人要同时在脑子里
+    维护 30 多个自由变量; 提取后它们成了实例字段, 状态边界一眼可见。
+    早期状态走构造函数, 后算出来的 (池顺序/配额/统计) 由 run_auto 在算出来的
+    位置交回 —— 方法里读的是 self.*, 所以别在 run_auto 里改这些局部变量。
+    """
+
+    def __init__(
+        self, avoid_conflicts, bg_simple, cat_weights, cfg, cross_banned, dropped, excl_cats,
+        excl_keys, explicit_extra, focus_portrait, gmode, led, max_prop, max_props_total,
+        minor_age, minor_block_words, mount_of_tag, nsfw_factor, nsfw_intensity, nsfw_on,
+        picks, pin_force, pinned_tids, rng, snap, solo_lock,
+    ) -> None:
+        self.avoid_conflicts = avoid_conflicts
+        self.bg_simple = bg_simple
+        self.cat_weights = cat_weights
+        self.cfg = cfg
+        self.cross_banned = cross_banned
+        self.dropped = dropped
+        self.excl_cats = excl_cats
+        self.excl_keys = excl_keys
+        self.explicit_extra = explicit_extra
+        self.focus_portrait = focus_portrait
+        self.gmode = gmode
+        self.led = led
+        self.max_prop = max_prop
+        self.max_props_total = max_props_total
+        self.minor_age = minor_age
+        self.minor_block_words = minor_block_words
+        self.mount_of_tag = mount_of_tag
+        self.nsfw_factor = nsfw_factor
+        self.nsfw_intensity = nsfw_intensity
+        self.nsfw_on = nsfw_on
+        self.picks = picks
+        self.pin_force = pin_force
+        self.pinned_tids = pinned_tids
+        self.rng = rng
+        self.snap = snap
+        self.solo_lock = solo_lock
+
+        # 后算出来的状态 (run_auto 在算出来之后赋值)
+        self.bundled_only = None
+        self.count_no_human = None
+        self.count_single = None
+        self.excl_used = None
+        self.master = None
+        self.minor_age = None
+        self.pools = None
+        self.search_l = None
+        self.slot_filled = None
+        self.stats = None
+        self.sub_ids_str = None
+        self.sub_ranges = None
+
+    def tag_ok(self, tid: int) -> bool:
+        """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
+        if not self.nsfw_on and self.snap.nsfw_flag[tid]:
+            return False
+        # 纯欲档: 未成年年龄词源头排除 (否则未成年锁触发后整场显式词全灭)
+        if self.nsfw_intensity >= 2 and self.snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
+            return False
+        # NSFW 开启时 teen 系模糊年龄词源头排除 (年龄歧义, 成人场景不碰)
+        if self.nsfw_on and self.snap.tag_lower[tid] in slotpolicy.TEEN_AGE_WORDS:
+            return False
+        if self.minor_age and (self.snap.tag_lower[tid] in self.minor_block_words):
+            return False
+        g = self.snap.gender_flag[tid]
+        if self.gmode == "female" and g == 2:
+            return False
+        if self.gmode == "male" and g == 1:
+            return False
+        if self.led.gender_lock == 1 and g == 2:
+            return False
+        if self.led.gender_lock == 2 and g == 1:
+            return False
+        si = self.snap.sub_of[tid]
+        cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
+        if cname in self.excl_cats or self.snap.sub_keys[si] in self.excl_keys:
+            return False
+        # ---- 场景条闸门 (1.8.1) ----
+        _sk = self.snap.sub_keys[si]
+        if self.solo_lock:
+            if self.snap.axis_arr[tid] == "count"                     and self.snap.tag_lower[tid] not in slotpolicy.SINGLE_COUNT_WORDS:
+                return False
+            if _sk == "动作姿态/互动与双人":
+                return False
+            # 隐含多人的行为词一并封禁 (1other + gangbang 实测漏网)
+            if self.snap.tag_lower[tid] in slotpolicy.SOLO_BAN_WORDS:
+                return False
+        if self.bg_simple:
+            if _sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
+                return False
+            if _sk == "场景环境/背景处理"                     and self.snap.tag_lower[tid] not in slotpolicy.SIMPLE_BG_WORDS:
+                return False
+        if self.focus_portrait:
+            if _sk in slotpolicy.PORTRAIT_BAN_SLOTS:
+                return False
+            if _sk == "构图镜头/取景范围"                     and self.snap.tag_lower[tid] not in slotpolicy.PORTRAIT_FRAMING_WORDS:
+                return False
+        return True
+
+    def make_pick(self, tid: int, source: str = "random") -> Pick:
+        si = self.snap.sub_of[tid]
+        ci = self.snap.cat_of_sub[si]
+        return Pick(tid, _artist_text(self.snap.tag_text[tid], self.snap.axis_arr[tid]),
+                    self.snap.tag_zh[tid],
+                    self.snap.base_weights[tid], bool(self.snap.nsfw_flag[tid]),
+                    ("female" if self.snap.gender_flag[tid] == 1 else
+                     "male" if self.snap.gender_flag[tid] == 2 else ""),
+                    self.snap.cat_names[ci], self.snap.axis_arr[tid], self.snap.order_arr[tid],
+                    "tag", None, source)
+
+    def commit_tag(self, tid: int, source: str = "random") -> Pick:
+        p = self.make_pick(tid, source)
+        # order = 池基数 + 提交序号: 同池按出生序, 束成员紧贴宿主 (基数差≥1 ≫ 序号增量)
+        p.order = self.snap.order_arr[tid] + len(self.picks) * 1e-5
+        self.picks.append(p)
+        self.led.used_ids.add(tid)
+        self.led.used_lower.add(self.snap.tag_lower[tid])
+        self.led.used_groups |= self.snap.group_sets[tid]
+        if self.cross_banned:
+            b = self.cross_banned.get(tid)
+            if b:
+                self.led.banned_ids |= b
+        # 性别宣言: 带性别标记的词立锁; 混合人数词 (couple 等) = 锁成 mixed(3),
+        # 两性放行。count 池先抽天然优先, character 轴词同样锁场。
+        gf = self.snap.gender_flag[tid]
+        if self.snap.axis_arr[tid] == "count" and self.snap.tag_lower[tid] in MIXED_COUNT_WORDS:
+            gf = 3
+        if gf and self.led.gender_lock == 0 and self.snap.axis_arr[tid] in ("count", "character", "appearance"):
+            self.led.gender_lock = gf
+        return p
+
+    def attach_bundle(self, host_tid: int, host_order: int, host_cat: str,
+                      host_axis: str) -> int:
+        """给身份词配一条姿势束 + 按概率配件。返回束内 tag 数。"""
+        profs = self.mount_of_tag.get(host_tid)
+        if not profs:
+            return 0
+        if self.led.prop_count >= self.max_prop:
+            return 0
+        self.led.prop_count += 1
+        prof = profs[0]
+        n = 0
+        if self.rng.random() < float(self.cfg.get("bundle_pose_prob", 0.85)) and prof.poses:
+            # 两阶段分配: 先收集全部可行姿势, 按 hands 升序 (同手数随机) ——
+            # 多武器同抽时保证每把先拿"最低手"姿势, 剩余资源才轮到双手姿,
+            # 杜绝"第一把双手占满、第二把裸奔"(repro① 病根)。
+            fitted = [p for p in prof.poses if p.weight > 0
+                      and self._pose_fits(p, self.led)]
+            if fitted:
+                fitted.sort(key=lambda p: (p.hands, self.rng.random()))
+                pose = fitted[0]
+                self._commit_ext(pose, host_order, host_cat, self.picks, self.led)
+                n = len(pose.tags)
+        for ex in prof.extras:
+            if self.rng.random() >= float(self.cfg.get("extra_prob", 0.35)):
+                continue
+            if not self._pose_fits(ex, self.led):
+                continue
+            self._commit_ext(ex, host_order + 0.5, host_cat, self.picks, self.led)
+            n += len(ex.tags)
+        return n
+
+    def _pose_fits(self, pose, led: _Ledger) -> bool:
+        if not self.led.budget_ok(pose.hands, pose.gaze, pose.state_slot_keys,
+                             pose.comp_groups):
+            return False
+        for t in pose.tags:
+            if _norm(t) in self.led.used_lower:
+                return False
+        # 束内自带 implies (库内词, 如 standing): 任一不可用 → 整条束弃
+        for imp in pose.implies:
+            tid = self.snap.tag_id(imp)
+            if tid is None:
+                continue
+            if _norm(imp) in self.led.used_lower:
+                continue
+            if not self.tag_ok(tid):
+                return False
+            if not self.led.cross_ok(tid):
+                return False
+            if self.led.used_groups & self.snap.group_sets[tid]:
+                return False
+        return True
+
+    def _commit_ext(self, pose, host_base_order, host_cat, picks, led: _Ledger) -> None:
+        for j, t in enumerate(pose.tags):
+            self.led.used_lower.add(_norm(t))
+            self.led.used_groups |= pose.comp_groups
+            # 词不在库内时 (ext 词) comp_groups 里没有 grouprules 域 — 按词补查
+            eg = self.snap.en_groups.get(_norm(t))
+            if eg:
+                self.led.used_groups |= eg
+            self.picks.append(Pick(None, t, pose.zh or "", 1.0, False, "",
+                              host_cat, pose.axis,
+                              host_base_order + j * 1e-7,
+                              "ext", f"{pose.pid}:{pose.pose_id}", "bundle",
+                              hands=pose.hands if j == 0 else 0,
+                              gaze=pose.gaze if j == 0 else 0,
+                              is_extra=pose.is_extra))
+        self.led.hands += pose.hands
+        self.led.gaze += pose.gaze
+        for sv in pose.state_slot_keys:
+            k, _, v = sv.partition("=")
+            self.led.states[k] = v
+        for imp in pose.implies:
+            tid = self.snap.tag_id(imp)
+            if tid is None or _norm(imp) in self.led.used_lower:
+                continue
+            if not self.tag_ok(tid) or self.led.used_groups & self.snap.group_sets[tid]:
+                continue
+            self.commit_tag(tid, "implied")
+
+    def _pin_collect(self, tid: int) -> None:
+        if tid is None:
+            return
+        lo = self.snap.tag_lower[tid]
+        if lo in self.led.used_lower or tid in self.led.used_ids:
+            return
+        if self.pin_force:
+            # 重摇钉入: 过 NSFW/未成年/性别闸门, 豁免排除类目
+            if not self.nsfw_on and self.snap.nsfw_flag[tid]:
+                return
+            if self.nsfw_intensity >= 2 and lo in slotpolicy.MINOR_AGE_WORDS:
+                return
+            if self.minor_age and lo in self.minor_block_words:
+                return
+            g = self.snap.gender_flag[tid]
+            if self.gmode == "female" and g == 2:
+                return
+            if self.gmode == "male" and g == 1:
+                return
+            if self.led.gender_lock == 1 and g == 2:
+                return
+            if self.led.gender_lock == 2 and g == 1:
+                return
+        elif not self.tag_ok(tid):
+            return
+        if tid not in self.pinned_tids:
+            self.pinned_tids.append(tid)
+
+    def _int_or(self, val, default):
+        try:
+            return int(val)
+        except (TypeError, ValueError):
+            return default
+
+    def tag_match(self, lo: str, tid: int) -> bool:
+        if not self.search_l:
+            return True
+        if self.search_l in lo or self.search_l in self.snap.tag_zh[tid].lower():
+            return True
+        for a in (self.snap.tag_aliases[tid] or ()):
+            if self.search_l in a.lower():
+                return True
+        return False
+
+    def cat_weight(self, cname: str) -> float:
+        if not self.cat_weights:
+            return 1.0
+        return max(float(self.cat_weights.get(cname, 1.0) or 0.001), 0.001)
+
+    def _slot_available(self, si: int) -> tuple:
+        """该槽位此刻能否抽 + 剩余容量 (已考虑 排除/互斥槽位组/人数语义/配额)。"""
+        sub_key = self.snap.sub_keys[si]
+        cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
+        if cname in self.excl_cats or sub_key in self.excl_keys:
+            return False, 0
+        if slotpolicy.exclusive_group(sub_key) in self.excl_used:
+            return False, 0          # 互斥槽位组: 同组已有槽位出过词
+        if self.count_single is True and sub_key in slotpolicy.MULTI_ONLY_SLOTS:
+            return False, 0          # 单人场景不抽"仅多人成立"的槽位
+        if self.count_no_human and self.snap.pool_axis.get(si) in slotpolicy.NO_HUMAN_SKIP_AXES:
+            return False, 0          # "画面里没有人" -> 不抽身份/外貌/服装
+        # 词 -> 槽位屏蔽: 已抽到 "bare feet" 就不再抽鞋子槽 (跨槽位的矛盾, 配额拦不住)
+        for w, bad_slots in slotpolicy.BLOCK_SLOTS_BY_WORD.items():
+            if sub_key in bad_slots and w in self.led.used_lower:
+                return False, 0
+        if self.master:
+            cap = slotpolicy.caps_for(sub_key)[1]      # max_n
+            if self.nsfw_intensity >= 2:
+                cap += slotpolicy.nsfw_boost(sub_key)  # 纯欲档: NSFW 槽位配额加成
+        else:
+            r = (self.sub_ranges.get(self.sub_ids_str[si]) or {})
+            cap = max(self._int_or(r.get("min"), 1), self._int_or(r.get("max"), 1))
+        return (cap - self.slot_filled.get(si, 0)) > 0, max(cap - self.slot_filled.get(si, 0), 0)
+
+    def _pool_fill(self, si: int, want: int) -> int:
+        """从槽位 si 抽至多 want 个词, 返回实际抽出数。两遍共用。"""
+
+        sub_key = self.snap.sub_keys[si]
+        cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
+        excl_gid = slotpolicy.exclusive_group(sub_key)
+        cands = []
+        for tid in self.pools.get(si, ()):
+            lo = self.snap.tag_lower[tid]
+            if lo in self.led.used_lower or tid in self.led.used_ids:
+                continue
+            if self.bundled_only and tid in self.bundled_only:
+                continue  # 束专属词: 只能经武器档案出生, 池中永不自抽
+            # 槽位 -> 词 屏蔽 (反向): 鞋子槽已出词就不再抽 "bare feet" / "barefoot"
+            _bw = slotpolicy.BLOCK_WORDS_BY_SLOT.get(sub_key)
+            if _bw and lo in _bw:
+                continue
+            if not self.tag_ok(tid):
+                continue  # 动态闸门: 性别锁 (count 词入账后生效)
+            if not self.tag_match(lo, tid):
+                continue
+            # 词级双手预算 (1.8.0): 乳交=2 / 手交·指交=1 —— 手已被武器/姿势占满时
+            # 这类词不再出生, 与档案束共用同一本手账
+            _hcost = self.snap.hands_cost[tid] if tid < len(self.snap.hands_cost) else 0
+            if _hcost and self.led.hands + _hcost > BODY_RESOURCES["hands"]:
+                continue
+            if self.max_props_total > 0 and self.snap.axis_arr[tid] == "prop"                     and self.led.props_lib >= self.max_props_total:
+                continue   # 道具总上限: 封闭场景不再堆杂物 (排除武器的束不在此列)
+            w = (self.snap.base_weights[tid] * self.snap.spawn_rate[tid]
+                 * self.snap.priority_factor[tid] * self.cat_weight(cname))
+            if self.nsfw_factor > 1.0 and self.snap.nsfw_flag[tid]:
+                w *= self.nsfw_factor   # NSFW 强度: 涩词在加权抽样里赢面放大
+                if self.explicit_extra > 1.0 and self.snap.explicit_flag[tid]:
+                    w *= self.explicit_extra   # 行为/解剖级词再乘一层 (防 mild 词稀释)
+            if w <= 0.0001:
+                continue
+            cands.append((self.rng.random() ** (1.0 / max(w, 1e-6)), tid))
+        cands.sort(reverse=True)
+
+        got = 0
+        for _key, tid in cands:
+            if got >= want:
+                break
+            if tid in self.led.used_ids:
+                continue
+            lo = self.snap.tag_lower[tid]
+            if lo in self.led.used_lower:
+                continue
+            # 词级双手预算 (1.8.0) —— 必须在提交时复查: 候选收集阶段的账本值
+            # 是池启动前的快照, 同池先提交的词会改变剩余手数
+            _hcost = self.snap.hands_cost[tid] if tid < len(self.snap.hands_cost) else 0
+            if _hcost and self.led.hands + _hcost > BODY_RESOURCES["hands"]:
+                continue
+            # 道具总上限: 提交时复查 (同手账本, 候选期值过期)
+            if self.max_props_total > 0 and self.snap.axis_arr[tid] == "prop"                     and self.led.props_lib >= self.max_props_total:
+                continue
+            if self.avoid_conflicts:
+                if self.led.used_groups & self.snap.group_sets[tid]:
+                    self.stats["dropped_mutex"] += 1
+                    if len(self.dropped) < 24:
+                        self.dropped.append(tid)
+                    continue
+                if not self.led.cross_ok(tid):
+                    self.stats["dropped_mutex"] += 1
+                    if len(self.dropped) < 24:
+                        self.dropped.append(tid)
+                    continue
+            self.commit_tag(tid)
+            got += 1
+            if self.snap.axis_arr[tid] == "prop":
+                self.led.props_lib += 1
+            if _hcost:
+                self.led.hands += _hcost
+            if excl_gid:
+                self.excl_used.add(excl_gid)
+            if self.snap.axis_arr[tid] == "count":
+                _low = self.snap.tag_lower[tid]
+                if _low in slotpolicy.SINGLE_COUNT_WORDS:
+                    self.count_single = True
+                elif _low in slotpolicy.MULTI_COUNT_WORDS:
+                    self.count_single = False
+                if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
+                    self.count_no_human = True
+            if self.snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
+                self.minor_age = True
+            if self.mount_of_tag.get(tid):
+                n = self.attach_bundle(tid, self.picks[-1].order, cname, self.snap.axis_arr[tid])
+                if n:
+                    self.stats["bundle_attached"] += 1
+            self.slot_filled[si] = self.slot_filled.get(si, 0) + 1
+        return got
+
 def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
              avoid_conflicts: bool = True, search_text: str = "",
              cat_weights: dict | None = None, config: dict | None = None,
@@ -286,84 +668,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     # 必须在 tag_ok 定义前赋值 —— 钉选阶段就会调 tag_ok。
     minor_age = False
 
-    def tag_ok(tid: int) -> bool:
-        """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
-        if not nsfw_on and snap.nsfw_flag[tid]:
-            return False
-        # 纯欲档: 未成年年龄词源头排除 (否则未成年锁触发后整场显式词全灭)
-        if nsfw_intensity >= 2 and snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
-            return False
-        # NSFW 开启时 teen 系模糊年龄词源头排除 (年龄歧义, 成人场景不碰)
-        if nsfw_on and snap.tag_lower[tid] in slotpolicy.TEEN_AGE_WORDS:
-            return False
-        if minor_age and (snap.tag_lower[tid] in minor_block_words):
-            return False
-        g = snap.gender_flag[tid]
-        if gmode == "female" and g == 2:
-            return False
-        if gmode == "male" and g == 1:
-            return False
-        if led.gender_lock == 1 and g == 2:
-            return False
-        if led.gender_lock == 2 and g == 1:
-            return False
-        si = snap.sub_of[tid]
-        cname = snap.cat_names[snap.cat_of_sub[si]]
-        if cname in excl_cats or snap.sub_keys[si] in excl_keys:
-            return False
-        # ---- 场景条闸门 (1.8.1) ----
-        _sk = snap.sub_keys[si]
-        if solo_lock:
-            if snap.axis_arr[tid] == "count"                     and snap.tag_lower[tid] not in slotpolicy.SINGLE_COUNT_WORDS:
-                return False
-            if _sk == "动作姿态/互动与双人":
-                return False
-            # 隐含多人的行为词一并封禁 (1other + gangbang 实测漏网)
-            if snap.tag_lower[tid] in slotpolicy.SOLO_BAN_WORDS:
-                return False
-        if bg_simple:
-            if _sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
-                return False
-            if _sk == "场景环境/背景处理"                     and snap.tag_lower[tid] not in slotpolicy.SIMPLE_BG_WORDS:
-                return False
-        if focus_portrait:
-            if _sk in slotpolicy.PORTRAIT_BAN_SLOTS:
-                return False
-            if _sk == "构图镜头/取景范围"                     and snap.tag_lower[tid] not in slotpolicy.PORTRAIT_FRAMING_WORDS:
-                return False
-        return True
 
-    def make_pick(tid: int, source: str = "random") -> Pick:
-        si = snap.sub_of[tid]
-        ci = snap.cat_of_sub[si]
-        return Pick(tid, _artist_text(snap.tag_text[tid], snap.axis_arr[tid]),
-                    snap.tag_zh[tid],
-                    snap.base_weights[tid], bool(snap.nsfw_flag[tid]),
-                    ("female" if snap.gender_flag[tid] == 1 else
-                     "male" if snap.gender_flag[tid] == 2 else ""),
-                    snap.cat_names[ci], snap.axis_arr[tid], snap.order_arr[tid],
-                    "tag", None, source)
 
-    def commit_tag(tid: int, source: str = "random") -> Pick:
-        p = make_pick(tid, source)
-        # order = 池基数 + 提交序号: 同池按出生序, 束成员紧贴宿主 (基数差≥1 ≫ 序号增量)
-        p.order = snap.order_arr[tid] + len(picks) * 1e-5
-        picks.append(p)
-        led.used_ids.add(tid)
-        led.used_lower.add(snap.tag_lower[tid])
-        led.used_groups |= snap.group_sets[tid]
-        if cross_banned:
-            b = cross_banned.get(tid)
-            if b:
-                led.banned_ids |= b
-        # 性别宣言: 带性别标记的词立锁; 混合人数词 (couple 等) = 锁成 mixed(3),
-        # 两性放行。count 池先抽天然优先, character 轴词同样锁场。
-        gf = snap.gender_flag[tid]
-        if snap.axis_arr[tid] == "count" and snap.tag_lower[tid] in MIXED_COUNT_WORDS:
-            gf = 3
-        if gf and led.gender_lock == 0 and snap.axis_arr[tid] in ("count", "character", "appearance"):
-            led.gender_lock = gf
-        return p
 
     # ---------- 档案索引 ----------
     mount_of_tag: dict[int, list] = {}
@@ -376,133 +682,30 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 mount_of_tag.setdefault(tid, []).append(prof)
     max_prop = int(cfg.get("max_weapons", 2) or 2)
 
-    def attach_bundle(host_tid: int, host_order: int, host_cat: str,
-                      host_axis: str) -> int:
-        """给身份词配一条姿势束 + 按概率配件。返回束内 tag 数。"""
-        profs = mount_of_tag.get(host_tid)
-        if not profs:
-            return 0
-        if led.prop_count >= max_prop:
-            return 0
-        led.prop_count += 1
-        prof = profs[0]
-        my_g = pose_group_of[prof.id]
-        n = 0
-        if rng.random() < float(cfg.get("bundle_pose_prob", 0.85)) and prof.poses:
-            # 两阶段分配: 先收集全部可行姿势, 按 hands 升序 (同手数随机) ——
-            # 多武器同抽时保证每把先拿"最低手"姿势, 剩余资源才轮到双手姿,
-            # 杜绝"第一把双手占满、第二把裸奔"(repro① 病根)。
-            fitted = [p for p in prof.poses if p.weight > 0
-                      and _pose_fits(p, led)]
-            if fitted:
-                fitted.sort(key=lambda p: (p.hands, rng.random()))
-                pose = fitted[0]
-                _commit_ext(pose, host_order, host_cat, picks, led)
-                n = len(pose.tags)
-        for ex in prof.extras:
-            if rng.random() >= float(cfg.get("extra_prob", 0.35)):
-                continue
-            if not _pose_fits(ex, led):
-                continue
-            _commit_ext(ex, host_order + 0.5, host_cat, picks, led)
-            n += len(ex.tags)
-        return n
 
-    def _pose_fits(pose, led: _Ledger) -> bool:
-        if not led.budget_ok(pose.hands, pose.gaze, pose.state_slot_keys,
-                             pose.comp_groups):
-            return False
-        for t in pose.tags:
-            if _norm(t) in led.used_lower:
-                return False
-        # 束内自带 implies (库内词, 如 standing): 任一不可用 → 整条束弃
-        for imp in pose.implies:
-            tid = snap.tag_id(imp)
-            if tid is None:
-                continue
-            if _norm(imp) in led.used_lower:
-                continue
-            if not tag_ok(tid):
-                return False
-            if not led.cross_ok(tid):
-                return False
-            if led.used_groups & snap.group_sets[tid]:
-                return False
-        return True
 
-    def _commit_ext(pose, host_base_order, host_cat, picks, led: _Ledger) -> None:
-        for j, t in enumerate(pose.tags):
-            led.used_lower.add(_norm(t))
-            led.used_groups |= pose.comp_groups
-            # 词不在库内时 (ext 词) comp_groups 里没有 grouprules 域 — 按词补查
-            eg = snap.en_groups.get(_norm(t))
-            if eg:
-                led.used_groups |= eg
-            picks.append(Pick(None, t, pose.zh or "", 1.0, False, "",
-                              host_cat, pose.axis,
-                              host_base_order + j * 1e-7,
-                              "ext", f"{pose.pid}:{pose.pose_id}", "bundle",
-                              hands=pose.hands if j == 0 else 0,
-                              gaze=pose.gaze if j == 0 else 0,
-                              is_extra=pose.is_extra))
-        led.hands += pose.hands
-        led.gaze += pose.gaze
-        for sv in pose.state_slot_keys:
-            k, _, v = sv.partition("=")
-            led.states[k] = v
-        for imp in pose.implies:
-            tid = snap.tag_id(imp)
-            if tid is None or _norm(imp) in led.used_lower:
-                continue
-            if not tag_ok(tid) or led.used_groups & snap.group_sets[tid]:
-                continue
-            commit_tag(tid, "implied")
 
     # ---------- 0. 钉选 ----------
     # 两代格式汇成一表, count 轴钉选先入账 (性别宣言先锁场再抽其余)
     pinned_tids: list[int] = []
+    # 闭包群已提取成 _Extraction: 早期状态走构造函数, 后算出来的状态在下面交回
+    ex = _Extraction(avoid_conflicts, bg_simple, cat_weights, cfg, cross_banned, dropped, excl_cats, excl_keys, explicit_extra, focus_portrait, gmode, led, max_prop, max_props_total, minor_age, minor_block_words, mount_of_tag, nsfw_factor, nsfw_intensity, nsfw_on, picks, pin_force, pinned_tids, rng, snap, solo_lock)
+
     pinned_sub_count: dict[int, int] = {}
 
-    def _pin_collect(tid: int) -> None:
-        if tid is None:
-            return
-        lo = snap.tag_lower[tid]
-        if lo in led.used_lower or tid in led.used_ids:
-            return
-        if pin_force:
-            # 重摇钉入: 过 NSFW/未成年/性别闸门, 豁免排除类目
-            if not nsfw_on and snap.nsfw_flag[tid]:
-                return
-            if nsfw_intensity >= 2 and lo in slotpolicy.MINOR_AGE_WORDS:
-                return
-            if minor_age and lo in minor_block_words:
-                return
-            g = snap.gender_flag[tid]
-            if gmode == "female" and g == 2:
-                return
-            if gmode == "male" and g == 1:
-                return
-            if led.gender_lock == 1 and g == 2:
-                return
-            if led.gender_lock == 2 and g == 1:
-                return
-        elif not tag_ok(tid):
-            return
-        if tid not in pinned_tids:
-            pinned_tids.append(tid)
 
     for t in (state.get("tags") or []):
         if not isinstance(t, dict) or not t.get("pinned"):
             continue
-        _pin_collect(snap.en_to_id.get(_lib_key(t.get("en"))))
+        ex._pin_collect(snap.en_to_id.get(_lib_key(t.get("en"))))
     for pid in (state.get("pinned") or []):
-        _pin_collect(snap.orig_id_to_int.get(str(pid)))
+        ex._pin_collect(snap.orig_id_to_int.get(str(pid)))
     pinned_tids.sort(key=lambda tid: 0 if snap.axis_arr[tid] == "count" else 1)
     for tid in pinned_tids:
-        commit_tag(tid, "pinned")
+        ex.commit_tag(tid, "pinned")
         pinned_sub_count[snap.sub_of[tid]] = pinned_sub_count.get(snap.sub_of[tid], 0) + 1
         if mount_of_tag.get(tid):
-            attach_bundle(tid, picks[-1].order,
+            ex.attach_bundle(tid, picks[-1].order,
                           snap.cat_names[snap.cat_of_sub[snap.sub_of[tid]]],
                           snap.axis_arr[tid])
 
@@ -513,14 +716,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     master = state.get("fill_master")
     master = True if master is None else bool(master)
 
-    def _int_or(val, default):
-        try:
-            return int(val)
-        except (TypeError, ValueError):
-            return default
 
-    mlo = _int_or(state.get("fill_master_min"), 1)
-    mhi = _int_or(state.get("fill_master_max"), 1)
     sub_ranges = state.get("fill_sub_ranges") or {}
     sub_ids_str = snap.sub_ids_str
 
@@ -537,20 +733,7 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     search_l = search_text.strip().lower()
     bundled_only = snap.bundled_only
 
-    def tag_match(lo: str, tid: int) -> bool:
-        if not search_l:
-            return True
-        if search_l in lo or search_l in snap.tag_zh[tid].lower():
-            return True
-        for a in (snap.tag_aliases[tid] or ()):
-            if search_l in a.lower():
-                return True
-        return False
 
-    def cat_weight(cname: str) -> float:
-        if not cat_weights:
-            return 1.0
-        return max(float(cat_weights.get(cname, 1.0) or 0.001), 0.001)
 
     # ---------- 1+2. 逐池抽取 (prop 池抽完立即配束) ----------
     stats = {"bundle_attached": 0, "dropped_mutex": 0, "dropped_resource": 0}
@@ -573,126 +756,25 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     slot_filled: dict[int, int] = {si: pinned_sub_count.get(si, 0) for si in pool_ids}
 
-    def _slot_available(si: int) -> tuple:
-        """该槽位此刻能否抽 + 剩余容量 (已考虑 排除/互斥槽位组/人数语义/配额)。"""
-        sub_key = snap.sub_keys[si]
-        cname = snap.cat_names[snap.cat_of_sub[si]]
-        if cname in excl_cats or sub_key in excl_keys:
-            return False, 0
-        if slotpolicy.exclusive_group(sub_key) in excl_used:
-            return False, 0          # 互斥槽位组: 同组已有槽位出过词
-        if count_single is True and sub_key in slotpolicy.MULTI_ONLY_SLOTS:
-            return False, 0          # 单人场景不抽"仅多人成立"的槽位
-        if count_no_human and snap.pool_axis.get(si) in slotpolicy.NO_HUMAN_SKIP_AXES:
-            return False, 0          # "画面里没有人" -> 不抽身份/外貌/服装
-        # 词 -> 槽位屏蔽: 已抽到 "bare feet" 就不再抽鞋子槽 (跨槽位的矛盾, 配额拦不住)
-        for w, bad_slots in slotpolicy.BLOCK_SLOTS_BY_WORD.items():
-            if sub_key in bad_slots and w in led.used_lower:
-                return False, 0
-        if master:
-            cap = slotpolicy.caps_for(sub_key)[1]      # max_n
-            if nsfw_intensity >= 2:
-                cap += slotpolicy.nsfw_boost(sub_key)  # 纯欲档: NSFW 槽位配额加成
-        else:
-            r = (sub_ranges.get(sub_ids_str[si]) or {})
-            cap = max(_int_or(r.get("min"), 1), _int_or(r.get("max"), 1))
-        return (cap - slot_filled.get(si, 0)) > 0, max(cap - slot_filled.get(si, 0), 0)
+    # 后算出来的状态交回实例 (方法里读 self.*)
+    ex.bundled_only = bundled_only
+    ex.count_no_human = count_no_human
+    ex.count_single = count_single
+    ex.excl_used = excl_used
+    ex.master = master
+    ex.minor_age = minor_age
+    ex.pools = pools
+    ex.search_l = search_l
+    ex.slot_filled = slot_filled
+    ex.stats = stats
+    ex.sub_ids_str = sub_ids_str
+    ex.sub_ranges = sub_ranges
 
-    def _pool_fill(si: int, want: int) -> int:
-        """从槽位 si 抽至多 want 个词, 返回实际抽出数。两遍共用。"""
-        nonlocal count_single, count_no_human, minor_age
-        sub_key = snap.sub_keys[si]
-        cname = snap.cat_names[snap.cat_of_sub[si]]
-        excl_gid = slotpolicy.exclusive_group(sub_key)
-        cands = []
-        for tid in pools.get(si, ()):
-            lo = snap.tag_lower[tid]
-            if lo in led.used_lower or tid in led.used_ids:
-                continue
-            if bundled_only and tid in bundled_only:
-                continue  # 束专属词: 只能经武器档案出生, 池中永不自抽
-            # 槽位 -> 词 屏蔽 (反向): 鞋子槽已出词就不再抽 "bare feet" / "barefoot"
-            _bw = slotpolicy.BLOCK_WORDS_BY_SLOT.get(sub_key)
-            if _bw and lo in _bw:
-                continue
-            if not tag_ok(tid):
-                continue  # 动态闸门: 性别锁 (count 词入账后生效)
-            if not tag_match(lo, tid):
-                continue
-            # 词级双手预算 (1.8.0): 乳交=2 / 手交·指交=1 —— 手已被武器/姿势占满时
-            # 这类词不再出生, 与档案束共用同一本手账
-            _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
-            if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
-                continue
-            if max_props_total > 0 and snap.axis_arr[tid] == "prop"                     and led.props_lib >= max_props_total:
-                continue   # 道具总上限: 封闭场景不再堆杂物 (排除武器的束不在此列)
-            w = (snap.base_weights[tid] * snap.spawn_rate[tid]
-                 * snap.priority_factor[tid] * cat_weight(cname))
-            if nsfw_factor > 1.0 and snap.nsfw_flag[tid]:
-                w *= nsfw_factor   # NSFW 强度: 涩词在加权抽样里赢面放大
-                if explicit_extra > 1.0 and snap.explicit_flag[tid]:
-                    w *= explicit_extra   # 行为/解剖级词再乘一层 (防 mild 词稀释)
-            if w <= 0.0001:
-                continue
-            cands.append((rng.random() ** (1.0 / max(w, 1e-6)), tid))
-        cands.sort(reverse=True)
 
-        got = 0
-        for _key, tid in cands:
-            if got >= want:
-                break
-            if tid in led.used_ids:
-                continue
-            lo = snap.tag_lower[tid]
-            if lo in led.used_lower:
-                continue
-            # 词级双手预算 (1.8.0) —— 必须在提交时复查: 候选收集阶段的账本值
-            # 是池启动前的快照, 同池先提交的词会改变剩余手数
-            _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
-            if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
-                continue
-            # 道具总上限: 提交时复查 (同手账本, 候选期值过期)
-            if max_props_total > 0 and snap.axis_arr[tid] == "prop"                     and led.props_lib >= max_props_total:
-                continue
-            if avoid_conflicts:
-                if led.used_groups & snap.group_sets[tid]:
-                    stats["dropped_mutex"] += 1
-                    if len(dropped) < 24:
-                        dropped.append(tid)
-                    continue
-                if not led.cross_ok(tid):
-                    stats["dropped_mutex"] += 1
-                    if len(dropped) < 24:
-                        dropped.append(tid)
-                    continue
-            commit_tag(tid)
-            got += 1
-            if snap.axis_arr[tid] == "prop":
-                led.props_lib += 1
-            if _hcost:
-                led.hands += _hcost
-            if excl_gid:
-                excl_used.add(excl_gid)
-            if snap.axis_arr[tid] == "count":
-                _low = snap.tag_lower[tid]
-                if _low in slotpolicy.SINGLE_COUNT_WORDS:
-                    count_single = True
-                elif _low in slotpolicy.MULTI_COUNT_WORDS:
-                    count_single = False
-                if _low in slotpolicy.NO_HUMAN_COUNT_WORDS:
-                    count_no_human = True
-            if snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
-                minor_age = True
-            if mount_of_tag.get(tid):
-                n = attach_bundle(tid, picks[-1].order, cname, snap.axis_arr[tid])
-                if n:
-                    stats["bundle_attached"] += 1
-            slot_filled[si] = slot_filled.get(si, 0) + 1
-        return got
 
     # ---- 第 1 遍: 按逐槽位配额抽 (取代原先"每槽位都抽 mlo~mhi 个") ----
     for si in pool_ids:
-        ok, room = _slot_available(si)
+        ok, room = ex._slot_available(si)
         if not ok:
             continue
         sub_key = snap.sub_keys[si]
@@ -703,8 +785,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 mn += slotpolicy.nsfw_min_boost(sub_key)   # 保底: 性行为/服装状态至少 1
         else:
             r = (sub_ranges.get(sub_ids_str[si]) or {})
-            a = _int_or(r.get("min"), 1)
-            b = _int_or(r.get("max"), 1)
+            a = ex._int_or(r.get("min"), 1)
+            b = ex._int_or(r.get("max"), 1)
             mn, mx = min(a, b), max(a, b)
         used_n = pinned_sub_count.get(si, 0)
         mn, mx = max(0, mn - used_n), max(0, mx - used_n)
@@ -715,11 +797,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         # 偏向配额上限: 逐槽位全取 randint 会让总量偏低 (实测均值 36 词),
         # 多数情况直接取满, 落进目标带。
         want = hi_ if (hi_ > lo_ and rng.random() < 0.65) else rng.randint(lo_, hi_)
-        _pool_fill(si, want)
+        ex._pool_fill(si, want)
 
     # ---- 第 2 遍 (补底): 总量不足 total_min 时, 从仍有余量的槽位各补 1 个 ----
     # 只补到下限为止, 不改变"哪些槽位能出"的判定 (排除/互斥组/人数语义照旧生效)。
-    tmin = _int_or(state.get("total_min") or cfg.get("total_min"), 0)
+    tmin = ex._int_or(state.get("total_min") or cfg.get("total_min"), 0)
     if tmin and len(picks) < tmin:
         # 多轮补: 单轮每槽只补 1 个, 而部分槽位首轮候选全被互斥/性别闸门挡掉;
         # 再跑一轮时 rng 已推进、已选集合也变了, 能拿到别的候选。
@@ -731,10 +813,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             for si in pool_ids:
                 if len(picks) >= tmin:
                     break
-                ok, _room = _slot_available(si)
+                ok, _room = ex._slot_available(si)
                 if not ok:
                     continue
-                if _pool_fill(si, 1):
+                if ex._pool_fill(si, 1):
                     progressed = True
             if not progressed:
                 break

@@ -79,9 +79,8 @@ def f2_solo():
 
 def f3_simple_bg():
     print("F3 场景条·简洁背景")
-    from slotpolicy import SIMPLE_BG_WORDS, SIMPLE_BG_BAN_SLOTS  # noqa: E402
     st = {**BASE_ST, "bg_mode": "simple"}
-    env_hits = bg_off = 0
+    env_hits = 0
     for seed in range(30):
         d = draw(st, seed)
         for p in d["picks"]:
@@ -109,7 +108,7 @@ def f4_portrait():
     # 用离线快照精确断言槽位 (真机与离线同库)
     import library as _lib
     import runtime_snapshot as _rs
-    snap = _rs.get_snapshot(_lib.get_merged())
+    _rs.get_snapshot(_lib.get_merged())
     bad = 0
     for seed in range(30):
         d = draw(st, seed)
@@ -128,7 +127,7 @@ def f5_intensity():
                 "bottomless", "topless", "masturbation", "female masturbation",
                 "pussy", "penis", "erection", "pussy juice", "ahegao", "bound",
                 "shibari", "groping", "clothed sex"}
-    means, hit = [], 0
+    means = []
     for inten in (0, 1, 2):
         st = {**BASE_ST, "nsfw_intensity": inten} if inten else dict(BASE_ST)
         counts = []

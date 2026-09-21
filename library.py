@@ -23,9 +23,11 @@ import time
 from typing import Any
 
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
+    from . import jsonio
     from . import tagfiles
     from . import schema
 except ImportError:  # pragma: no cover
+    import jsonio
     import tagfiles
     import schema
 
@@ -412,11 +414,7 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
                            **payload.get("settings", {})}
         out.pop("_meta", None)
 
-        os.makedirs(DATA_DIR, exist_ok=True)
-        tmp = USER_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(out, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, USER_PATH)
+        jsonio.atomic_write_json(USER_PATH, out)
         invalidate_cache()
         return {"ok": True, "mtime": _mtime(USER_PATH), "tombstones": len(new_tombs)}
 
@@ -441,7 +439,6 @@ def _apply_folder_deletions(base: dict, missing_rels: list[str]) -> int:
     删除前快照到 data/备份库/_trash/ (带时间戳), 可手动找回。
     返回删除的分类数 (整分类删才计 1; 子分类删除随文件处理)。
     """
-    import shutil
     trash = os.path.join(os.path.dirname(DEFAULT_PATH), "backups", "_trash")
     n_cat = 0
     touched_cats = set()
@@ -637,6 +634,20 @@ def hot_sync_now() -> None:
     读库 (`get_merged`) 不再触发它。
     """
     _folder_hot_sync()
+
+
+def mirror_folder_now() -> None:
+    """库 -> 文件夹实时同步 (分类/子分类增删改名、导入、重置后调用)。失败不影响请求。
+
+    以前挂在 `api/_common.py` 里, 让"路由公共层"背上了业务依赖 (§3.2): 它本来就只调
+    library + tagfiles, 挪回 library 之后 `_common` 里只剩常量和无业务工具。
+    """
+    try:
+        lib_key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
+        tagfiles.sync_to_folder(get_merged())
+        tagfiles.mark_synced(lib_key=lib_key)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def invalidate_cache() -> None:

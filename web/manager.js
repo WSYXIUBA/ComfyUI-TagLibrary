@@ -1463,7 +1463,7 @@ ${TPL_RULES}
         </div>
       </details>
 
-      <div style="text-align:right;margin-top:10px;"><button id="bt-close" class="btn">关闭</button></div>
+      <div style="position:sticky;bottom:0;background:#1a1d24;text-align:right;margin-top:10px;padding:8px 0;"><button id="bt-close" class="btn">关闭</button></div>
     `;
     document.body.appendChild(dlg);
     dlg.querySelector("#bt-close").onclick = () => dlg.close();
@@ -1583,6 +1583,10 @@ ${TPL_RULES}
         out.appendChild(row);
       }
     };
+
+    // ⚠ 必须 showModal() —— 原生 <dialog> 不调它就一直 display:none。
+    //   这个弹层从 1.8.0 上线起就没显示过: 「🧰 批量工具」点了毫无反应。
+    dlg.showModal();
   }
   $("#btnBulkTools").onclick = openBulkTools;
 

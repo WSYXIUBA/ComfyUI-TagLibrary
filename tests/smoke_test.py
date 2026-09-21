@@ -29,6 +29,8 @@ def clean_user_lib() -> None:
     try:
         import tagfiles
         tagfiles.LIBRARY_DIR = os.path.join(_SANDBOX, "标签库")
+        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+        tagparse.LIBRARY_DIR = os.path.join(_SANDBOX, "标签库")
     except Exception:
         pass
     library.invalidate_cache()
@@ -274,8 +276,6 @@ def main() -> None:
 
     # ---- NSFW 过滤三态 (用户库导入后有真实 nsfw 标签: 取一个 nsfw en 做样本)
     lib_n = library.get_merged()
-    nsfw_en = next((t.get("en") for _, cn in TagLibraryNode._flat(lib_n)
-                    for t in [] if False), None)
     flat_pairs = TagLibraryNode._flat(lib_n)
     nsfw_sample = None
     for t, _cn in flat_pairs:
@@ -382,9 +382,6 @@ def main() -> None:
             state_r = json.dumps({
                 "fill_master": True, "fill_master_min": 1, "fill_master_max": 1,
                 "exclude_categories": ["人物主体"]})
-            big_ens = {t.get("en", "").lower()
-                       for s in subj_cat.get("subcategories", [])
-                       for t in s.get("tags", [])}
             # 同名标签可能存在于多个分类 (如 dappled moonlight 双处),
             # 泄漏判定 = 输出含【只在人物主体】的独有标签
             flat_all = TagLibraryNode._flat(library.get_merged())

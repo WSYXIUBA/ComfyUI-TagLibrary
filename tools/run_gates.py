@@ -27,6 +27,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TESTS = os.path.join(ROOT, "tests")
@@ -49,6 +50,7 @@ OFFLINE = [
     ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
     ("tag_edit_test", "标签就地编辑 (推导/新增/改字段/校验拒绝/首页分段/待完善)"),
     ("sync_idempotent_test", "文件夹镜像幂等性 (.md 收敛 / 标记往返不丢字段)"),
+    ("lint_check", "死代码门禁 (ruff: 死导入 / 重复定义 / 死变量)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
 ]
 
@@ -106,6 +108,25 @@ def _run(name: str) -> tuple[int, str]:
     return p.returncode, (p.stdout or "") + (p.stderr or "")
 
 
+# 环境性抖动 (跟被测代码无关, 重跑一次就好) —— 命中就在门禁层重试一轮:
+#   · 扩展的 MV3 service worker 被浏览器回收: "Detached while handling command"
+#   · 桥/扩展忙不过来: "桥无响应" / "[TIMEOUT]"
+# 只重试一次, 且重试结果会打印出来, 不让它掩盖真问题。
+FLAKY_MARKERS = ("Detached while handling command", "桥无响应", "[TIMEOUT]",
+                 "还没有受控标签页")
+
+
+def _run_with_flake_retry(name: str) -> tuple[int, str, bool]:
+    rc, out = _run(name)
+    if rc == 0 or not any(m in out for m in FLAKY_MARKERS):
+        return rc, out, False
+    time.sleep(3)
+    rc2, out2 = _run(name)
+    if rc2 == 0:
+        return 0, out2 + "\n(注: 首轮命中环境性抖动, 重试后通过)", True
+    return rc2, out2, True
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(add_help=True)
     ap.add_argument("filters", nargs="*", help="只跑名字含这些关键字的门禁")
@@ -131,10 +152,11 @@ def main() -> int:
     results: list[tuple[str, bool, str]] = []
     try:
         for name, desc in gates:
-            code, out = _run(name)
+            code, out, retried = _run_with_flake_retry(name)
             ok = code == 0
             results.append((name, ok, out))
-            print(f"{'PASS' if ok else 'FAIL'}  {name:<24} {desc}")
+            note = " (首轮抖动, 重试通过)" if (ok and retried) else ""
+            print(f"{'PASS' if ok else 'FAIL'}  {name:<24} {desc}{note}")
             if not ok:
                 tail = "\n".join(out.strip().splitlines()[-12:])
                 print("      " + tail.replace("\n", "\n      "))

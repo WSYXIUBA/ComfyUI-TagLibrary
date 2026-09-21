@@ -49,7 +49,7 @@ def main() -> int:
 
     print("\n[快照编译]")
     rs.invalidate_snapshot()
-    snap = bench("get_snapshot() 冷", lambda: rs.get_snapshot(library.get_merged()), 1)
+    bench("get_snapshot() 冷", lambda: rs.get_snapshot(library.get_merged()), 1)
     bench("get_snapshot() 热", lambda: rs.get_snapshot(library.get_merged()), 3)
 
     print("\n[抽取引擎]")

@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import tagconflicts
 import tagfiles
+import tagparse
 
 PASS, FAIL = [], []
 
@@ -47,6 +48,8 @@ def main():
     tmp = tempfile.mkdtemp(prefix="taglib_conf_")
     # 沙箱: 指到临时目录
     tagfiles.LIBRARY_DIR = tmp
+    # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+    tagparse.LIBRARY_DIR = tmp
     tagconflicts.CONFLICTS_PATH = os.path.join(tmp, "conflicts.json")
     tagconflicts.LEGACY_GROUPS_PATH = os.path.join(tmp, "legacy_groups.json")  # 沙箱, 不碰真实旧文件
     tagconflicts.invalidate()
@@ -71,9 +74,9 @@ def main():
             json.dump({"version": 1, "groups": [
                 {"id": "mouth", "name": "嘴部", "tags": ["open mouth", "closed mouth", "smirk"]}]},
                 f, ensure_ascii=False)
-        rules2 = tagconflicts.load_rules()
+        tagconflicts.load_rules()
         tagconflicts.invalidate()
-        rules2 = tagconflicts.load_rules()
+        tagconflicts.load_rules()
         # 迁移只在 _fresh_payload (文件不存在) 时发生 → 这里手动触发
         merged = tagconflicts._migrate_legacy_groups()
         check("旧组转规则", len(merged) == 1 and merged[0]["left"]["kind"] == "tags"

@@ -7,11 +7,12 @@ import os
 
 from aiohttp import web
 
+from .. import jsonio
 from .. import library
 from .. import tagfiles
 from ._common import (
     _WEB_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
-    UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, _json_response, _mirror_folder,
+    UPGRADE_PROMPT_PATH, LEGACY_BACKUP_PATH, _json_response,
 )
 
 
@@ -201,7 +202,7 @@ async def save_library(request: web.Request) -> web.Response:
             payload,
             client_mtime=float(client_mtime) if client_mtime else None,
         )
-        _mirror_folder()  # 实时镜像: 分类/子分类增删改名即刻落到 data/taglib/
+        library.mirror_folder_now()  # 实时镜像: 分类/子分类增删改名即刻落到 data/taglib/
         return _json_response(result)
     except library.LibraryError as exc:
         return _json_response({"ok": False, "error": str(exc)}, 409)
@@ -216,12 +217,8 @@ async def reset_library(_request: web.Request) -> web.Response:
     下次导入模板/管理页保存会自动退出空库状态。
     """
     try:
-        os.makedirs(library.DEFAULT_DATA_DIR, exist_ok=True)
         cleared = {"version": 1, "categories": [], "_cleared": True, "_tombstones": []}
-        tmp = library.USER_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(cleared, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, library.USER_PATH)
+        jsonio.atomic_write_json(library.USER_PATH, cleared)
         library.invalidate_cache()
         # taglib 镜像文件夹同步清空 (删除全部分类文件夹, 保留 _ 开头文件与 conflicts.json)
         keep = {"conflicts.json", "_sync_state.json", "_说明.md"}
@@ -254,10 +251,7 @@ async def backup_library(_request: web.Request) -> web.Response:
         lib = library.get_merged()
         lib.pop("_meta", None)
         os.makedirs(BACKUP_DIR, exist_ok=True)
-        tmp = USER_BACKUP_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(lib, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, USER_BACKUP_PATH)
+        jsonio.atomic_write_json(USER_BACKUP_PATH, lib)
         # 用户备份不存在时 (首次点存为默认库), 出厂备份尚未生成 → 从当前默认库补生成
         if not os.path.isfile(FACTORY_BACKUP_PATH) and os.path.isfile(LEGACY_BACKUP_PATH):
             try:
@@ -324,7 +318,7 @@ async def restore_backup(_request: web.Request) -> web.Response:
         if not isinstance(data.get("categories"), list):
             raise ValueError("备份文件缺少 categories")
         library.save_user_library(data)
-        _mirror_folder()
+        library.mirror_folder_now()
         # 恢复成功 → 升级弹窗使命完成, 销毁标记
         try:
             if os.path.isfile(UPGRADE_PROMPT_PATH):
@@ -360,10 +354,7 @@ async def save_settings(request: web.Request) -> web.Response:
     user_raw = library.load_user_raw()
     if user_raw.get("_cleared"):
         user_raw["settings"] = {**(user_raw.get("settings") or {}), **incoming}
-        tmp = library.USER_PATH + ".tmp"
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump(user_raw, f, ensure_ascii=False, indent=1)
-        os.replace(tmp, library.USER_PATH)
+        jsonio.atomic_write_json(library.USER_PATH, user_raw)
         library.invalidate_cache()
     else:
         merged = json.loads(json.dumps(library.get_merged()))

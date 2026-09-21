@@ -31,7 +31,12 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                    padding:6px 12px; outline:none; font-size:12.5px; }
       .tp-search:focus { border-color:color-mix(in srgb, var(--tl-accent) 60%, transparent); }
       .tp-cols { flex:1; display:flex; min-height:0; }
-      .tp-cats { width:200px; border-right:1px solid var(--tl-border); overflow-y:auto;
+      /* ⚠ 视图必须 flex:1 吃满弹窗 —— 不给的话它按内容宽收缩, 首页那条流水线
+         只占一半宽度, 右边一大片空白 (用户报的"利用率不高, 都是空白")。 */
+      .tp-cats ~ section, .tp-homeview { flex:1 1 auto; min-width:0; }
+      /* ⚠ 必须 flex:0 0 200px —— 只写 width 的话, 兄弟视图 flex:1 会把它压成
+         38px (左侧栏被挤扁, 用户报过)。 */
+      .tp-cats { flex:0 0 200px; width:200px; border-right:1px solid var(--tl-border); overflow-y:auto;
                  padding:10px; display:flex; flex-direction:column; gap:4px; }
       .tp-cat { display:flex; align-items:center; gap:7px; padding:7px 10px; border-radius:9px;
                 cursor:pointer; border:1px solid transparent; transition:.12s; color:var(--tl-text-2); }
@@ -1797,7 +1802,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (tab === "pick") {
       info.innerHTML = `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`;
     } else if (tab === "home") {
-      info.innerHTML = `🏠 流水线首页 · 按官方六段次序 · 点方框放大, 再点进入该类目`;
+      info.innerHTML = `🏠 流水线首页 · 按官方六段次序 · 点入口直接进该类目`;
     } else if (tab === "prof") {
       info.innerHTML = `⚔ 姿势只能随武器出生 · 改档案保存即生效`;
     } else if (tab === "grp") {

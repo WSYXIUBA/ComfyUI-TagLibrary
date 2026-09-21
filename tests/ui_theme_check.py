@@ -6,99 +6,23 @@ python tests/ui_theme_check.py
 退出码 0 = 全部断言通过。
 """
 
-import base64
 import json
 import os
 import sys
 import time
-import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = HERE
 
-_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+# 浏览器层 = huashu-chrome 桥 (驱动用户自己的 Edge), 不再自己拉调试用 Edge。
+# 为什么换、有哪些坑, 见 tests/_ui_bridge.py 顶部。
+sys.path.insert(0, HERE)
+from _ui_bridge import ensure_bridge, wait_app  # noqa: E402
 
+# 期望值 (深/浅两套主题的 --tl-bg / 弹窗底色, 与 tagpanel-css.js 对齐)
 DARK_BG = "rgba(23,23,24,0.94)"
 LIGHT_BG = "rgba(255,255,255,0.96)"
 LIGHT_DIALOG = "rgb(255, 255, 255)"
-
-
-def http_json(path, method="GET"):
-    r = urllib.request.Request("http://127.0.0.1:9222" + path, method=method)
-    return json.loads(_OPENER.open(r, timeout=5).read())
-
-
-class CDP:
-    def __init__(self, tab):
-        self.tab = tab
-        self.ws = None
-        self.mid = 0
-
-    def connect(self):
-        from websocket import create_connection
-        if self.ws:
-            try:
-                self.ws.close()
-            except Exception:
-                pass
-        self.ws = create_connection(self.tab["webSocketDebuggerUrl"],
-                                    timeout=25, suppress_origin=True)
-
-    def cmd(self, method, **params):
-        for _ in range(3):
-            try:
-                if not self.ws:
-                    self.connect()
-                self.mid += 1
-                mid = self.mid
-                self.ws.send(json.dumps({"id": mid, "method": method,
-                                         "params": params}))
-                while True:
-                    m = json.loads(self.ws.recv())
-                    if m.get("id") == mid:
-                        return m.get("result", {})
-            except Exception:
-                self.ws = None
-                time.sleep(1.5)
-        raise RuntimeError("CDP 三连失败: " + method)
-
-    def ev(self, expr):
-        r = self.cmd("Runtime.evaluate", expression=expr,
-                     returnByValue=True, awaitPromise=True)
-        if r.get("exceptionDetails"):
-            return "EXC:" + str(r["exceptionDetails"].get("exception", {})
-                                .get("description", ""))[:200]
-        return r.get("result", {}).get("value")
-
-    def shot(self, name):
-        r = self.cmd("Page.captureScreenshot", format="png")
-        with open(os.path.join(OUT, name), "wb") as f:
-            f.write(base64.b64decode(r["data"]))
-        return name
-
-
-def ensure_browser():
-    import subprocess
-    try:
-        http_json("/json/version")
-        return
-    except Exception:
-        pass
-    exe = next((p for p in (r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-                            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe")
-                if os.path.exists(p)), None)
-    subprocess.Popen([exe, "--remote-debugging-port=9222",
-                      r"--user-data-dir=C:\EdgeForHermes",
-                      "--no-proxy-server", "--no-first-run", "about:blank"],
-                     creationflags=0x208)
-    for _ in range(15):
-        time.sleep(1.5)
-        try:
-            http_json("/json/version")
-            return
-        except Exception:
-            pass
-    raise RuntimeError("9222 起不来")
 
 
 PROBE = """(() => {
@@ -118,26 +42,34 @@ PROBE = """(() => {
     dlgText: d ? d.color : null,
     dlgLight: dlg ? dlg.classList.contains('tl-light') : null,
     catText: cat ? cs(cat).color : null,
-    topbarBg: (() => {
-      const b = document.getElementById('taglib-topbar-btn');
-      return b ? cs(b).backgroundColor : null;
-    })(),
-    topbarText: (() => {
-      const b = document.getElementById('taglib-topbar-btn');
-      return b ? cs(b).color : null;
-    })(),
   });
 })()"""
 
 
-def set_theme(cdp, light: bool):
-    """切换 ComfyUI 主题: 官方用 html.dark-theme 类区分明暗, 配色 id 存设置里。"""
-    pid = "light" if light else "dark"
+def get_palette(cdp, tab=None):
+    """读用户当前的配色 id (要还原的东西)。"""
+    return cdp.ev("(() => { try { return window.app.extensionManager.setting"
+                  ".get('Comfy.ColorPalette'); } catch(e) { return null; } })()", tab)
+
+
+def set_palette(cdp, pid: str, tab=None):
+    """设置配色。
+
+    ⚠ 这个设置是**写进用户 `user/default/comfy.settings.json`** 的 —— 门禁切主题
+    会把用户自己的配色 (例如 github) 覆盖掉, 跑完**必须还原** (2026-09-19 真踩过,
+    用户当天就发现了)。
+    """
     cdp.ev(f"""(() => {{
       try {{ window.app.extensionManager.setting.set('Comfy.ColorPalette', '{pid}'); }} catch(e) {{}}
-      document.documentElement.classList.toggle('dark-theme', {str(not light).lower()});
       return 'ok';
-    }})()""")
+    }})()""", tab)
+
+
+def set_theme(cdp, light: bool, tab=None):
+    """切到深/浅色: 官方用 html.dark-theme 类区分明暗, 配色 id 存设置里。"""
+    pid = "light" if light else "dark"
+    set_palette(cdp, pid, tab)
+    cdp.ev(f"document.documentElement.classList.toggle('dark-theme', {str(not light).lower()})", tab)
     time.sleep(1.2)   # 等 MutationObserver -> applyTheme
 
 
@@ -149,32 +81,28 @@ def check(label, got, cond, errs):
     return ok
 
 
-def main():
-    ensure_browser()
-    old = [t for t in http_json("/json/list") if t.get("type") == "page"]
-    http_json("/json/new?url=about:blank", method="PUT")
-    time.sleep(1)
-    for t in old:
-        try:
-            http_json("/json/close/" + t["id"])
-        except Exception:
-            pass
-    tab = next(t for t in http_json("/json/list") if t["type"] == "page")
-    cdp = CDP(tab)
-    cdp.cmd("Page.navigate", url="http://127.0.0.1:8188/")
-    for _ in range(30):
-        time.sleep(2)
-        if cdp.ev("!!(window.app && window.app.graph)"):
-            break
-    else:
+def _run(cdp, tab):
+    """cdp 现在是 UiBridge —— cdp.ev / cdp.shot 的调用点语义与旧 CDP 一致。"""
+    # 2) 等 app ready
+    if not wait_app(cdp, tab, 60):
         print("app 未就绪")
         sys.exit(1)
     print("app ready")
 
+
     # 建节点 + 开挑选器
     cdp.ev("""(() => {
+      // ⚠ 只在画布上另建一个带标记的节点, 不动用户工作流里已有的 TagLibraryNode
+      //   (跑完删掉自己这个)。断言一律通过 window.__tlGateNode 定位它。
+      window.__tlGateView = window.__tlGateView || JSON.stringify({
+        offset: window.app.canvas?.ds?.offset, scale: window.app.canvas?.ds?.scale });
       const n = LiteGraph.createNode('TagLibraryNode');
       n.pos=[100,100]; n.size=[520,760]; window.app.graph.add(n);
+      n.title = '__tl_gate__';
+      window.__tlGateNode = n;
+      // 真浏览器里视图可能停在别处, 节点不在可视区就不会给 DOM widget 排布局
+      // (面板 offsetHeight=0 → 后面取元素全部落空) → 把视图挪到节点上
+      window.app.canvas?.centerOnNode?.(n);
       const sw = n.widgets && n.widgets.find(w=>w.name==='selection_state');
       if (sw) sw.value = JSON.stringify({tags:[{en:'katana',pinned:true,enabled:true}],
         fill_master:true, fill_master_min:2, fill_master_max:3, nl_tail:true});
@@ -182,9 +110,11 @@ def main():
     })()""")
     time.sleep(2)
     print("picker:", cdp.ev("""(() => {
-      const n = window.app.graph._nodes.find(x=>x.type==='TagLibraryNode');
+      const n = window.__tlGateNode;
       const w = n.widgets.find(x=>x.name==='taglib_panel');
-      const btn = [...w.element.querySelectorAll('button')].find(b=>/添加标签/.test(b.textContent));
+      // 按 data-act 取, 别按文案 —— 按钮文案改过一次(「＋ 添加标签」→「＋ 添加」),
+      // 按文案找的断言就静默失效了。
+      const btn = w.element.querySelector('[data-act="addtags"]');
       btn.click(); return 'clicked';
     })()"""))
     time.sleep(2.5)
@@ -192,7 +122,7 @@ def main():
     errs = []
 
     # ---------- 深色 ----------
-    set_theme(cdp, light=False)
+    set_theme(cdp, light=False, tab=tab)
     d = json.loads(cdp.ev(PROBE))
     cdp.shot("ui_theme_dark.png")
     print("  [深色主题]")
@@ -202,11 +132,9 @@ def main():
     check("弹窗底色", d["dlgBg"], lambda v: v.startswith("rgb(21"), errs)
     check("面板文字为浅色", d["panelText"], lambda v: _lum(v) > 180, errs)
     check("分类项文字为浅色", d["catText"], lambda v: _lum(v) > 120, errs)
-    check("顶栏按钮底色为深色", d["topbarBg"], lambda v: _lum(v) < 90, errs)
-    check("顶栏按钮文字为浅色", d["topbarText"], lambda v: _lum(v) > 150, errs)
 
     # ---------- 浅色 ----------
-    set_theme(cdp, light=True)
+    set_theme(cdp, light=True, tab=tab)
     l = json.loads(cdp.ev(PROBE))
     cdp.shot("ui_theme_light.png")
     print("  [浅色主题]")
@@ -218,20 +146,20 @@ def main():
     check("面板文字为深色", l["panelText"], lambda v: _lum(v) < 90, errs)
     check("弹窗文字为深色", l["dlgText"], lambda v: _lum(v) < 90, errs)
     check("分类项文字为深色", l["catText"], lambda v: _lum(v) < 130, errs)
-    check("顶栏按钮底色为浅色", l["topbarBg"], lambda v: _lum(v) > 200, errs)
-    check("顶栏按钮文字为深色", l["topbarText"], lambda v: _lum(v) < 90, errs)
-    check("顶栏按钮带 tl-light", cdp.ev(
-        "document.getElementById('taglib-topbar-btn')?.classList.contains('tl-light')"),
-        lambda v: v is True, errs)
 
     # ---------- 管理弹窗 (独立文档, 走 iframe + 主题参数) ----------
     print("  [管理页]")
     cdp.ev("document.getElementById('taglib-picker-dialog')?.close()")
     time.sleep(0.8)
     mgr = cdp.ev("""(() => {
-      const b = document.getElementById('taglib-topbar-btn');
-      if (!b) return 'NO-BTN';
-      b.click(); return 'clicked';
+      const p = [...document.querySelectorAll('.taglib-panel')].filter(x => x.offsetHeight > 0).pop();
+      if (!p) return 'NO-PANEL';
+      const more = p.querySelector('.tl-more-btn');
+      if (!more) return 'NO-MORE-BTN';
+      more.click();                       // ⋯ 菜单是同步展开的, 同一个 tick 里就能点
+      const item = p.querySelector('.tl-menu-item[data-act="manager"]');
+      if (!item) return 'NO-MENU-ITEM';
+      item.click(); return 'clicked';
     })()""")
     print(f"    打开管理弹窗: {mgr}")
     time.sleep(3.5)
@@ -288,5 +216,44 @@ def _lum(rgb: str) -> float:
         return -1.0
 
 
+def main():
+    ui = ensure_bridge()
+    tab = ui.new_tab("http://127.0.0.1:8188/", label="TagLib UI 门禁")
+    saved_palette = None
+    try:
+        wait_app(ui, tab, 60)
+        saved_palette = get_palette(ui, tab)
+        print(f"  [主题] 用户原配色: {saved_palette!r} (跑完还原)")
+        _run(ui, tab)
+    finally:
+        # ⚠ 先还原用户的配色 —— 它是持久设置, 不还原等于把用户的主题改掉
+        if saved_palette:
+            try:
+                set_palette(ui, str(saved_palette), tab)
+                print(f"  [主题] 已还原为 {saved_palette!r}")
+            except Exception:  # noqa: BLE001
+                pass
+        # 收尾: 删掉自己建的节点、把画布视图还原, 再关掉自己的标签页 ——
+        # 驱动的是用户的真浏览器, 不能留下任何痕迹。
+        try:
+            ui.ev("""(() => {
+              const g = window.app.graph, n = window.__tlGateNode;
+              if (n && g) g.remove(n);
+              const v = window.__tlGateView && JSON.parse(window.__tlGateView);
+              if (v && window.app.canvas?.ds) {
+                if (v.offset) window.app.canvas.ds.offset = v.offset;
+                if (v.scale) window.app.canvas.ds.scale = v.scale;
+              }
+              window.app.canvas?.setDirty?.(true, true);
+              window.app.canvas?.draw?.(true, true);
+              return 'gate-cleaned';
+            })()""")
+        except Exception:  # noqa: BLE001
+            pass
+        ui.close_tab(tab)
+        ui.close()
+
+
 if __name__ == "__main__":
     main()
+

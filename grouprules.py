@@ -17,8 +17,10 @@ import os
 import threading
 
 try:
+    from . import jsonio
     from . import tagfiles
 except ImportError:  # pragma: no cover
+    import jsonio
     import tagfiles
 
 GROUPRULES_PATH = os.path.join(tagfiles.LIBRARY_DIR, "grouprules.json")
@@ -91,11 +93,7 @@ def en_membership() -> dict[str, frozenset]:
 
 
 def save_grouprules(groups: list[dict]) -> None:
-    os.makedirs(os.path.dirname(GROUPRULES_PATH), exist_ok=True)
-    tmp = GROUPRULES_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump({"version": 1, "groups": groups}, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, GROUPRULES_PATH)
+    jsonio.atomic_write_json(GROUPRULES_PATH, {"version": 1, "groups": groups})
     global _cache, _cache_key
     with _lock:
         _cache = None

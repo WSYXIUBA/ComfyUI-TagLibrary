@@ -89,7 +89,7 @@ def main() -> int:
 
     # 重建 .md 镜像 (镜像内容来自合并库, 修复后自然变干净)
     library.invalidate_cache()
-    merged = library.get_merged()
+    library.get_merged()
     try:
         # 优先走 library 的正式入口 (会同时维护 _sync_state.json 指纹)
         library.sync_to_folder_snapshot()

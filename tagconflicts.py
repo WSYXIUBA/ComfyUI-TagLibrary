@@ -28,9 +28,11 @@ import re
 import threading
 
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
+    from . import jsonio
     from . import library
     from . import tagfiles
 except ImportError:  # pragma: no cover
+    import jsonio
     import library
     import tagfiles
 
@@ -122,11 +124,7 @@ def _lib_key() -> tuple:
 
 
 def _write_file(payload: dict) -> None:
-    os.makedirs(tagfiles.LIBRARY_DIR, exist_ok=True)
-    tmp = CONFLICTS_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(payload, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, CONFLICTS_PATH)
+    jsonio.atomic_write_json(CONFLICTS_PATH, payload)
 
 
 def _migrate_legacy_groups() -> list[dict]:

@@ -1,6 +1,6 @@
 """perf 门禁: build() 性能基线与 SLA 断言 (方案 V2.1 阶段 0, 最先写的测试)。
 
-- 构造 800 / 1k / 5k / 10k 合成标签库 + 互斥规则 (确定性生成, 不碰真实数据)。
+- 构造 800 / 1k / 5k / 10k 合成标签库 (确定性生成, 不碰真实数据)。
 - 测: 冷启动首次 build / 热 build 连续 100~500 次; 打印 P50 / P95 / max。
 - 断言故障红线 (禁止合并): 800→100ms, 5k→200ms, 10k→1000ms。
 - 可选 GIL 抢占测试: PERF_GIL_HOG=1 时后台线程间歇烧 CPU, 信息性输出。
@@ -11,7 +11,6 @@
 import gc
 import json
 import os
-import random
 import statistics
 import sys
 import time
@@ -50,7 +49,6 @@ CAT_NAMES = ["质量与技术", "人物主体", "服装系统", "姿势动作", 
 
 def gen_lib(n_tags: int, seed: int = 42) -> dict:
     """确定性合成库: 均分到 10 大类, 每类 4 个子分类, 交错生成互斥词簇。"""
-    rng = random.Random(seed)
     per_cat = [n_tags // len(CAT_NAMES)] * len(CAT_NAMES)
     for i in range(n_tags - sum(per_cat)):
         per_cat[i % len(CAT_NAMES)] += 1
@@ -80,22 +78,6 @@ def gen_lib(n_tags: int, seed: int = 42) -> dict:
     return {"version": 1, "categories": categories}
 
 
-def gen_mutex_rules(lib: dict, n_rules: int, seed: int = 7) -> list[dict]:
-    """生成 n 条组互斥规则 (每组 4~6 个真实存在的标签, 类似旧 groups)。"""
-    rng = random.Random(seed)
-    pool = [t["en"] for c in lib["categories"]
-            for s in c["subcategories"] for t in s["tags"]]
-    rules = []
-    for i in range(n_rules):
-        members = rng.sample(pool, rng.randint(4, 6))
-        rules.append({
-            "id": f"perf.group{i}",
-            "left": {"kind": "tags", "value": members},
-            "right": [{"kind": "tag", "value": t} for t in members],
-        })
-    return rules
-
-
 # ---------------------------------------------------------------- 测量
 
 def measure_build(node, state: str, mode: str, runs: int) -> dict:
@@ -123,12 +105,11 @@ def check(name, cond, extra=""):
     print(f"  {'✅' if cond else '❌'} {name}" + (f"  [{extra}]" if extra else ""))
 
 
-def run_suite(n_tags: int, n_rules: int, mode: str = "auto"):
+def run_suite(n_tags: int, mode: str = "auto"):
     key = n_tags if n_tags in SLA else min(SLA, key=lambda k: abs(k - n_tags))
-    print(f"\n== 规模 {n_tags} 标签 + {n_rules} 规则 (mode={mode}) ==")
+    print(f"\n== 规模 {n_tags} 标签 (mode={mode}) ==")
 
     lib = gen_lib(n_tags)
-    rules = gen_mutex_rules(lib, n_rules) if n_rules else []
 
     # 注入合成库 (真实文件不参与; 恢复由 finally/进程退出处理)
     real_get_merged = library.get_merged
@@ -191,12 +172,11 @@ def gil_hog_info(n_tags: int = 1000):
 
 def main():
     print("== perf_build_test: build() 性能门禁 ==")
-    redline_fail = [f for f in FAIL if "故障红线" in f]
 
-    run_suite(800, 20)
-    run_suite(1000, 30)
-    run_suite(5000, 200)
-    run_suite(10000, 500)
+    run_suite(800)
+    run_suite(1000)
+    run_suite(5000)
+    run_suite(10000)
 
     if os.environ.get("PERF_GIL_HOG") == "1":
         gil_hog_info(1000)

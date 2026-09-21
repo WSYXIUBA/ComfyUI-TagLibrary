@@ -310,7 +310,6 @@ class TagLibraryNode:
         # 若把过滤树喂给 get_snapshot, 编译出的快照会缺 NSFW 词, 且之后打开 NSFW
         # 开关也拿不回 (同一键命中旧快照)。manual 路径则在 chosen 层复核, 同样不需要。
         selected_ids: list[str] = list(state.get("selected") or [])
-        pinned_ids: set[str] = set(state.get("pinned") or [])
         avoid_conflicts = bool(state.get("avoid_conflicts", True))
         # 排除类目: 支持 "大类名" / "大类名/子分类名" / "大类名/子分类名/孙分类名"
         exclude_keys: set[str] = {str(x) for x in (state.get("exclude_categories") or [])}

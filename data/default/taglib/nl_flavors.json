@@ -260,6 +260,11 @@
    "{S} wears {C}.",
    "{S} is outfitted in {C}."
   ],
+  "carry": [
+   "{O} hangs at {POS} side on its strap, along for the walk.",
+   "{S} carry {O} slung across {POS} chest, hands free.",
+   "{O} rides against {POS} ribs, strap worn soft."
+  ],
   "scene": [
    "{E1} fills the frame.",
    "The composition centres on {E1}.",
@@ -284,6 +289,7 @@
   "sheathed sword": "sheathed_idle",
   "katana sheath": "sheathed_idle",
   "aiming gun": "aim",
+  "sniper scope": "aim",
   "aiming at viewer": "aim_viewer",
   "holding gun": "hold_one",
   "one handed gun hold": "hold_one",
@@ -294,10 +300,12 @@
   "spear thrusting stance": "aim",
   "drawing bow": "aim",
   "nocked arrow": "aim",
+  "quiver": "on_back",
   "bow lowered": "lowered",
   "holding weapon": "hold_one",
   "dual swords": "hold_two",
   "holding guitar": "guitar_hold",
+  "playing instrument": "guitar_play",
   "holding book": "hold_book",
   "open book": "read",
   "book closed": "hold_book",
@@ -306,6 +314,7 @@
   "phone to ear": "phone_call",
   "camera up": "photo",
   "holding camera": "hold_one",
+  "camera on neck strap": "carry",
   "taking picture": "photo",
   "selfie": "photo",
   "holding microphone": "mic_sing",
@@ -315,7 +324,14 @@
   "holding food": "hold_one",
   "sipping": "sip",
   "drinking": "sip",
-  "weapon drag": "hold_one"
+  "weapon drag": "hold_one",
+  "holding umbrella": "umbrella",
+  "holding umbrella closed": "hold_one",
+  "holding cup": "cup_hold",
+  "holding cup with both hands": "hold_two",
+  "holding bouquet": "hold_two",
+  "holding flower": "flower",
+  "holding pen": "write"
  },
  "sub_family": {
   "weapon.katana": {

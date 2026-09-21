@@ -1,8 +1,6 @@
 """质量审计 v2: 30 条完整提示词 + 修正后的断言 (solo 才锁性别; 束率按整体统计)。"""
 
-import json
 import os
-import re
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

@@ -7,6 +7,10 @@ node.zip
 tests/*.png
 ComfyUI-TagLibrary-*.zip
 
+# 写盘前自动留的 .bak (save_* / 迁移脚本生成, 不是数据真源)
+data/default/taglib/*.bak
+data/default/taglib/*.pre-*.bak
+
 # 备份: 只排除用户个人数据和脚本 (出厂备份进包, 随升级覆盖)
 # v1.1.1: 数据分级 data/default/, 备份英文命名
 data/default/backups/user_backup.json

@@ -97,7 +97,6 @@ def e2_invariants(n_seeds=400):
 
 def e3_reroll(n_seeds=60):
     print("E3 分轴重摇语义")
-    base_si = SNAP.sub_key_to_index.get(("动作姿态", "站走与动态"))
     for seed in range(n_seeds):
         res0 = engine.run_auto(SNAP, STATE, seed, nsfw_on=True)
         if len(res0.picks) < 6:
@@ -165,7 +164,6 @@ def e6_nl_pack(n_seeds=100):
     print("E6 NL 扩展包")
     fams = (nl_mod.load_flavors().get("families") or {})
     check("nsfw_scene" in fams, "nsfw_scene 族未加载")
-    seen_nsfw_sentence = False
     for seed in range(n_seeds):
         res = engine.run_auto(SNAP, STATE, seed, nsfw_on=True)
         if not any(p.nsfw for p in res.picks):

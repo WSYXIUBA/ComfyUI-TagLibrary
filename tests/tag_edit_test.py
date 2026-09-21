@@ -15,7 +15,7 @@
       `服装/腿袜与内衣/腿袜与内衣.md` 的 `thong(丁字裤)` 改成了 `thong(丁字裤)[nsfw]`)。
       不能靠改 `tagfiles.LIBRARY_DIR` 绕过: `sync_to_folder(lib, folder=LIBRARY_DIR)`
       的默认值是**定义时**求值的, 改模块属性无效。
-   3. `tag_edit_routes._mirror_folder` → 空操作 (端点自带的写后镜像)
+   3. `library.mirror_folder_now` → 空操作 (端点自带的写后镜像)
 """
 
 from __future__ import annotations
@@ -78,22 +78,21 @@ def body(resp) -> dict:
 def main() -> int:
     tmp = tempfile.mkdtemp(prefix="taglib_edit_")
     saved = (library.USER_PATH, library.DATA_DIR)
-    real_mirror = ter._mirror_folder
+    real_mirror = library.mirror_folder_now
     real_hot_sync = library._folder_hot_sync
     try:
         library.USER_PATH = os.path.join(tmp, "tag_library.user.json")
         library.DATA_DIR = tmp
-        ter._mirror_folder = lambda: None          # 不落 .md 镜像
+        library.mirror_folder_now = lambda: None   # 不落 .md 镜像
         library._folder_hot_sync = lambda: None    # 读库不再触发真实镜像重写
         library.invalidate_cache()
 
         lib = library.get_merged()
         slot_id = None
-        cat_name = slot = None
         for cat in lib["categories"]:
             for sub in cat["subcategories"]:
                 if sub.get("name") == "武器装备" and cat.get("name") == "道具武器":
-                    slot_id, cat_name, slot = sub["id"], cat.get("name"), sub
+                    slot_id = sub["id"]
         check(bool(slot_id), f"定位到 道具武器/武器装备 槽位 ({slot_id})")
         base_total = sum(len(s.get("tags") or []) for c in lib["categories"]
                          for s in c["subcategories"])
@@ -183,12 +182,16 @@ def main() -> int:
         c = inc["counts"]
         check(inc["ok"] and inc["total"] == sum(c.values()), "三类缺口计数自洽")
         check(c["dangling_ref"] > 0, f"扫出陈旧引用 {c['dangling_ref']} 条 (互斥域/档案引用已不存在的词)")
-        check(c["pose_no_family"] > 0, f"扫出缺句式族 {c['pose_no_family']} 条")
+        # 缺口数是**数据状态**, 不是接口契约: 3C 把那 11 个档案姿势词补进 pose_map 后
+        # 归零, 原来写死 >0 等于把"缺口还在"当成了断言。这里锁计数合法, 数值看
+        # GET /taglib/api/nl 的 uncovered (前端 NL 页直接显示)。
+        check(isinstance(c["pose_no_family"], int) and c["pose_no_family"] >= 0,
+              f"扫出缺句式族 {c['pose_no_family']} 条 (补完姿势词后应为 0)")
         check(c["weapon_unregistered"] > 0, f"扫出未建档武器 {c['weapon_unregistered']} 条")
 
     finally:
         library.USER_PATH, library.DATA_DIR = saved
-        ter._mirror_folder = real_mirror
+        library.mirror_folder_now = real_mirror
         library._folder_hot_sync = real_hot_sync
         library.invalidate_cache()
         shutil.rmtree(tmp, ignore_errors=True)

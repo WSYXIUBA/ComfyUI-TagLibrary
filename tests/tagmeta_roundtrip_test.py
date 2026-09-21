@@ -17,7 +17,8 @@ import tempfile
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-import tagfiles  # noqa: E402
+import tagfiles
+import tagparse  # noqa: E402
 
 
 def main() -> int:
@@ -30,6 +31,8 @@ def main() -> int:
     old_lib_dir = tagfiles.LIBRARY_DIR
     tmp = tempfile.mkdtemp(prefix="taglib_meta_")
     tagfiles.LIBRARY_DIR = tmp
+    # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+    tagparse.LIBRARY_DIR = tmp
     try:
         lib = {"version": 1, "categories": [{
             "id": "c1", "name": "测试", "subcategories": [{
@@ -88,6 +91,8 @@ def main() -> int:
               all(not k.startswith("_") for k in fp), str(sorted(fp)[:5]))
     finally:
         tagfiles.LIBRARY_DIR = old_lib_dir
+        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+        tagparse.LIBRARY_DIR = old_lib_dir
         # 逐文件清理 (避免 rmtree 触发宿主批量删除保护)
         for root, _dirs, files in os.walk(tmp, topdown=False):
             for fn in files:

@@ -7,9 +7,6 @@ import re
 
 from aiohttp import web
 
-from .. import library
-from .. import tagfiles
-
 # 本模块位于 <root>/api/ 下, 路径常量统一以仓库根为基准
 _PKG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -156,17 +153,6 @@ async def taglib_csrf_middleware(request: web.Request, handler):
 
 
 # ---------------------------------------------------------------- page
-
-
-def _mirror_folder() -> None:
-    """库 -> 文件夹实时同步 (保存/导入/重置后调用)。失败不影响请求。"""
-    try:
-        lib_key = (library._mtime(library.DEFAULT_PATH),
-                   library._mtime(library.USER_PATH))
-        tagfiles.sync_to_folder(library.get_merged())
-        tagfiles.mark_synced(lib_key=lib_key)
-    except Exception:  # noqa: BLE001
-        pass
 
 
 _migrate_legacy_backup_layout()

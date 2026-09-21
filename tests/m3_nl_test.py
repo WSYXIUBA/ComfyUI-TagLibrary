@@ -121,6 +121,19 @@ for seed in range(100):
         she += 1
 check("1boy 样本用 He/his", he > 0 and she == 0, f"he={he} she={she}")
 
+# ---- 占位符契约: 动作句那条路只替换 {O} (nl.py 步骤3), {S}/{POS} 由 fill() 补。
+#      pose_map 指向的族里若混进 {C}/{A}/{E1} (那是"补头句"专用的), 动作句就会把
+#      占位符原样吐进 prompt —— 例如把某个姿势词映到 wear 族。
+F = nl.load_flavors()
+_fam, _pm = F.get("families") or {}, F.get("pose_map") or {}
+leak = []
+for _w, _f in _pm.items():
+    for _s in _fam.get(_f) or []:
+        _bad = set(re.findall(r"\{([A-Z0-9]+)\}", _s)) - {"S", "POS", "O"}
+        if _bad:
+            leak.append(f"{_w} -> {_f} {sorted(_bad)}")
+check("pose_map 目标族只含 {S}/{POS}/{O}", not leak, str(leak[:4]))
+
 # ---- 展示
 if "--show" in sys.argv:
     print("\n---- 样本 (人工眼评) ----")

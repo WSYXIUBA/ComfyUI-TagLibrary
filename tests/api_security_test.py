@@ -50,6 +50,7 @@ def _load(name: str, path: str):
 api_pkg = _load(f"{_PARENT}.api", os.path.join(ROOT, "api", "__init__.py"))
 library = importlib.import_module(f"{_PARENT}.library")  # noqa: E402
 tagfiles = importlib.import_module(f"{_PARENT}.tagfiles")  # noqa: E402
+tagparse = importlib.import_module(f"{_PARENT}.tagparse")  # noqa: E402
 taglib_csrf_middleware = api_pkg.taglib_csrf_middleware  # noqa: E402
 _export_dir_error = importlib.import_module(
     f"{_PARENT}.api.tagfiles_routes")._export_dir_error  # noqa: E402
@@ -135,6 +136,8 @@ def _deletion_checks() -> list[str]:
         # _trash 快照跟着 DEFAULT_PATH 走 → 全部落进沙箱, 不碰真实 data/
         library.DEFAULT_PATH = os.path.join(tmp, "tag_library.json")
         tagfiles.LIBRARY_DIR = tmp
+        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+        tagparse.LIBRARY_DIR = tmp
 
         def cat_dir(name: str) -> str:
             p = os.path.join(tmp, name)
@@ -192,6 +195,8 @@ def _deletion_checks() -> list[str]:
             errs.append(f"S3d (n) 去重后缀匹配失效: 期望 ['写实'] 实际 {got}")
     finally:
         tagfiles.LIBRARY_DIR = old_lib_dir
+        # 路径常量的真源在 tagparse (1.8.3 四拆后各模块不再共享同一个全局)
+        tagparse.LIBRARY_DIR = old_lib_dir
         library.DEFAULT_PATH = old_default_path
         # 逐文件清理 (避免 rmtree 触发宿主批量删除保护)
         for root, _dirs, files in os.walk(tmp, topdown=False):

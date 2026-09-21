@@ -9,7 +9,7 @@ from aiohttp import web
 
 from .. import library
 from .. import tagfiles
-from ._common import _PKG_DIR, _json_response, _mirror_folder
+from ._common import _PKG_DIR, _json_response
 
 
 async def list_tagfiles(request: web.Request) -> web.Response:
@@ -150,7 +150,7 @@ async def import_tagfile(request: web.Request) -> web.Response:
     client_mtime = request.headers.get("X-TagLib-Mtime")
     result = library.save_user_library(
         base, float(client_mtime) if client_mtime else None)
-    _mirror_folder()
+    library.mirror_folder_now()
     return _json_response({
         "ok": True,
         "imported_categories": len(agg["categories"]),

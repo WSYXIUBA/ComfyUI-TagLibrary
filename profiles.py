@@ -29,8 +29,10 @@ import json
 import os
 
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
+    from . import jsonio
     from . import tagfiles
 except ImportError:  # pragma: no cover
+    import jsonio
     import tagfiles
 
 PROFILES_PATH = os.path.join(tagfiles.LIBRARY_DIR, "profiles.json")
@@ -65,11 +67,7 @@ def load_profiles() -> dict:
 
 
 def save_profiles(data: dict) -> None:
-    os.makedirs(os.path.dirname(PROFILES_PATH), exist_ok=True)
-    tmp = PROFILES_PATH + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=1)
-    os.replace(tmp, PROFILES_PATH)
+    jsonio.atomic_write_json(PROFILES_PATH, data)
 
 
 def validate_profiles(data: dict) -> tuple[list[dict], list[dict]]:

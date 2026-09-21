@@ -155,6 +155,7 @@ export function buildPanelWidget(node, container) {
         </select>
       </div>
       <div class="tl-menu-sec">其他</div>
+      <button class="tl-menu-item" data-act="manager"><span class="tl-mi-k">🏷 标签库管理</span><span class="tl-mi-v">分类/导入/备份/同步</span></button>
       <button class="tl-menu-item" data-act="preset-mgr"><span class="tl-mi-k">📦 预设管理</span><span class="tl-mi-v">详情/编辑</span></button>
       <button class="tl-menu-item" data-act="explorer"><span class="tl-mi-k">🎲 批量探索</span><span class="tl-mi-v">一次看 N 条</span></button>
       <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
@@ -1040,6 +1041,9 @@ export function buildPanelWidget(node, container) {
       else if (act === "pv") cyclePvMode();
       else if (act === "explorer") openDrawExplorer();
       else if (act === "preset-mgr") openPresetMgr();
+      // 管理页 (分类增删改 / 导入 / 备份 / 批量工具 / 标签文件同步) 的唯一入口就在
+      // 这个菜单里: 原来右上角那个悬浮 🏷 按钮已删 (界面全部收进节点面板)。
+      else if (act === "manager") openManagerDialog();
       else if (act === "clear") doClearTags();
       // 语言/预览模式改完留在菜单里, 方便看到值的变化
       if (act !== "lang" && act !== "pv") closeMoreMenu();
@@ -1136,7 +1140,7 @@ export function buildPanelWidget(node, container) {
       <div style="font-weight:600;margin-bottom:8px;">📦 预设管理
         <span style="opacity:.6;font-size:11px;">预设 = 钉选词 + 排除域 + 配置 (约束不锁死)</span></div>
       <div id="tl-pmgr-list" style="font-size:12px;"></div>
-      <div style="display:flex;gap:8px;margin-top:10px;">
+      <div style="display:flex;gap:8px;margin-top:10px;position:sticky;bottom:0;background:#15171d;padding:8px 0;">
         <button id="tl-pmgr-new" class="tl-btn primary" style="padding:4px 12px;">💾 把当前面板存为预设</button>
         <span style="flex:1"></span>
         <button id="tl-pmgr-close" class="tl-btn" style="padding:4px 10px;">关闭</button>
@@ -1279,7 +1283,7 @@ export function buildPanelWidget(node, container) {
     dlg = document.createElement("dialog");
     dlg.id = "taglib-picker-dialog";
     dlg.style.cssText =
-      "width:min(92vw,1200px);height:min(90vh,860px);border:none;border-radius:14px;" +
+      "width:min(92vw,1440px);height:min(90vh,900px);border:none;border-radius:14px;" +
       "padding:0;background:var(--tl-bg-solid);color:var(--tl-text);max-width:none;max-height:none;";
     // 翻译免疫 (同面板): 防止挑选器里的标签英文被翻译扩展改写
     dlg.classList.add("p-inputtext", "notranslate", "tl-scope");
@@ -1287,8 +1291,25 @@ export function buildPanelWidget(node, container) {
     dlg.innerHTML = `<div id="taglib-picker-root" style="width:100%;height:100%;overflow:hidden"></div>`;
     document.body.appendChild(dlg);
     dlg.showModal();
+    // 收尾统一走这里 —— **不依赖 dialog 的 close 事件**: Edge 153 在后台标签页里
+    // 调 close() 不会派发 close 事件 (2026-09-19 实测), 那样 dialog 就永远留在 DOM 里,
+    // 内嵌管理页改过库之后面板也不会刷新。
+    let cleaned = false;
+    const cleanupPicker = () => {
+      if (cleaned) return;
+      cleaned = true;
+      handle?.destroy?.();
+      if (document.getElementById("taglib-picker-dialog") === dlg) dlg.remove();
+      if (handle?.libTouched()) {
+        // 内嵌管理页可能改过库 -> 刷新缓存, 全部节点面板跟随
+        invalidateLibraryCache();
+        fetchPanelIndex().then(renderAll);
+        window.dispatchEvent(new CustomEvent("taglib-updated"));
+      }
+    };
+    const closePicker = () => { dlg.close(); cleanupPicker(); };
     const handle = mountTagPicker(dlg.querySelector("#taglib-picker-root"), {
-      onCancel: () => dlg.close(),
+      onCancel: () => closePicker(),
       onConfirm: (picked) => {
         // picked: [{en, zh?, nsfw?}] -> 追加到 state.tags
         const st = getState(node);
@@ -1301,7 +1322,7 @@ export function buildPanelWidget(node, container) {
         }
         setState(node, { tags: st.tags });
         renderTags();
-        dlg.close();
+        closePicker();
       },
       getExisting: () => new Set(getState(node).tags.map((t) => t.en.toLowerCase())),
       getExcluded: () => getState(node).exclude_categories || [],
@@ -1310,18 +1331,10 @@ export function buildPanelWidget(node, container) {
       onGlobalChange: () => { applyScale(); renderAll(); },
       node,
     });
-    // 点弹窗外遮罩 = 关闭 (与管理页一致); 移除与收尾统一走 close 事件
-    dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
-    dlg.addEventListener("close", () => {
-      handle.destroy?.();
-      dlg.remove();
-      if (handle.libTouched()) {
-        // 内嵌管理页可能改过库 -> 刷新缓存, 全部节点面板跟随
-        invalidateLibraryCache();
-        fetchPanelIndex().then(renderAll);
-        window.dispatchEvent(new CustomEvent("taglib-updated"));
-      }
-    });
+    // 点弹窗外遮罩 = 关闭 (与管理页一致); Esc 走 cancel/close 两条路兜底
+    dlg.addEventListener("click", (e) => { if (e.target === dlg) closePicker(); });
+    dlg.addEventListener("close", cleanupPicker);
+    dlg.addEventListener("cancel", cleanupPicker);
   }
 
   /* ---------- 随机设置 (原 ⚙ 弹窗) 已并入「添加标签 → ⚙ 设置」页签 ---------- */
@@ -1843,38 +1856,9 @@ app.registerExtension({
   },
 
   async setup() {
-    // 顶栏直达按钮: fixed 定位贴在右上角 (控制面板按钮左侧), 不依赖插件变动大的 DOM 结构
-    const injectTopbarBtn = () => {
-      try {
-        if (document.getElementById("taglib-topbar-btn")) return true;
-        const btn = document.createElement("button");
-        btn.id = "taglib-topbar-btn";
-        btn.textContent = "🏷";
-        btn.title = "标签库管理页";
-        // tl-scope: 复用面板主题变量 → 顶栏按钮在深浅主题下都不违和
-        btn.className = "tl-scope";
-        btn.style.cssText =
-          "position:fixed;z-index:99999;top:10px;right:64px;padding:4px 10px;" +
-          "border-radius:8px;border:1px solid var(--tl-border-2);" +
-          "background:var(--tl-bg-solid);color:var(--tl-text);cursor:pointer;font-size:13px;";
-        const syncTheme = () => {
-          const { pid, isLight } = currentTheme();
-          btn.dataset.theme = pid;
-          btn.classList.toggle("tl-light", isLight);
-        };
-        syncTheme();
-        try {
-          new MutationObserver(syncTheme).observe(document.documentElement, {
-            attributes: true, attributeFilter: ["class"],
-          });
-        } catch {}
-        btn.onclick = openManagerDialog;
-        document.body.appendChild(btn);
-        return true;
-      } catch { return false; }
-    };
-    setTimeout(injectTopbarBtn, 2500);
-    setTimeout(injectTopbarBtn, 6000);
+    // ⚠ 这里原来会往页面右上角注入一个 fixed 的 🏷 悬浮按钮 (直达管理页)。
+    //   按用户要求删掉: 界面全部收进节点面板, 管理页入口 = 面板 ⋯ 菜单的
+    //   「🏷 标签库管理」项。别再往回加 —— 独立页面 /taglib 仍保留, 只是不再挂悬浮按钮。
     // ---- 自动模式队列回显: 监听 executed 事件, 把 auto 节点实际抽到的标签写回面板 ----
     try {
       app.api?.addEventListener?.("executed", (event) => {

@@ -13,141 +13,47 @@ python tests/ui_v13_check.py
 退出码 0 = 面板结构断言全过。
 """
 
-import base64
 import json
 import os
 import sys
 import time
-import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = HERE
 
-
-_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-
-
-def http_json(path, method="GET"):
-    r = urllib.request.Request("http://127.0.0.1:9222" + path, method=method)
-    return json.loads(_OPENER.open(r, timeout=5).read())
+# 浏览器层 = huashu-chrome 桥 (驱动用户自己的 Edge), 不再自己拉调试用 Edge。
+# 为什么换、有哪些坑, 见 tests/_ui_bridge.py 顶部。
+sys.path.insert(0, HERE)
+from _ui_bridge import ensure_bridge, wait_app  # noqa: E402
 
 
-class CDP:
-    """每次操作自动重连的极简 CDP 客户端 (页面导航/冻结不炸整轮)。"""
 
-    def __init__(self, tab):
-        self.tab = tab
-        self.ws = None
-        self.mid = 0
-
-    def connect(self):
-        from websocket import create_connection
-        if self.ws:
-            try:
-                self.ws.close()
-            except Exception:
-                pass
-        self.ws = create_connection(self.tab["webSocketDebuggerUrl"],
-                                    timeout=25, suppress_origin=True)
-
-    def cmd(self, method, **params):
-        for attempt in range(3):
-            try:
-                if not self.ws:
-                    self.connect()
-                self.mid += 1
-                mid = self.mid
-                self.ws.send(json.dumps({"id": mid, "method": method,
-                                         "params": params}))
-                while True:
-                    m = json.loads(self.ws.recv())
-                    if m.get("id") == mid:
-                        return m.get("result", {})
-            except Exception:
-                self.ws = None
-                time.sleep(1.5)
-        raise RuntimeError("CDP 三连失败: " + method)
-
-    def ev(self, expr):
-        r = self.cmd("Runtime.evaluate", expression=expr,
-                     returnByValue=True, awaitPromise=True)
-        res = r.get("result", {})
-        if r.get("exceptionDetails"):
-            return "EXC:" + str(r["exceptionDetails"].get("exception", {})
-                                .get("description", ""))[:160]
-        return res.get("value")
-
-    def shot(self, name):
-        r = self.cmd("Page.captureScreenshot", format="png")
-        with open(os.path.join(OUT, name), "wb") as f:
-            f.write(base64.b64decode(r["data"]))
-        return name
-
-
-def ensure_browser():
-    """9222 不活就自己拉 Edge 调试实例。"""
-    import subprocess
-    try:
-        http_json("/json/version")
-        return
-    except Exception:
-        pass
-    exe = next((p for p in (r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-                            r"C:\Program Files\Microsoft\Edge\Application\msedge.exe")
-                if os.path.exists(p)), None)
-    subprocess.Popen([exe, "--remote-debugging-port=9222",
-                      r"--user-data-dir=C:\EdgeForHermes",
-                      "--no-proxy-server", "--no-first-run", "about:blank"],
-                     creationflags=0x208)
-    for _ in range(15):
-        time.sleep(1.5)
-        try:
-            http_json("/json/version")
-            return
-        except Exception:
-            pass
-    raise RuntimeError("9222 起不来")
-
-
-def main():
-    ensure_browser()
-    # 先开新页签再关旧的 (关光最后页签 = Edge 整个退出, 别再自杀)
-    old = [t for t in http_json("/json/list")
-           if t.get("type") == "page"]
-    tab = http_json("/json/new?url=about:blank", method="PUT")
-    time.sleep(1)
-    for t in old:
-        try:
-            http_json("/json/close/" + t["id"])
-        except Exception:
-            pass
-    tab = http_json("/json/list")
-    tab = next(t for t in tab if t["type"] == "page")
-    cdp = CDP(tab)
-    cdp.cmd("Page.navigate", url="http://127.0.0.1:8188/")
+def _run(cdp, tab):
+    """cdp 现在是 UiBridge —— cdp.ev / cdp.shot 的调用点语义与旧 CDP 一致。"""
     # 2) 等 app ready
-    for _ in range(30):
-        time.sleep(2)
-        ok = cdp.ev("!!(window.app && window.app.graph)")
-        if ok:
-            break
-        cdp = CDP(http_json("/json/list")[0] if False else tab)
-    else:
+    if not wait_app(cdp, tab, 60):
         print("app 未就绪")
         sys.exit(1)
     print("app ready")
+
 
     # 3) 建测试节点 (带一把钉选 katana)
     # ⚠ ComfyUI 会恢复上次打开的工作流, 里面可能已有若干 TagLibraryNode ——
     # 不清场的话后面 `_nodes.find(...)` 会读到第一个(旧的空节点), 断言全部错位。
     r = cdp.ev("""(() => {
       const g = window.app.graph;
-      for (const old of [...g._nodes].filter(x => x.type === 'TagLibraryNode')) g.remove(old);
+      // ⚠ 只在画布上另建一个带标记的节点, 不动用户工作流里已有的 TagLibraryNode
+      //   (跑完删掉自己这个)。断言一律通过 window.__tlGateNode 定位它。
+      window.__tlGateView = window.__tlGateView || JSON.stringify({
+        offset: window.app.canvas?.ds?.offset, scale: window.app.canvas?.ds?.scale });
       const n = LiteGraph.createNode('TagLibraryNode');
       n.pos=[100,100]; n.size=[520,760]; g.add(n);
       n.setSize([520,760]);
-      // 清场后画布需要重绘才会给 DOM widget 排布局 (否则面板 height=0,
-      // 菜单之类绝对定位的弹出层 offsetHeight 也是 0)
+      n.title = '__tl_gate__';
+      window.__tlGateNode = n;
+      // 真浏览器里视图可能停在别处, 节点不在可视区就不会给 DOM widget 排布局
+      // (面板 offsetHeight=0 → 后面取元素全部落空) → 把视图挪到节点上
+      window.app.canvas?.centerOnNode?.(n);
       window.app.canvas?.setDirty?.(true, true);
       window.app.canvas?.draw?.(true, true);
       const sw = n.widgets && n.widgets.find(w=>w.name==='selection_state');
@@ -160,7 +66,7 @@ def main():
     for _ in range(25):
         time.sleep(1)
         ok = cdp.ev("""(() => {
-          const n = window.app.graph._nodes.filter(x => x.type === 'TagLibraryNode').pop();
+          const n = window.__tlGateNode;
           if (!n) return false;
           const w = n.widgets && n.widgets.find(x => x.name === 'taglib_panel');
           return !!(w && w.element && w.element.offsetHeight > 0
@@ -175,7 +81,7 @@ def main():
     # ---- 节点面板结构 (面板瘦身: 死 UI 已删, 低频项收进 ⋯ 菜单) ----
     panel_errs = []
     probe = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n = window.__tlGateNode;
       const w = n.widgets.find(x=>x.name==='taglib_panel');
       const p = w.element;
       const label = (sel) => { const e = p.querySelector(sel); return e ? e.textContent.trim() : null; };
@@ -193,6 +99,8 @@ def main():
         pv: (p.querySelector('.tl-pv-sel') || {}).value || null,
         hasRoll: !!p.querySelector('.tl-roll-btn'),
         hasClearBtn: !!p.querySelector('.tl-clear-btn'),
+        // 管理页入口 (分类增删改/导入/备份/批量工具/标签文件同步) 的唯一正门
+        hasMgrItem: !!p.querySelector('.tl-menu-item[data-act="manager"]'),
       });
     })()""")
     pv = json.loads(probe)
@@ -207,7 +115,11 @@ def main():
     chk("头部常驻按钮数", pv["headButtons"], 4)          # NSFW / 强度 / ⋯ / ＋添加标签 (1.8.1)
     chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
     chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
-    chk("⋯ 菜单项数", pv["menuItems"], 3)                # 预设管理/批量探索/清空 (性别·防冲突·语言·预览已改为面板上的标准控件)
+    chk("⋯ 菜单项数", pv["menuItems"], 4)                # 标签库管理/预设管理/批量探索/清空
+    chk("⋯ 菜单里有「标签库管理」入口", pv["hasMgrItem"], True)
+    # 右上角那个 fixed 悬浮 🏷 按钮 1.8.4 已按用户要求删除 (界面全部收进节点面板) ——
+    # 钉一条反向断言, 免得日后有人又"顺手"加回去。
+    chk("右上角悬浮按钮已删", cdp.ev("!!document.getElementById('taglib-topbar-btn')"), False)
 
     # ---- 控件行: 什么语义给什么控件 (开关/分段/下拉) ----
     #  用户明确要求「按人的交互来」。这里不只数元素, 还**真的操作一次**看反应。
@@ -268,13 +180,13 @@ def main():
 
     # 展开 ⋯ 菜单, 确认可正常打开
     cdp.ev("""(() => {
-      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n = window.__tlGateNode;
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       p.querySelector('.tl-more-btn').click(); return 'ok';
     })()""")
     time.sleep(0.6)
     opened = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n = window.__tlGateNode;
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       const m = p.querySelector('.tl-menu');
       const cs = getComputedStyle(m);
@@ -292,7 +204,7 @@ def main():
         panel_errs.append(f"⋯ 菜单定位异常: {ov['position']}")
     cdp.shot("ui_panel.png")
     cdp.ev("""(() => {
-      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n = window.__tlGateNode;
       const p = n.widgets.find(x=>x.name==='taglib_panel').element;
       p.querySelector('.tl-more-btn').click(); return 'ok';
     })()""")
@@ -300,10 +212,12 @@ def main():
 
     # 打开挑选器
     r = cdp.ev("""(() => {
-      const n = window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n = window.__tlGateNode;
       const w = n.widgets.find(x=>x.name==='taglib_panel');
       if (!w || !w.element) return 'NO-PANEL-WIDGET';
-      const btn = [...w.element.querySelectorAll('button')].find(b=>/添加标签/.test(b.textContent));
+      // 按 data-act 取, 别按文案 —— 按钮文案改过一次(「＋ 添加标签」→「＋ 添加」),
+      // 按文案找的断言就静默失效了。
+      const btn = w.element.querySelector('[data-act="addtags"]');
       if (!btn) return 'NO-ADD-BTN';
       btn.click();
       return 'clicked';
@@ -353,21 +267,82 @@ def main():
         ui_errs.append(f"页签数 {n_tabs} != 7")
 
     # ---- 🏠 流水线首页 (2026-09-19 编辑体验改造) ----
-    #  首页按 axes.AXIS_SECTION 的官方六段次序排 13 条轴, 奇数段方框在线上方、
-    #  偶数段在下方; 段4 作品 与 段9 未归类 库内暂无轴, 渲染为占位方框。
+    #  首页按 axes.AXIS_SECTION 的官方六段次序排 13 条轴: 胶囊逐颗按"当前更窄的
+    #  一排"分到主轴上下 (段6 有 9 条轴, 按段交替会 4 : 9), 段名留在主轴线上。
+    #  段4 作品 与 段9 未归类 库内暂无轴, 渲染为占位胶囊。
     #  数据全部来自 GET /taglib/api/axes-overview (前端不抄次序)。
     cdp.ev("document.querySelector('.tp-hometab').click()")
     time.sleep(2.0)                      # 轴数据与「待完善」角标都是异步 fetch
     home = cdp.ev("""(() => {
       const v = document.querySelector('.tp-homeview');
       if (!v) return 'NO VIEW';
+      // 入场动画 (pl-in / pl-draw) 可能还在跑 —— 量几何前先推到终态, 否则量到的是
+      // translateY(6px) 的中间态: 主轴看着没穿过圆心、上下留白也不均。
+      v.querySelectorAll('.pl-station, .pl-flow')
+        .forEach(e => e.getAnimations?.().forEach(a => a.finish?.()));
+      const chips = [...v.querySelectorAll('.pl-chip:not(.empty)')];
+      const rs = chips.map(c => c.getBoundingClientRect());
+      let overlap = 0;
+      for (let i = 0; i < rs.length; i++)
+        for (let j = i + 1; j < rs.length; j++) {
+          const a = rs[i], b = rs[j];
+          if (a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom) overlap++;
+        }
+      const vr = v.getBoundingClientRect();
+      const flow = v.querySelector('.pl-flow');
+      const fr = flow.getBoundingClientRect();
+      const all = [...v.querySelectorAll('.pl-chip')].map(c => c.getBoundingClientRect());
+      const dots = [...v.querySelectorAll('.pl-dot')].map(d => d.getBoundingClientRect());
+      const R = (el) => { const b = el.getBoundingClientRect();
+                          return { t: b.top, b: b.bottom, l: b.left, r: b.right,
+                                   cy: b.top + b.height / 2 }; };
+      const sts = [...v.querySelectorAll('.pl-station')].map(s => {
+        const axis = R(s.querySelector('.pl-axis'));
+        const label = R(s.querySelector('.pl-label'));
+        const entries = R(s.querySelector('.pl-entries'));
+        const cs = [...s.querySelectorAll('.pl-entries .pl-chip')].map(R);
+        return {
+          axisText: (s.querySelector('.pl-axis').textContent || '').trim(),
+          dotCy: R(s.querySelector('.pl-dot')).cy,
+          axisCy: axis.cy,
+          labelAbove: label.cy < axis.cy,
+          entriesAbove: entries.cy < axis.cy,
+          // 入口是**竖列**: 站内胶囊同一个中心 x, y 自上而下递增
+          chipCenters: [...new Set(cs.map(c => Math.round(c.l + (c.r - c.l) / 2)))].length,
+          chipTops: cs.map(c => Math.round(c.t)),
+          chipCol: cs.length,
+        };
+      });
       return JSON.stringify({
         visible: getComputedStyle(v).display !== 'none',
-        segs: v.querySelectorAll('.pl-boxes').length,
-        nodes: v.querySelectorAll('.pl-dot').length,
-        boxes: v.querySelectorAll('.pl-box').length,
-        empty: v.querySelectorAll('.pl-box.empty').length,
-        zoomedBefore: !!v.querySelector('.pl-flow.zoomed'),
+        stations: sts.length,
+        nodes: dots.length,
+        chips: v.querySelectorAll('.pl-chip').length,
+        empty: v.querySelectorAll('.pl-chip.empty').length,
+        overlap: overlap,
+        dotTopVariants: [...new Set(dots.map(d => Math.round(d.top)))].length,
+        axisCount: v.querySelectorAll('.pl-axis').length,
+        axisText: sts.map(s => s.axisText).join(''),
+        dotOnAxis: sts.every(s => Math.abs(s.dotCy - s.axisCy) <= 2),
+        sidesSplit: sts.every(s => s.labelAbove !== s.entriesAbove),
+        alternates: sts.every((s, i) => i === 0 || s.labelAbove !== sts[i - 1].labelAbove),
+        entriesOneColumn: sts.every(s => s.chipCenters <= 1),
+        entriesDescending: sts.every(s => s.chipTops.every((y, k) => k === 0 || y > s.chipTops[k - 1])),
+        // 入口列总高 (段6 有 8 条轴 → 撑起纵向空间, 用户要的"利用率")
+        tallestCol: Math.max(...sts.map(s => s.chipCol)),
+        // 站点等宽 + 最后一个站点的右沿贴着 flow 右沿 = 横向铺满, 不留空白
+        filledWidth: (() => {
+          const ws = [...v.querySelectorAll('.pl-station')].map(s => Math.round(s.getBoundingClientRect().width));
+          const last = [...v.querySelectorAll('.pl-station')].pop().getBoundingClientRect();
+          return Math.max(...ws) - Math.min(...ws) <= 2 && Math.abs(last.right - fr.right) <= 8;
+        })(),
+        flowH: Math.round(fr.height),
+        scrolled: flow.scrollWidth > flow.clientWidth + 1,
+        outRight: all.filter(r => r.right > vr.right + 1).length,
+        outBottom: all.filter(r => r.bottom > vr.bottom + 1).length,
+        // 确认卡片与整层缩放都已删除 (用户: 动画不优美 / 纯图层重叠)
+        noCard: v.querySelectorAll('.pl-card').length === 0,
+        noZoom: !v.querySelector('.pl-flow.zoomed') && !v.querySelector('.pl-flow').style.transform,
       });
     })()""")
     try:
@@ -377,65 +352,40 @@ def main():
     if not hv:
         ui_errs.append(f"首页视图解析失败: {home!r}")
     for label, got, want in (("首页默认可见", hv.get("visible"), True),
-                             ("首页段行数 = 7", hv.get("segs"), 7),
+                             ("首页站点数 = 7", hv.get("stations"), 7),
                              ("首页段位节点 = 7", hv.get("nodes"), 7),
-                             ("首页方框 = 15 (13 轴 + 2 占位)", hv.get("boxes"), 15),
-                             ("首页占位方框 = 2", hv.get("empty"), 2),
-                             ("首页初始态未放大", hv.get("zoomedBefore"), False)):
+                             ("首页胶囊 = 15 (13 轴 + 2 占位)", hv.get("chips"), 15),
+                             ("首页占位胶囊 = 2", hv.get("empty"), 2),
+                             ("首页胶囊零重叠", hv.get("overlap"), 0),
+                             ("7 个节点同高 (主轴成一条线)", hv.get("dotTopVariants"), 1),
+                             # 用户定的版式: 主轴是**一条不带文字的线**, 每站画自己那段
+                             # (站间留 6px 缝 = "中断多个"); 类目标签与入口胶囊分居主轴两侧
+                             # 且**逐段上下交替** (段1 标签在上入口在下, 段2 反过来);
+                             # 入口沿 X 排成一行, 不往 Y 方向堆。
+                             ("主轴分段 = 站点数", hv.get("axisCount"), 7),
+                             ("站点等宽铺满 (无横向空白)", hv.get("filledWidth"), True),
+                             ("主轴上零文字", hv.get("axisText"), ""),
+                             ("主轴穿过每个节点圆心", hv.get("dotOnAxis"), True),
+                             ("标签与入口分居主轴两侧", hv.get("sidesSplit"), True),
+                             ("标签/入口逐段上下交替", hv.get("alternates"), True),
+                             # 入口**竖成一列**(用户: "每一类入口以Y轴列"), 列里自上而下;
+                             # 类目本身才沿 X 轴排 (站点等宽铺满整条)
+                             ("入口竖成一列", hv.get("entriesOneColumn"), True),
+                             ("入口列自上而下", hv.get("entriesDescending"), True),
+                             ("最长入口列 = 8 (段6)", hv.get("tallestCol"), 8),
+                             ("无需横向滚动", hv.get("scrolled"), False),
+                             ("无胶囊越出右边", hv.get("outRight"), 0),
+                             ("无胶囊越出下边", hv.get("outBottom"), 0),
+                             # 确认卡片与整层缩放都已删除 (用户: 动画不优美 / 纯图层重叠)
+                             ("首页无聚焦卡片元素", hv.get("noCard"), True),
+                             ("首页无整层缩放残留", hv.get("noZoom"), True)):
         ok = got == want
         print(f"    {'✓' if ok else '✗'} {label}: {got!r}" + ("" if ok else f" (期望 {want!r})"))
         if not ok:
             ui_errs.append(f"{label}={got!r} 期望 {want!r}")
 
-    #  ⚠ 2026-09-19 教训: 只断言"元素个数"抓不到排版错 —— 第一版横向布局
-    #  照样"7 段 / 15 方框"全对, 但段6 的 8 个框折成 4 行、纵跨 286→470px
-    #  穿过流水线, 把别的段标签压进框堆里, 整块挤在左上角。**必须断言几何**。
-    geo = cdp.ev("""(() => {
-      const v = document.querySelector('.tp-homeview');
-      if (!v) return 'NO VIEW';
-      const boxes = [...v.querySelectorAll('.pl-box:not(.empty)')];
-      const rs = boxes.map(b => b.getBoundingClientRect());
-      let overlap = 0;
-      for (let i = 0; i < rs.length; i++) {
-        for (let j = i + 1; j < rs.length; j++) {
-          const a = rs[i], b = rs[j];
-          if (a.left < b.right && b.left < a.right &&
-              a.top < b.bottom && b.top < a.bottom) overlap++;
-        }
-      }
-      const vr = v.getBoundingClientRect();
-      return JSON.stringify({
-        overlap: overlap,
-        widths: [...new Set(rs.map(r => Math.round(r.width)))],
-        overflowY: v.scrollHeight > v.clientHeight + 1,
-        outRight: rs.filter(r => r.right > vr.right + 1).length,
-        outBottom: rs.filter(r => r.bottom > vr.bottom + 1).length,
-        maxRowTop: Math.max(...rs.map(r => Math.round(r.top))),
-        minTop: Math.min(...rs.map(r => Math.round(r.top))),
-      });
-    })()""")
-    try:
-        gv = json.loads(geo) if isinstance(geo, str) and geo.startswith("{") else {}
-    except Exception:  # noqa: BLE001
-        gv = {}
-    for label, got, want in (("首页方框零重叠", gv.get("overlap"), 0),
-                             ("首页方框宽度统一 (只有 1 种)", len(gv.get("widths") or []), 1),
-                             ("首页无纵向溢出", gv.get("overflowY"), False),
-                             ("首页无方框越出右边", gv.get("outRight"), 0),
-                             ("首页无方框越出下边", gv.get("outBottom"), 0)):
-        ok = got == want
-        print(f"    {'✓' if ok else '✗'} {label}: {got!r}" + ("" if ok else f" (期望 {want!r})"))
-        if not ok:
-            ui_errs.append(f"{label}={got!r} 期望 {want!r}")
-
-    #  两段式交互 (用户已定): 单击先把类目放大铺满 → 再点同一个 → 进入挑标签
-    cdp.ev("document.querySelector('.tp-homeview .pl-box:not(.empty)').click()")
-    time.sleep(0.7)
-    zoomed = cdp.ev("!!document.querySelector('.tp-homeview .pl-flow.zoomed')")
-    print(f"    {'✓' if zoomed is True else '✗'} 首页单击 → 放大: {zoomed!r}")
-    if zoomed is not True:
-        ui_errs.append(f"首页单击未放大: {zoomed!r}")
-    cdp.ev("document.querySelector('.tp-homeview .pl-box.focus').click()")
+    #  单击入口**直接进入**挑标签 (原来的"再点一下确认"卡片已删: 用户说那纯是叠在上面的图层)
+    cdp.ev("document.querySelector('.tp-homeview .pl-chip:not(.empty)').click()")
     time.sleep(1.2)
     landed = cdp.ev("""(() => {
       const c = document.querySelector('.tp-chips');
@@ -443,11 +393,18 @@ def main():
       return getComputedStyle(c).display !== 'none' &&
              getComputedStyle(h).display === 'none';
     })()""")
-    print(f"    {'✓' if landed is True else '✗'} 首页再点 → 进入挑标签: {landed!r}")
+    print(f"    {'✓' if landed is True else '✗'} 首页单击 → 直接进入挑标签: {landed!r}")
     if landed is not True:
-        ui_errs.append(f"首页再点未进入挑标签: {landed!r}")
+        ui_errs.append(f"首页单击未进入挑标签: {landed!r}")
     cdp.ev("document.querySelector('.tp-picktab').click()")   # 复位到挑标签
     time.sleep(0.6)
+
+    #  左侧栏必须还是 200px —— 曾经因为兄弟视图 flex:1 被压成 38px (用户: "被压扁了")
+    cats_w = cdp.ev("Math.round(document.querySelector('#taglib-picker-dialog .tp-cats')"
+                    ".getBoundingClientRect().width)")
+    print(f"    {'✓' if cats_w == 200 else '✗'} 挑标签左侧栏宽 = {cats_w} (期望 200)")
+    if cats_w != 200:
+        ui_errs.append(f"挑标签左侧栏被压扁: {cats_w}px")
 
     drawer = cdp.ev("""(() => {
       const d = document.querySelector('.tp-exc');
@@ -501,7 +458,7 @@ def main():
       const t=row.querySelector('.tp-row-tog');
       if(!t) return JSON.stringify({err:'no-toggle'});
       t.click();
-      const n=window.app.graph._nodes.filter(x=>x.type==='TagLibraryNode').pop();
+      const n=window.__tlGateNode;
       const st=JSON.parse(n.widgets.find(x=>x.name==='selection_state').value||'{}');
       return JSON.stringify({excluded: st.exclude_categories||[], hasAxis:(st.exclude_categories||[]).includes('角色身份')});
     })()""")
@@ -572,23 +529,37 @@ def main():
     # 9) 设置「新节点的默认模式」→ 新节点生效 (v1.6.5 回归:
     #    combo widget 的 options 是 {values:[...]}, 旧判断 Object.values(options)
     #    拿到 [[...]] 永远 includes 不中, 设置从未生效)
-    dm_res = cdp.ev("""(async () => {
+    # ⚠ 拆成两次求值: huashu-chrome 的 eval 不 await Promise (async 表达式回传的是
+    #   Promise 的 JSON = "{}"), 所以"设设置 → 建节点 → 等 800ms → 读 widget"
+    #   这种带 await 的探针必须由 Python 侧分段, 中间 sleep。
+    cdp.ev("""(() => {
+      const app = window.app;
+      const set = app.extensionManager?.setting;
+      if (!set?.set || !set?.get) { window.__tlGateModeErr = 'no-setting-api'; return 'no-api'; }
+      window.__tlGateModePrev = set.get('TagLibrary.default_mode');
+      set.set('TagLibrary.default_mode', 'auto');
+      const n = LiteGraph.createNode('TagLibraryNode');
+      n.pos = [100, 100];
+      n.title = '__tl_gate_mode__';
+      app.graph.add(n);
+      window.__tlGateModeNode = n;
+      return 'created';
+    })()""")
+    time.sleep(1.5)          # onNodeCreated 里的 setTimeout(0) + 设置传播
+    dm_res = cdp.ev("""(() => {
       try {
         const app = window.app;
-        const set = app.extensionManager?.setting;
-        if (!set?.set || !set?.get) return JSON.stringify({err: 'no-setting-api'});
-        const KEY = 'TagLibrary.default_mode';
-        const prev = set.get(KEY);
-        set.set(KEY, 'auto');
-        await new Promise(r => setTimeout(r, 100));
-        const n = LiteGraph.createNode('TagLibraryNode');
-        n.pos = [100, 100];
-        app.graph.add(n);
-        await new Promise(r => setTimeout(r, 800));   // onNodeCreated 里的 setTimeout(0) 要跑完
-        const modeW = n.widgets?.find(w => w.name === 'mode');
+        const n = window.__tlGateModeNode;
+        const modeW = n && n.widgets?.find(w => w.name === 'mode');
         const got = modeW ? modeW.value : null;
-        app.graph.remove(n);
-        set.set(KEY, prev === undefined || prev === null ? 'manual' : prev);
+        if (n) app.graph.remove(n);
+        window.__tlGateModeNode = null;
+        const set = app.extensionManager?.setting;
+        const prev = window.__tlGateModePrev;
+        if (set?.set) {
+          set.set('TagLibrary.default_mode', prev === undefined || prev === null ? 'manual' : prev);
+        }
+        if (window.__tlGateModeErr) return JSON.stringify({err: window.__tlGateModeErr});
         return JSON.stringify({got: got, prev: prev});
       } catch (e) {
         return JSON.stringify({err: String(e).slice(0, 120)});
@@ -619,5 +590,33 @@ def main():
     print("✅ UI 巡检通过 (面板瘦身 / 页签 8→5 / 三个数据视图可编辑)")
 
 
+def main():
+    ui = ensure_bridge()
+    tab = ui.new_tab("http://127.0.0.1:8188/", label="TagLib UI 门禁")
+    try:
+        _run(ui, tab)
+    finally:
+        # 收尾: 删掉自己建的节点、把画布视图还原, 再关掉自己的标签页 ——
+        # 驱动的是用户的真浏览器, 不能留下任何痕迹。
+        try:
+            ui.ev("""(() => {
+              const g = window.app.graph, n = window.__tlGateNode;
+              if (n && g) g.remove(n);
+              const v = window.__tlGateView && JSON.parse(window.__tlGateView);
+              if (v && window.app.canvas?.ds) {
+                if (v.offset) window.app.canvas.ds.offset = v.offset;
+                if (v.scale) window.app.canvas.ds.scale = v.scale;
+              }
+              window.app.canvas?.setDirty?.(true, true);
+              window.app.canvas?.draw?.(true, true);
+              return 'gate-cleaned';
+            })()""")
+        except Exception:  # noqa: BLE001
+            pass
+        ui.close_tab(tab)
+        ui.close()
+
+
 if __name__ == "__main__":
     main()
+
