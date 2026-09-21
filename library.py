@@ -591,7 +591,22 @@ def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
         pass
 
 def get_merged() -> dict[str, Any]:
-    _folder_hot_sync()  # 热同步: 外部文件改动先吸入, 再给合并视图 (扫描已节流)
+    """合并视图 (纯读)。
+
+    ⚠ **这里绝对不能再调 `_folder_hot_sync()`**（2026-09-19 修）。
+    它原来是"读路径写盘"的元凶, 实测后果:
+
+      - 热同步被 `HOT_SYNC_MIN_INTERVAL` 节流, 绝大多数调用是 0.0ms;
+        但节流窗口一到就会跑一遍 `folder_sync_plan` → pull → `save_user_library`
+        → 全量镜像 66 个 .md。**活进程里这一步要 3.7~4.0 秒**。
+      - 而 `.md` 镜像**不幂等**（重写会改内容, 例如 `thong(丁字裤)` 补成
+        `thong(丁字裤)[nsfw]`）→ 指纹永远在变 → **永不收敛, 每次都重跑全量**。
+      - 于是 `TagLibraryNode.build()` 会偶发卡 2.5~4 秒, 且随运行次数"越跑越多"
+        （连续 100 次输出的中位耗时从 0.02s 涨到 1.8s, 倍率 20~85x）。
+
+    热同步改由**显式触发点**驱动: `save_user_library` 之后、以及管理页的
+    `/taglib/api/tagfiles*` 入口 (见 `hot_sync_now`)。
+    """
     global _cache, _cache_key
     key = (_mtime(DEFAULT_PATH), _mtime(EXT_PATH), _mtime(USER_PATH))
     with _lock:
@@ -613,6 +628,15 @@ def get_merged() -> dict[str, Any]:
                 pass
         _cache, _cache_key = merged, key
         return merged
+
+
+def hot_sync_now() -> None:
+    """显式执行一次文件夹热同步 (外部 .md 改动 → 吸入; 库改动 → 镜像回文件)。
+
+    只在**用户主动路径**上调用: 保存库之后 / 管理页打开标签文件页 / 手动同步入口。
+    读库 (`get_merged`) 不再触发它。
+    """
+    _folder_hot_sync()
 
 
 def invalidate_cache() -> None:

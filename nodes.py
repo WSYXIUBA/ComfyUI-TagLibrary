@@ -16,6 +16,8 @@ except ImportError:  # pragma: no cover
     import nl
 
 
+
+
 # 手动模式查表索引缓存: (库 mtime 键, 库 dict 身份, en→标签, en→路径, id→标签)
 # 库没变 (mtime 同 + get_merged 返回同一个 dict) 时手动模式零全库扫描;
 # 任一变化即重建。表内容只读, 调用方不得修改 (chosen 里取的是浅拷贝)。

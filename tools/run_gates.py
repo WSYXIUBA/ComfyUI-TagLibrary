@@ -48,6 +48,7 @@ OFFLINE = [
     ("api_security_test", "API 安全门禁 (CSRF 中间件/导出目录确认/双向删除精确匹配)"),
     ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
     ("tag_edit_test", "标签就地编辑 (推导/新增/改字段/校验拒绝/首页分段/待完善)"),
+    ("sync_idempotent_test", "文件夹镜像幂等性 (.md 收敛 / 标记往返不丢字段)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
 ]
 

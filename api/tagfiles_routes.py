@@ -13,7 +13,19 @@ from ._common import _PKG_DIR, _json_response, _mirror_folder
 
 
 async def list_tagfiles(request: web.Request) -> web.Response:
-    """GET /taglib/api/tagfiles?dir=... -> 列出标签库目录(两级结构)+兼容旧目录+外置目录。"""
+    """GET /taglib/api/tagfiles?dir=... -> 列出标签库目录(两级结构)+兼容旧目录+外置目录。
+
+    ⚠ 文件夹 → 库 的**吸入方向**改由这里显式触发。它原来挂在 `get_merged()` 的
+    读路径上 (`_folder_hot_sync()`), 实测在活进程里一次要 **3.7~4.0 秒**
+    —— 因为 .md 镜像不幂等 (重写会改内容, 如 `thong(丁字裤)` 补成
+    `thong(丁字裤)[nsfw]`), 指纹永远在变, 于是永不收敛、每次都重跑全量。
+    后果是 `TagLibraryNode.build()` 偶发卡 3~4 秒, 且连续输出时中位耗时
+    从 0.02s 涨到 1.8s (倍率 20~85x)。详见 `library.get_merged` 的注释。
+    """
+    try:
+        library.hot_sync_now()
+    except Exception:  # noqa: BLE001 — 同步失败不影响列文件
+        pass
     ext = request.query.get("dir") or ""
     items = tagfiles.scan_folder(ext, tagfiles.LIBRARY_DIR)
     items += tagfiles.scan_folder("", tagfiles.BUILTIN_DIR)  # 旧内置目录兼容
