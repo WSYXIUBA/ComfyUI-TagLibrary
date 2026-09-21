@@ -476,18 +476,45 @@ def main() -> int:
         st = {**base, key: val, "nsfw": True}
         c = engine.resolve_config(st, lib.get("settings"))
         hits = 0
+        banned = 0          # 场景开关的**功能**断言 (此前只跑通用检查 -> 开关坏掉也全绿)
+        banned_eg: list[str] = []
         for seed in range(1, args.matrix + 1):
             res = engine.run_auto(snap, st, seed, nsfw_on=True, config=c)
             rep.prompts += 1
             check_engine_semantics(snap, st, seed, res.picks, rep, "E")
-            if key == "solo_lock":
-                for p in res.picks:
-                    if p.id is not None and snap.axis_arr[p.id] == "count" \
-                            and nz(p.en) not in slotpolicy.SINGLE_COUNT_WORDS:
-                        hits += 1
+            for p in res.picks:
+                if p.id is None:
+                    continue
+                sk = snap.sub_keys[snap.sub_of[p.id]]
+                en = nz(p.en)
+                if key == "solo_lock" and snap.axis_arr[p.id] == "count" \
+                        and en not in (slotpolicy.SINGLE_COUNT_WORDS - slotpolicy.SOLO_BAN_WORDS):
+                    # 判据必须扣掉单人锁自己的禁词 —— 用整张 SINGLE_COUNT_WORDS 当白名单
+                    # 会与被测共用同一口径, 1other 这类词永远测不出来 (2026-09-21 实测
+                    # 60 seed 里 18 条照出)。
+                    hits += 1
+                # 简洁背景: 具象场景槽全封 + 背景处理槽只许白名单词
+                if key == "bg_mode":
+                    if sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
+                        banned += 1
+                    elif sk == "场景环境/背景处理" and en not in slotpolicy.SIMPLE_BG_WORDS:
+                        banned += 1
+                    if banned and len(banned_eg) < 4:
+                        banned_eg.append(f"{sk}:{en}")
+                # 人物特写: 杂物道具槽全封 + 取景范围只许白名单词
+                if key == "focus_mode":
+                    if sk in slotpolicy.PORTRAIT_BAN_SLOTS:
+                        banned += 1
+                    elif sk == "构图镜头/取景范围" and en not in slotpolicy.PORTRAIT_FRAMING_WORDS:
+                        banned += 1
+                    if banned and len(banned_eg) < 4:
+                        banned_eg.append(f"{sk}:{en}")
         rep.ok(f"G 场景开关[{key}]")
         if key == "solo_lock" and hits:
             rep.fail("G 场景开关[solo_lock]", f"{hits} 个非单人人数词")
+        if banned:
+            rep.fail(f"G 场景开关[{key}]",
+                     f"{banned} 个被该开关封禁的词仍输出 (例: {banned_eg})")
 
     print("=" * 74)
     print(f"H 排除类目                  : 各 {args.matrix} 条")
@@ -529,6 +556,22 @@ def main() -> int:
         rep.fail("I 性能无累积劣化", f"末段中位 {last:.1f}ms vs 首段 {first:.1f}ms")
 
     # ---------------------------------------------------------------- 汇总
+    # E12 库数据配额 vs 引擎配额 (仅信息): 库里的槽位 min_count/max_count 目前无人读取
+    # (引擎真源 = slotpolicy.SLOT_MAX), 但面板/文档会引用它 —— 两份值不一致时用户按
+    # 哪份理解都会算错。只暴露漂移, 不判失败 (对齐数据属于库迁移, 另议)。
+    lib_now = library.get_merged()
+    drift = []
+    for c in lib_now.get("categories") or []:
+        for s in c.get("subcategories") or []:
+            skey = f"{c.get('name')}/{s.get('name')}"
+            d_pair = (int(s.get("min_count", 1) or 0), int(s.get("max_count", 1) or 0))
+            c_pair = slotpolicy.caps_for(skey)
+            if d_pair != c_pair:
+                drift.append(f"{skey} 库{d_pair[0]}~{d_pair[1]} / 引擎{c_pair[0]}~{c_pair[1]}")
+    if drift:
+        rep.soft[f"E12 库数据配额与引擎配额漂移(仅信息, 共{len(drift)}个槽位)"] += len(drift)
+        rep.samples["E12 库数据配额与引擎配额漂移(仅信息, 共%d个槽位)" % len(drift)] = drift[:6]
+
     print()
     print("=" * 74)
     print(f"总计评估提示词: {rep.prompts} 条")
@@ -544,6 +587,8 @@ def main() -> int:
         print("\n信息项 (不计失败, 但必须可见 —— 供人工判断是否接受):")
         for k in sorted(rep.soft):
             print(f"  · {k}: {rep.soft[k]} 次")
+            for s in (rep.samples.get(k) or [])[:4]:
+                print(f"      - {s}")
     if bad:
         print("\n违规样本:")
         for k, v in bad.items():

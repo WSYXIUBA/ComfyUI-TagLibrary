@@ -248,23 +248,27 @@ def _run(cdp, tab):
         ui_errs.append(f"预设页签解析失败: {e} / {pr_ok}")
     cdp.ev("document.querySelector('.tp-picktab').click()")
 
-    # ---- 页签收敛 + 排除抽屉 (v1.6.0) ----
+    # ---- 页签收敛 + 排除抽屉 (v1.6.0; 1.9.0 起档案页退出主导航 → 6 页签) ----
+    # ⚠ 别把「⚔ 武器档案」加回来: 1.9.0 按用户要求把档案**编辑**降为二级
+    #   (设置 → ⚔ 道具/武器档案 (高级) → 打开档案编辑器, `.tp-goprof`),
+    #   **选用**搬进挑标签右栏。老断言写死 7 页签 + 该页签存在 → 改完必然假红
+    #   (2026-09-21 实测: 只改点击路径不够, 页签断言也得跟着改)。
     ui_errs = []
-    want_tabs = ["🏠 首页", "挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
+    want_tabs = ["🏠 首页", "挑标签", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
     for t in want_tabs:
         ok = t in tabs
         print(f"    {'✓' if ok else '✗'} 页签存在: {t}")
         if not ok:
             ui_errs.append(f"缺页签 {t}")
-    for bad in ("排除类目", "防冲突关系", "标签库管理"):
+    for bad in ("排除类目", "防冲突关系", "标签库管理", "⚔ 武器档案"):
         ok = bad not in tabs
-        print(f"    {'✓' if ok else '✗'} 页签已合并/删除: {bad}")
+        print(f"    {'✓' if ok else '✗'} 页签已合并/降级: {bad}")
         if not ok:
             ui_errs.append(f"未删除页签 {bad}")
     n_tabs = len([x for x in tabs.split(" | ") if x.strip()])
-    print(f"    {'✓' if n_tabs == 7 else '✗'} 页签总数 = {n_tabs} (期望 7)")
-    if n_tabs != 7:
-        ui_errs.append(f"页签数 {n_tabs} != 7")
+    print(f"    {'✓' if n_tabs == 6 else '✗'} 页签总数 = {n_tabs} (期望 6)")
+    if n_tabs != 6:
+        ui_errs.append(f"页签数 {n_tabs} != 6")
 
     # ---- 🏠 流水线首页 (2026-09-19 编辑体验改造) ----
     #  首页按 axes.AXIS_SECTION 的官方六段次序排 13 条轴: 胶囊逐颗按"当前更窄的

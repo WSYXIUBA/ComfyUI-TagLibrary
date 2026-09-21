@@ -104,6 +104,7 @@ let PANEL_CATS = [];         // [{name, icon, color}] 面板分组标题与类�
 let PANEL_NSFW = new Set();  // NSFW 词表 (executed 回显反查)
 let LIB_PATH = new Map();    // en_l -> [大类名, 子分类名, 孙分类名|null]
 let LIB_GENDER = new Map();  // en_l -> "female"|"male"
+let PANEL_CAPS = new Map();  // "大类/子类" -> [下限, 上限] = 引擎内置槽位配额 (slotpolicy.SLOT_MAX)
 let INDEX_FETCHING = null;
 
 function applyPanelIndex(d) {
@@ -120,6 +121,20 @@ function applyPanelIndex(d) {
   LIB_PATH = m;
   LIB_GENDER = new Map(Object.entries(d.gender || {}));
   PANEL_NSFW = new Set(d.nsfw || []);
+  // 引擎内置槽位配额: 与 subs 同序的 [下限, 上限]
+  const caps = d.caps || [];
+  PANEL_CAPS = new Map();
+  subs.forEach((pair, i) => {
+    const c = caps[i];
+    if (pair && c) PANEL_CAPS.set(`${pair[0]}/${pair[1]}`, c);
+  });
+}
+
+/* 槽位配额 (引擎内置值)。挑标签面板用它做数字框的默认显示 —— 显示 1/1 而引擎按
+   5/3 或 2 走, 用户按面板理解必然算错 (2026-09-21 修)。 */
+function panelSlotCap(key) {
+  const hit = PANEL_CAPS.get(key);
+  return hit ? { min: hit[0], max: hit[1] } : { min: 1, max: 1 };
 }
 
 // 标签有效性别: state 里带的 gender 优先; 旧选择数据缺字段时回查库
@@ -158,6 +173,7 @@ function invalidateLibraryCache() {
   LIB_CACHE = null;
   PANEL_CATS = [];
   PANEL_NSFW = new Set();
+  PANEL_CAPS = new Map();
   LIB_PATH = new Map();
   LIB_GENDER = new Map();
 }
@@ -304,7 +320,7 @@ function setState(node, patch) {
 export {
   escapeHtml, toast, undoToast, hideUndoToast, MANAGER_URL, SETTING_PREFIX, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
   SET_SCALE, SET_LANG, LIB_CACHE, PANEL_CATS, PANEL_NSFW, LIB_PATH, LIB_GENDER,
-  tagGender, fetchPanelIndex, fetchLibrary, invalidateLibraryCache,
+  tagGender, fetchPanelIndex, fetchLibrary, invalidateLibraryCache, panelSlotCap,
   getSetting, setSetting, currentTheme, managerUrl, pushThemeToFrames,
   registerPanelSync, defaultState, getState, setState, getNsfwEffective, getGender,
   GENDER_SEQ, GENDER_LABEL, GENDER_TITLE,

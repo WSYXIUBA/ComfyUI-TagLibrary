@@ -1364,6 +1364,253 @@
     "manual_fill"
    ],
    "params": {}
+  },
+  {
+   "id": "eye-color-vs-eye-color",
+   "note": "眼色/眼图案 ↔ 眼色/眼图案 (两只眼睛不能两个颜色; 与眼型/睫毛/眼影/瞳孔形状不冲突)",
+   "strict": true,
+   "left": {
+    "kind": "tags",
+    "value": [
+     "amber eyes",
+     "aqua eyes",
+     "black eyes",
+     "blue eyes",
+     "brown eyes",
+     "crimson eyes",
+     "cyan eyes",
+     "dark eyes",
+     "empty black eyes",
+     "galaxy eyes",
+     "glowing blue eyes",
+     "glowing green eyes",
+     "glowing purple eyes",
+     "glowing red eyes",
+     "golden eyes",
+     "gradient eyes",
+     "green eyes",
+     "grey eyes",
+     "hazel eyes",
+     "heterochromia",
+     "heterochromia red and blue",
+     "ice eyes",
+     "icy blue eyes",
+     "indigo eyes",
+     "light purple eyes",
+     "lilac eyes",
+     "maroon eyes",
+     "mint eyes",
+     "molten gold eyes",
+     "multicolored eyes",
+     "navy eyes",
+     "olive eyes",
+     "orange eyes",
+     "pale eyes",
+     "pink eyes",
+     "pure white eyes",
+     "purple eyes",
+     "rainbow eyes",
+     "red eyes",
+     "scarlet eyes",
+     "silver eyes",
+     "teal eyes",
+     "turquoise eyes",
+     "two-tone eyes",
+     "violet eyes",
+     "white eyes",
+     "yellow eyes"
+    ]
+   },
+   "right": [
+    {
+     "kind": "tag",
+     "value": "amber eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "aqua eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "black eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "blue eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "brown eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "crimson eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "cyan eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "dark eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "empty black eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "galaxy eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "glowing blue eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "glowing green eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "glowing purple eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "glowing red eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "golden eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "gradient eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "green eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "grey eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "hazel eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "heterochromia"
+    },
+    {
+     "kind": "tag",
+     "value": "heterochromia red and blue"
+    },
+    {
+     "kind": "tag",
+     "value": "ice eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "icy blue eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "indigo eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "light purple eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "lilac eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "maroon eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "mint eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "molten gold eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "multicolored eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "navy eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "olive eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "orange eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "pale eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "pink eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "pure white eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "purple eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "rainbow eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "red eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "scarlet eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "silver eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "teal eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "turquoise eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "two-tone eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "violet eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "white eyes"
+    },
+    {
+     "kind": "tag",
+     "value": "yellow eyes"
+    }
+   ]
   }
  ]
 }

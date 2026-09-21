@@ -222,6 +222,11 @@ def save_rules(rules: list[dict], doc: str | None = None) -> dict:
     for r in rules or []:
         if not _valid_shape(r):
             continue
+        # 扩展包规则 (ext.*) 归 nsfw_conflicts.json 管, 主文件里存一份会变成
+        # 双份 + 影子旧值 (load_rules 两个文件都读)。前端 GET 拿到的是合并后的
+        # 整表, 用户随手删一条就会把扩展规则整批回写进主文件 —— 这里挡住。
+        if str(r.get("id") or "").strip().startswith("ext."):
+            continue
         rid = str(r["id"]).strip()
         n = 2
         while rid in seen:

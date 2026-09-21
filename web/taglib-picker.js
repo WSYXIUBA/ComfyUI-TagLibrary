@@ -11,6 +11,7 @@ import {
   getNsfwEffective, getGender, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
   SET_SCALE, SET_LANG, SETTING_PREFIX,
   LIB_CACHE, LIB_PATH, fetchLibrary, fetchPanelIndex, invalidateLibraryCache,
+  panelSlotCap,
 } from "./taglib-common.js";
 import { renderPipeline, disposePipeline } from "./taglib-pipeline.js";
 
@@ -558,13 +559,22 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       for (const sub of c.subcategories || []) {
         const key = `${c.name}/${sub.name}`;
         const sEx = cEx || isEx(key);
-        const subRange = (st.fill_sub_ranges || {})[sub.id] || { min: 1, max: 1 };
+        // ⚠ 默认值必须是**引擎内置配额** (slotpolicy.SLOT_MAX, 由 panel-index 带过来),
+        // 不能写死 1/1 —— 引擎对 画质增强 5/3、细节强化 4/2、眼部 2 … 都有配额,
+        // 面板显示 1/1 会让用户按错的数字理解输出 (2026-09-21 修)。
+        const override = (st.fill_sub_ranges || {})[sub.id];
+        const subRange = override || panelSlotCap(key);
+        const cap = panelSlotCap(key);
         mkRow(catsBox, {
           id: sub.id, name: sub.name + (sEx ? " · 已关" : ""), count: (sub.tags || []).length,
           depth: 1, active: ui.activeSlot === sub.name,
           toggle: { on: !sEx, title: cEx ? "所属轴已关闭" : (isEx(key) ? "该槽位已关闭" : "点击关闭该槽位"),
                     onToggle: (on) => toggleEx(key, on, c.name) },
-          range: cEx ? { min: 0, max: 0, locked: true } : subRange,
+          range: cEx ? { min: 0, max: 0, locked: true }
+            : { min: subRange.min, max: subRange.max,
+                title: override
+                  ? `自定义配额 ${subRange.min}~${subRange.max}（关掉上方「自动配额」总开关后才生效；现在走引擎内置 ${cap.min}~${cap.max}）`
+                  : `引擎内置配额 ${cap.min}~${cap.max}（改这里 = 自定义，需关掉上方「自动配额」总开关）` },
           onRange: (mn, mx) => {
             const all = { ...(getState(node).fill_sub_ranges || {}) };
             all[sub.id] = { min: mn, max: mx };
@@ -600,7 +610,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (depth === 1) el.style.paddingLeft = "22px";
     if (depth === 2) el.style.paddingLeft = "38px";
     const rangeHtml = range ? `
-      <span class="tp-range" style="${range.locked ? "opacity:.35" : ""}">
+      <span class="tp-range" style="${range.locked ? "opacity:.35" : ""}"
+            title="${esc(String(range.title || "该槽位抽取数量范围"))}">
         <input type="number" min="0" max="20" value="${range.min}" data-r="min" ${range.locked ? "disabled" : ""}/>
         <span>~</span>
         <input type="number" min="0" max="20" value="${range.max}" data-r="max" ${range.locked ? "disabled" : ""}/>

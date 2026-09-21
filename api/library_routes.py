@@ -9,6 +9,7 @@ from aiohttp import web
 
 from .. import jsonio
 from .. import library
+from .. import slotpolicy
 from .. import tagfiles
 from ._common import (
     _WEB_DIR, BACKUP_DIR, FACTORY_BACKUP_PATH, USER_BACKUP_PATH,
@@ -128,6 +129,7 @@ async def get_panel_index(_request: web.Request) -> web.Response:
     lib = library.get_merged()
     cats: list[dict] = []
     subs: list[list] = []                 # [[大类名, 子类名], ...]
+    caps: list[list[int]] = []            # 与 subs 同序: [下限, 上限] = 引擎内置槽位配额
     groups: list[str] = []                # 去重后的孙分类名
     groups_idx: dict[str, int] = {}
     paths: dict[str, list] = {}           # en_lower -> [子分类下标, 孙分类下标] (-1=直属)
@@ -155,6 +157,11 @@ async def get_panel_index(_request: web.Request) -> web.Response:
             sname = str(s.get("name", ""))
             si = len(subs)
             subs.append([cname, sname])
+            # 引擎内置配额 (真源 = slotpolicy.SLOT_MAX)。带上它, 面板才能显示
+            # 「引擎实际会出几个」—— 此前面板固定显示 1/1, 而引擎按 SLOT_MAX 走
+            # (画质增强 5/3、眼部 2 …), 用户按面板理解必然算错。
+            mn, mx = slotpolicy.caps_for(f"{cname}/{sname}")
+            caps.append([mn, mx])
             for g in s.get("groups") or []:
                 gname = str(g.get("name", ""))
                 if gname not in groups_idx:
@@ -169,6 +176,7 @@ async def get_panel_index(_request: web.Request) -> web.Response:
     return _json_response({"ok": True,
                            "mtime": library._mtime(library.USER_PATH),
                            "cats": cats, "subs": subs, "groups": groups,
+                           "caps": caps,
                            "paths": paths, "gender": gender, "nsfw": nsfw,
                            "count": len(paths)})
 

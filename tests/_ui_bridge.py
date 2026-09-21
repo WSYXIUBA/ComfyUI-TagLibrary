@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+import atexit
 import base64
 import json
 import os
@@ -70,6 +71,7 @@ class UiBridge:
         self.ws = None
         self.mid = 0
         self.tabs_opened: list[int] = []
+        self._storage_backup: dict | None = None   # 用户草稿/上次工作流的原始快照
 
     # ---------------------------------------------------------------- 连接
     def connect(self) -> None:
@@ -183,9 +185,12 @@ class UiBridge:
 
         ⚠ 扩展是 MV3 service worker, 会被浏览器随时回收 —— 长跑门禁里偶发
         "Detached while handling command"。截图是纯读操作, 重试安全。
+        worker 被回收后要几秒才醒, 所以退避必须够长, 且每次重试前先发一个廉价命令
+        把它叫起来 —— 1.5s × 3 的老参数在真机连跑里仍被打穿 (2026-09-21:
+        两轮在线门禁各命中一次, 分别挂在 ui_theme_dark.png / ui_prof.png)。
         """
         last = None
-        for attempt in range(3):
+        for attempt in range(5):
             try:
                 data = self.cmd("screenshot", {"full": True}, tab_id)
                 break
@@ -193,7 +198,11 @@ class UiBridge:
                 last = e
                 if "Detached" not in str(e) and "TIMEOUT" not in str(e):
                     raise
-                time.sleep(1.5)
+                time.sleep((1.5, 3.0, 6.0, 10.0)[min(attempt, 3)])
+                try:                      # 唤醒被回收的 worker; 它自己失败也无所谓
+                    self.cmd("tabs", {"action": "list"})
+                except UiError:
+                    pass
         else:
             raise last
         url = data.get("dataUrl") or ""
@@ -212,12 +221,99 @@ class UiBridge:
         tab_id = int(data.get("tabId") or 0)
         if tab_id:
             self.tabs_opened.append(tab_id)
+            self.backup_storage(tab_id)
         return tab_id
 
-    def close_tab(self, tab_id: int) -> None:
-        """关掉自己的标签页 —— 收尾动作, 失败不该拖垮整轮门禁。"""
+    # ------------------------------------------------- 用户浏览器存储的防污染
+    # 门禁会在 ComfyUI 页面上建 __tl_gate__ 测试节点, 而 ComfyUI 会把画布状态
+    # **自动存成草稿** (Comfy.Workflow.Draft.v2:personal:<id>) —— 于是用户的工作流
+    # 草稿里被塞进一堆测试节点 (2026-09-21 实测: 一份草稿里 15 个), 下次打开
+    # 工作流就带出来。收尾时把草稿/上次工作流原样还原, 才是真"不留垃圾"。
+    #
+    # ⚠ 快照**存在页面 localStorage 里**, 不走 eval 回传: 扩展的 evaluate 有
+    #   20000 字符上限, 草稿动辄 75KB, 回传必然被截断 (实测 JSONDecodeError)。
+    #   这里只回传键名与长度。
+    _DRAFT_KEYS = ("Comfy.Workflow.Draft", "workflow")
+    _BACKUP_KEY = "__tl_gate_draft_backup__"
+
+    def _draft_js(self, mode: str) -> str:
+        keys, bk = json.dumps(list(self._DRAFT_KEYS)), json.dumps(self._BACKUP_KEY)
+        match = f"const K={keys}; const hit=(k)=>K.some(p=>k.startsWith(p));"
+        if mode == "backup":
+            return ("(() => { %s"
+                    " if (localStorage.getItem(%s)) return JSON.stringify({kept:true});"
+                    " const o={}; for (const k of Object.keys(localStorage))"
+                    " { if (hit(k)) o[k]=localStorage.getItem(k); }"
+                    " localStorage.setItem(%s, JSON.stringify(o));"
+                    " return JSON.stringify({n:Object.keys(o).length,"
+                    " bytes:JSON.stringify(o).length, keys:Object.keys(o)}); })()"
+                    % (match, bk, bk))
+        return ("(() => { %s"
+                " const raw=localStorage.getItem(%s);"
+                " if (!raw) return JSON.stringify({restored:false});"
+                " const s=JSON.parse(raw);"
+                " for (const k of Object.keys(localStorage))"
+                " { if (hit(k) && !(k in s)) localStorage.removeItem(k); }"
+                " for (const k of Object.keys(s)) localStorage.setItem(k, s[k]);"
+                " localStorage.removeItem(%s);"
+                " return JSON.stringify({restored:true, n:Object.keys(s).length}); })()"
+                % (match, bk, bk))
+
+    def backup_storage(self, tab_id: int) -> None:
+        """备份 ComfyUI 草稿/上次工作流 (快照留在页面里, 只回传元信息)。"""
+        if self._storage_backup:
+            return
+        # 新标签页刚建出来时可能还没落到目标 origin, 这时读到的 localStorage 是空的
+        # (甚至会读到 about:blank) —— 空结果重试几次, 别把"没备份"当成"没草稿"。
+        for attempt in range(3):
+            try:
+                raw = self.ev(self._draft_js("backup"), tab_id)
+                info = json.loads(raw) if isinstance(raw, str) else {}
+                if info.get("n") or info.get("kept"):
+                    self._storage_backup = info or {}
+                    print(f"    (草稿快照: {info.get('n', 0)} 项 / {info.get('bytes', 0)} 字节"
+                          f"{', 沿用本轮已有快照' if info.get('kept') else ''})")
+                    return
+            except UiError as e:
+                if attempt == 2:
+                    print(f"    (提示: 草稿备份失败, 本轮不做还原: {e})", file=sys.stderr)
+                    return
+            time.sleep(1.5)
+        print("    (提示: 没读到可备份的草稿, 本轮不做还原)")
+
+    def restore_storage(self, tab_id: int) -> None:
+        """还原草稿 —— 收尾动作, 失败不该拖垮整轮门禁。"""
+        if not self._storage_backup:
+            return
         try:
-            self.cmd("tabs", {"action": "close"}, tab_id)
+            self.ev(self._draft_js("restore"), tab_id)
+        except UiError as e:
+            print(f"    (收尾提示: 草稿还原失败: {e})", file=sys.stderr)
+
+    def cleanup_tabs(self) -> None:
+        """异常退出兜底: 把本轮开过、还没关的标签页关掉。
+
+        正常路径每条都调了 close_tab, 但门禁失败时可能直接 sys.exit / 抛异常,
+        标签页就留给用户了 (2026-09-21 实测: 一轮在线门禁留下 2 个
+        「TagLib 弹层门禁」标签页)。注册到 atexit, 崩了也收干净。
+        """
+        for t in list(self.tabs_opened):
+            try:
+                self.close_tab(t)
+            except Exception:  # noqa: BLE001  收尾不许再抛
+                pass
+
+    def close_tab(self, tab_id: int) -> None:
+        """关掉自己的标签页 —— 收尾动作, 失败不该拖垮整轮门禁。
+
+        ⚠ tabId 必须放进 **params**: 扩展的 tabs 处理器读的是 `p.tabId`, 信封里的
+        tabId 只有 ask 之类用。放错位置 → `resolveTab` 回落到会话的缺省槽 → 报
+        `NO_TAB 还没有受控标签页` 并且**真的不关** (2026-09-21 实测: 在线门禁
+        每轮都给用户留 2 个标签页, 就是这里)。
+        """
+        self.restore_storage(tab_id)          # 先还原用户的草稿, 再关
+        try:
+            self.cmd("tabs", {"action": "close", "tabId": tab_id}, tab_id)
         except UiError as e:
             print(f"    (收尾提示: 关闭标签页 {tab_id} 失败: {e})", file=sys.stderr)
         finally:
@@ -227,6 +323,7 @@ class UiBridge:
 def ensure_bridge(session_id: str = "taglib-gates") -> UiBridge:
     """拿到一个连好的 UiBridge; 桥没起就自己拉起来 (最多等 ~20s)。"""
     ui = UiBridge(session_id=session_id)
+    atexit.register(ui.cleanup_tabs)      # 崩了也别把标签页/草稿垃圾留给用户
     try:
         ui.connect()
         return ui

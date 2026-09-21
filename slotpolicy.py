@@ -356,4 +356,8 @@ SOLO_BAN_WORDS = frozenset({
     "foursome", "spitroast", "double penetration", "surrounded by penises",
     "cooperative fellatio", "cooperative paizuri", "teamwork (sexual)",
     "mutual masturbation", "futa with female", "surrounded by penises",
+    # 1other = "画面里另有一人" -> 单人锁下语义自相矛盾, 实测 60 seed 里 18 条照出
+    # (2026-09-21)。它同时留在 SINGLE_COUNT_WORDS 里: 那是"分类"(Q10 要求人数轴
+    # 每个词都被分类), 这里是"单人锁下的禁令", 两件事, 不冲突。
+    "1other",
 })
