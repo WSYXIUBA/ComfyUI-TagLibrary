@@ -6,8 +6,6 @@
 
 from __future__ import annotations
 
-from aiohttp import web
-
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
     from .. import library
 except ImportError:  # pragma: no cover
@@ -33,6 +31,9 @@ from .v13_routes import (
 )
 from .v18_routes import (
     get_presets, draw_batch, draw_reroll, absorb, absorb_add,
+)
+from .tag_edit_routes import (
+    get_axes_overview, preview_derive, create_tag, update_tag, get_incomplete,
 )
 
 try:
@@ -86,3 +87,9 @@ def register_routes() -> None:
     app.router.add_post("/taglib/api/draw_reroll", draw_reroll)
     app.router.add_post("/taglib/api/absorb", absorb)
     app.router.add_post("/taglib/api/absorb_add", absorb_add)
+    # 编辑体验改造 (2026-09-19): 流水线首页 / 标签就地编辑 / 待完善汇总
+    app.router.add_get("/taglib/api/axes-overview", get_axes_overview)
+    app.router.add_post("/taglib/api/tag/derive", preview_derive)
+    app.router.add_post("/taglib/api/tag/create", create_tag)
+    app.router.add_post("/taglib/api/tag/update", update_tag)
+    app.router.add_get("/taglib/api/tag/incomplete", get_incomplete)

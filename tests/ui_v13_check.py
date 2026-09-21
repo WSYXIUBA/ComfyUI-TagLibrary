@@ -1,7 +1,8 @@
 """UI 验收: 面板结构 → 开 picker → 逐 tab 截图+断言 → 编辑能力断言。
 
 v1.6.0 起额外断言 (失败即退出码非 0):
-  · 页签收敛为 6 个 (挑标签/武器档案/互斥域/NL句式/预设/设置), 排除类目与防冲突已合并
+  · 页签收敛为 7 个 (首页/挑标签/武器档案/互斥域/NL句式/预设/设置), 排除类目与防冲突已合并
+  · 首页 = 流水线 (按 axes 官方六段次序渲染 13 条轴, 单击放大 → 再点进入)
   · 排除类目出现在侧栏抽屉里
   · 武器档案 / 互斥域 / NL 三个视图是**可编辑**的 (存在 input.tp-ecell / 增删按钮 / 保存按钮)
   · 跨池互斥规则已并入互斥域页
@@ -185,10 +186,11 @@ def main():
         menuHidden: menu ? menu.hidden : null,
         menuItems: menu ? menu.querySelectorAll('.tl-menu-item').length : 0,
         nsfw: label('.tl-nsfw-btn'),
-        gender: label('.tl-gender-val'),
-        conflict: label('.tl-conflict-val'),
-        lang: label('.tl-lang-val'),
-        pv: label('.tl-pv-val'),
+        // 性别/防冲突 已改成面板控件行上的分段/开关; 语言/预览 在 ⋯ 里是下拉
+        gender: (p.querySelector('.tl-gender-seg button.active') || {}).textContent || null,
+        conflict: p.querySelector('.tl-conflict-btn').classList.contains('on') ? '开' : '关',
+        lang: (p.querySelector('.tl-lang-sel') || {}).value || null,
+        pv: (p.querySelector('.tl-pv-sel') || {}).value || null,
         hasRoll: !!p.querySelector('.tl-roll-btn'),
         hasClearBtn: !!p.querySelector('.tl-clear-btn'),
       });
@@ -205,11 +207,59 @@ def main():
     chk("头部常驻按钮数", pv["headButtons"], 4)          # NSFW / 强度 / ⋯ / ＋添加标签 (1.8.1)
     chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
     chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
-    chk("⋯ 菜单项数", pv["menuItems"], 7)                # 性别/防冲突/语言/预览/预设管理/批量探索/清空 (1.8.1: 强度移到标题栏)
+    chk("⋯ 菜单项数", pv["menuItems"], 3)                # 预设管理/批量探索/清空 (性别·防冲突·语言·预览已改为面板上的标准控件)
+
+    # ---- 控件行: 什么语义给什么控件 (开关/分段/下拉) ----
+    #  用户明确要求「按人的交互来」。这里不只数元素, 还**真的操作一次**看反应。
+    ctl = cdp.ev("""(() => {
+      const p = [...document.querySelectorAll('.taglib-panel')].filter(x=>x.offsetHeight>0).pop();
+      const sws = [...p.querySelectorAll('.tl-controls .tl-sw')];
+      const segs = [...p.querySelectorAll('.tl-controls .tl-seg')];
+      return JSON.stringify({
+        switches: sws.length,
+        segments: segs.length,
+        segButtons: segs.map(s => s.querySelectorAll('button').length),
+        hasSelect: !!p.querySelector('.tl-menu .tl-sel'),
+        noChipCycle: p.querySelectorAll('.tl-stchip').length === 0,
+      });
+    })()""")
+    cv = json.loads(ctl) if isinstance(ctl, str) and ctl.startswith("{") else {}
+    chk("控件行: 开关数 = 5", cv.get("switches"), 5)          # NSFW/单人/简背景/特写/防冲突
+    chk("控件行: 分段组数 = 2", cv.get("segments"), 2)         # 涩度/性别
+    chk("控件行: 每段 3 个选项", cv.get("segButtons"), [3, 3])
+    chk("菜单里有下拉(选择语义)", cv.get("hasSelect"), True)
+    chk("已无'点胶囊循环'控件", cv.get("noChipCycle"), True)
+
+    # 真的拨一下 NSFW 开关, 看 aria-checked 有没有反过来
+    flip = cdp.ev("""(() => {
+      const p = [...document.querySelectorAll('.taglib-panel')].filter(x=>x.offsetHeight>0).pop();
+      const sw = p.querySelector('.tl-nsfw-btn');
+      const a = sw.getAttribute('aria-checked');
+      sw.click();
+      const b = sw.getAttribute('aria-checked');
+      sw.click();
+      return JSON.stringify({ before: a, after: b, restored: sw.getAttribute('aria-checked') });
+    })()""")
+    fv = json.loads(flip) if isinstance(flip, str) and flip.startswith("{") else {}
+    chk("开关: 拨一下状态翻转", fv.get("after") != fv.get("before"), True)
+    chk("开关: 再拨一下复原", fv.get("restored"), fv.get("before"))
+
+    # 真的点一下性别分段, 看高亮有没有跟着走
+    seg = cdp.ev("""(() => {
+      const p = [...document.querySelectorAll('.taglib-panel')].filter(x=>x.offsetHeight>0).pop();
+      const bs = [...p.querySelectorAll('.tl-gender-seg button')];
+      bs[1].click();
+      const mid = bs.map(b => b.classList.contains('active'));
+      bs[0].click();
+      return JSON.stringify({ mid: mid, back: bs.map(b => b.classList.contains('active')) });
+    })()""")
+    sv = json.loads(seg) if isinstance(seg, str) and seg.startswith("{") else {}
+    chk("分段: 点第 2 项只有它高亮", sv.get("mid"), [False, True, False])
+    chk("分段: 点回第 1 项复原", sv.get("back"), [True, False, False])
     chk("清空按钮已移入菜单", pv["hasClearBtn"], False)
     chk("🎲 填充常驻", pv["hasRoll"], True)
-    for k, name in [("gender", "菜单·性别"), ("conflict", "菜单·防冲突"),
-                    ("lang", "菜单·语言"), ("pv", "菜单·预览")]:
+    for k, name in [("gender", "面板·性别分段"), ("conflict", "面板·防冲突开关"),
+                    ("lang", "菜单·语言下拉"), ("pv", "菜单·预览下拉")]:
         if not pv[k]:
             print(f"    ✗ {name} 无状态文案")
             panel_errs.append(f"{name} 无状态文案")
@@ -286,7 +336,7 @@ def main():
 
     # ---- 页签收敛 + 排除抽屉 (v1.6.0) ----
     ui_errs = []
-    want_tabs = ["挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
+    want_tabs = ["🏠 首页", "挑标签", "⚔ 武器档案", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
     for t in want_tabs:
         ok = t in tabs
         print(f"    {'✓' if ok else '✗'} 页签存在: {t}")
@@ -298,9 +348,106 @@ def main():
         if not ok:
             ui_errs.append(f"未删除页签 {bad}")
     n_tabs = len([x for x in tabs.split(" | ") if x.strip()])
-    print(f"    {'✓' if n_tabs == 6 else '✗'} 页签总数 = {n_tabs} (期望 6)")
-    if n_tabs != 6:
-        ui_errs.append(f"页签数 {n_tabs} != 6")
+    print(f"    {'✓' if n_tabs == 7 else '✗'} 页签总数 = {n_tabs} (期望 7)")
+    if n_tabs != 7:
+        ui_errs.append(f"页签数 {n_tabs} != 7")
+
+    # ---- 🏠 流水线首页 (2026-09-19 编辑体验改造) ----
+    #  首页按 axes.AXIS_SECTION 的官方六段次序排 13 条轴, 奇数段方框在线上方、
+    #  偶数段在下方; 段4 作品 与 段9 未归类 库内暂无轴, 渲染为占位方框。
+    #  数据全部来自 GET /taglib/api/axes-overview (前端不抄次序)。
+    cdp.ev("document.querySelector('.tp-hometab').click()")
+    time.sleep(2.0)                      # 轴数据与「待完善」角标都是异步 fetch
+    home = cdp.ev("""(() => {
+      const v = document.querySelector('.tp-homeview');
+      if (!v) return 'NO VIEW';
+      return JSON.stringify({
+        visible: getComputedStyle(v).display !== 'none',
+        segs: v.querySelectorAll('.pl-boxes').length,
+        nodes: v.querySelectorAll('.pl-dot').length,
+        boxes: v.querySelectorAll('.pl-box').length,
+        empty: v.querySelectorAll('.pl-box.empty').length,
+        zoomedBefore: !!v.querySelector('.pl-flow.zoomed'),
+      });
+    })()""")
+    try:
+        hv = json.loads(home) if isinstance(home, str) and home.startswith("{") else {}
+    except Exception:  # noqa: BLE001
+        hv = {}
+    if not hv:
+        ui_errs.append(f"首页视图解析失败: {home!r}")
+    for label, got, want in (("首页默认可见", hv.get("visible"), True),
+                             ("首页段行数 = 7", hv.get("segs"), 7),
+                             ("首页段位节点 = 7", hv.get("nodes"), 7),
+                             ("首页方框 = 15 (13 轴 + 2 占位)", hv.get("boxes"), 15),
+                             ("首页占位方框 = 2", hv.get("empty"), 2),
+                             ("首页初始态未放大", hv.get("zoomedBefore"), False)):
+        ok = got == want
+        print(f"    {'✓' if ok else '✗'} {label}: {got!r}" + ("" if ok else f" (期望 {want!r})"))
+        if not ok:
+            ui_errs.append(f"{label}={got!r} 期望 {want!r}")
+
+    #  ⚠ 2026-09-19 教训: 只断言"元素个数"抓不到排版错 —— 第一版横向布局
+    #  照样"7 段 / 15 方框"全对, 但段6 的 8 个框折成 4 行、纵跨 286→470px
+    #  穿过流水线, 把别的段标签压进框堆里, 整块挤在左上角。**必须断言几何**。
+    geo = cdp.ev("""(() => {
+      const v = document.querySelector('.tp-homeview');
+      if (!v) return 'NO VIEW';
+      const boxes = [...v.querySelectorAll('.pl-box:not(.empty)')];
+      const rs = boxes.map(b => b.getBoundingClientRect());
+      let overlap = 0;
+      for (let i = 0; i < rs.length; i++) {
+        for (let j = i + 1; j < rs.length; j++) {
+          const a = rs[i], b = rs[j];
+          if (a.left < b.right && b.left < a.right &&
+              a.top < b.bottom && b.top < a.bottom) overlap++;
+        }
+      }
+      const vr = v.getBoundingClientRect();
+      return JSON.stringify({
+        overlap: overlap,
+        widths: [...new Set(rs.map(r => Math.round(r.width)))],
+        overflowY: v.scrollHeight > v.clientHeight + 1,
+        outRight: rs.filter(r => r.right > vr.right + 1).length,
+        outBottom: rs.filter(r => r.bottom > vr.bottom + 1).length,
+        maxRowTop: Math.max(...rs.map(r => Math.round(r.top))),
+        minTop: Math.min(...rs.map(r => Math.round(r.top))),
+      });
+    })()""")
+    try:
+        gv = json.loads(geo) if isinstance(geo, str) and geo.startswith("{") else {}
+    except Exception:  # noqa: BLE001
+        gv = {}
+    for label, got, want in (("首页方框零重叠", gv.get("overlap"), 0),
+                             ("首页方框宽度统一 (只有 1 种)", len(gv.get("widths") or []), 1),
+                             ("首页无纵向溢出", gv.get("overflowY"), False),
+                             ("首页无方框越出右边", gv.get("outRight"), 0),
+                             ("首页无方框越出下边", gv.get("outBottom"), 0)):
+        ok = got == want
+        print(f"    {'✓' if ok else '✗'} {label}: {got!r}" + ("" if ok else f" (期望 {want!r})"))
+        if not ok:
+            ui_errs.append(f"{label}={got!r} 期望 {want!r}")
+
+    #  两段式交互 (用户已定): 单击先把类目放大铺满 → 再点同一个 → 进入挑标签
+    cdp.ev("document.querySelector('.tp-homeview .pl-box:not(.empty)').click()")
+    time.sleep(0.7)
+    zoomed = cdp.ev("!!document.querySelector('.tp-homeview .pl-flow.zoomed')")
+    print(f"    {'✓' if zoomed is True else '✗'} 首页单击 → 放大: {zoomed!r}")
+    if zoomed is not True:
+        ui_errs.append(f"首页单击未放大: {zoomed!r}")
+    cdp.ev("document.querySelector('.tp-homeview .pl-box.focus').click()")
+    time.sleep(1.2)
+    landed = cdp.ev("""(() => {
+      const c = document.querySelector('.tp-chips');
+      const h = document.querySelector('.tp-homeview');
+      return getComputedStyle(c).display !== 'none' &&
+             getComputedStyle(h).display === 'none';
+    })()""")
+    print(f"    {'✓' if landed is True else '✗'} 首页再点 → 进入挑标签: {landed!r}")
+    if landed is not True:
+        ui_errs.append(f"首页再点未进入挑标签: {landed!r}")
+    cdp.ev("document.querySelector('.tp-picktab').click()")   # 复位到挑标签
+    time.sleep(0.6)
 
     drawer = cdp.ev("""(() => {
       const d = document.querySelector('.tp-exc');

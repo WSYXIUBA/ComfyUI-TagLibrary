@@ -4,7 +4,7 @@
   {
    "id": "weapon.katana",
    "zh": "武士刀",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "katana",
     "odachi"
@@ -193,7 +193,7 @@
   {
    "id": "weapon.sword",
    "zh": "剑",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "sword",
     "rapier",
@@ -376,7 +376,7 @@
   {
    "id": "weapon.greatsword",
    "zh": "大剑",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "greatsword",
     "claymore",
@@ -491,7 +491,7 @@
   {
    "id": "weapon.gun",
    "zh": "枪械",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "gun",
     "pistol",
@@ -656,7 +656,7 @@
   {
    "id": "weapon.bow",
    "zh": "弓",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "bow (weapon)",
     "compound bow",
@@ -797,7 +797,7 @@
   {
    "id": "weapon.staff",
    "zh": "法杖",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "staff",
     "magical staff",
@@ -914,7 +914,7 @@
   {
    "id": "weapon.polearm",
    "zh": "长柄武器",
-   "mount_sub": "人物主体/武器装备",
+   "mount_sub": "道具武器/武器装备",
    "tags": [
     "spear",
     "naginata",
@@ -1027,7 +1027,7 @@
   {
    "id": "obj.phone",
    "zh": "手机",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "smartphone"
    ],
@@ -1089,7 +1089,7 @@
   {
    "id": "obj.book",
    "zh": "书本",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "book"
    ],
@@ -1153,7 +1153,7 @@
   {
    "id": "obj.umbrella",
    "zh": "伞",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "umbrella",
     "paper umbrella"
@@ -1193,7 +1193,7 @@
   {
    "id": "obj.guitar",
    "zh": "吉他",
-   "mount_sub": "人物主体/乐器与运动",
+   "mount_sub": "道具武器/乐器与运动",
    "tags": [
     "guitar",
     "acoustic guitar",
@@ -1237,7 +1237,7 @@
   {
    "id": "obj.cup",
    "zh": "杯子",
-   "mount_sub": "人物主体/食物饮品",
+   "mount_sub": "道具武器/食物饮品",
    "tags": [
     "teacup",
     "coffee cup"
@@ -1297,7 +1297,7 @@
   {
    "id": "obj.camera",
    "zh": "相机",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "camera"
    ],
@@ -1370,7 +1370,7 @@
   {
    "id": "obj.mic",
    "zh": "麦克风",
-   "mount_sub": "人物主体/乐器与运动",
+   "mount_sub": "道具武器/乐器与运动",
    "tags": [
     "microphone"
    ],
@@ -1402,7 +1402,7 @@
   {
    "id": "obj.flower",
    "zh": "花",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "rose"
    ],
@@ -1443,7 +1443,7 @@
   {
    "id": "obj.optics",
    "zh": "望远镜",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "binoculars",
     "telescope"
@@ -1474,7 +1474,7 @@
   {
    "id": "obj.snack",
    "zh": "点心",
-   "mount_sub": "人物主体/食物饮品",
+   "mount_sub": "道具武器/食物饮品",
    "tags": [
     "apple",
     "cookie",
@@ -1521,7 +1521,7 @@
   {
    "id": "obj.pen",
    "zh": "笔",
-   "mount_sub": "人物主体/日用道具",
+   "mount_sub": "道具武器/日用道具",
    "tags": [
     "pen",
     "paintbrush"

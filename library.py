@@ -591,12 +591,7 @@ def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
         pass
 
 def get_merged() -> dict[str, Any]:
-    import time as _t
-    _t0 = _t.perf_counter()
     _folder_hot_sync()  # 热同步: 外部文件改动先吸入, 再给合并视图 (扫描已节流)
-    _ms = (_t.perf_counter() - _t0) * 1000
-    if _ms > 300:  # 正常 <5ms; 超标 = GIL 被其他插件后台线程占住 (Manager/bsk_UI 轮询), 留痕便于排查
-        print(f"[TagLibrary] ⏱ 热同步窗口 {_ms:.0f}ms (非本插件计算, 为后台线程 GIL 竞争)")
     global _cache, _cache_key
     key = (_mtime(DEFAULT_PATH), _mtime(EXT_PATH), _mtime(USER_PATH))
     with _lock:

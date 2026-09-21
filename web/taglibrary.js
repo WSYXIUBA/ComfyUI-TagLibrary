@@ -19,10 +19,6 @@ import {
 } from "./taglib-common.js";
 import { mountTagPicker } from "./taglib-picker.js";
 
-// 版本横幅: 控制台可核对浏览器加载的是否为新版 JS (老缓存是"点了没反应"的常见根因)
-window.__taglibVersion = "1.8.1";
-console.log("[TagLibrary] 面板脚本 v1.8.1 已加载");
-
 const NODE_NAME = "TagLibraryNode";
 
 /* chip 右键菜单 —— 单例复用。
@@ -89,31 +85,48 @@ export function buildPanelWidget(node, container) {
     <div class="tl-head">
       <span class="tl-logo">🏷</span>
       <span class="tl-title">标签库</span>
-      <span class="tl-head-spacer"></span>
-      <button class="tl-btn tl-nsfw-btn" data-act="nsfw" title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出">NSFW</button>
-      <button class="tl-btn tl-ninten-btn" data-act="ninten" title="NSFW 强度: 涩词抽样权重 ×1/×2.5/×6, 纯欲档另有槽位保底" style="display:none;">涩·标准</button>
-      <button class="tl-btn icon tl-more-btn" data-act="more" title="更多设置 (性别过滤 / 防冲突 / 显示语言 / 预览模式 / 预设管理 / 批量探索 / 清空)">⋯<i class="tl-more-dot"></i></button>
-      <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">➕ 添加标签</button>
-    </div>
-    <div class="tl-toolbar">
-      <input class="tl-search" placeholder="🔍 过滤已添加的标签…" />
-      <div class="tl-seg tl-mode-seg" title="工作模式">
+      <div class="tl-seg tl-mode-seg" title="工作模式: 手动=自己挑标签 / 自动=按排除类目随机组合">
         <button data-mode="manual">手动</button>
         <button data-mode="auto">自动</button>
       </div>
+      <span class="tl-head-spacer"></span>
+      <button class="tl-btn primary" data-act="addtags" title="从标签库挑选标签添加">＋ 添加</button>
+      <button class="tl-btn icon tl-more-btn" data-act="more" title="更多: 场景 / 预设 / 内容过滤 / 显示 / 清空">⋯<i class="tl-more-dot"></i></button>
     </div>
-    <div class="tl-preset-row" style="display:flex;gap:4px;align-items:center;margin:4px 0 0;">
-      <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)">
-        <option value="">📦 场景预设…</option>
-      </select>
-      <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设" style="padding:2px 7px;">🗑</button>
-      <button class="tl-btn icon" data-act="preset-save" title="把当前钉选词/排除域/随机配置存为预设" style="padding:2px 7px;">💾</button>
-      <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库" style="padding:2px 7px;">📥</button>
+    <div class="tl-toolbar">
+      <input class="tl-search" placeholder="🔍 过滤已添加的标签…" />
     </div>
-    <div class="tl-scene-row">
-      <button class="tl-scene-btn" data-scene="solo" title="单人锁: 人数轴只出单词 (1girl/1boy/solo…), 禁多人词与互动槽">👤 单人</button>
-      <button class="tl-scene-btn" data-scene="bg" title="简洁背景: 禁具象场景/天气/粒子槽, 背景处理只出简洁族 (纯色/渐变/虚化/棚拍)">🖼 简背景</button>
-      <button class="tl-scene-btn" data-scene="focus" title="人物特写: 禁杂物道具槽 (日用/食物/乐器/动物/束缚), 取景只出特写族 (portrait/upper body…)">🎯 特写</button>
+    <div class="tl-controls">
+      <div class="tl-ctl"><span class="tl-ctl-k">NSFW</span>
+        <button class="tl-sw tl-nsfw-btn" data-act="nsfw" role="switch" aria-checked="false"
+                title="NSFW: 关=剔除并不显示 NSFW 标签; 开=显示且可输出"><i></i></button>
+      </div>
+      <div class="tl-ctl tl-ninten-wrap" hidden><span class="tl-ctl-k">涩度</span>
+        <div class="tl-seg tl-ninten-seg" role="radiogroup" aria-label="涩词强度">
+          <button data-ninten="0">标准</button><button data-ninten="1">强调</button><button data-ninten="2">纯欲</button>
+        </div>
+      </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">性别</span>
+        <div class="tl-seg tl-gender-seg" role="radiogroup" aria-label="性别过滤">
+          <button data-gender="off">双性</button><button data-gender="female">仅女</button><button data-gender="male">仅男</button>
+        </div>
+      </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">单人</span>
+        <button class="tl-sw tl-scene-btn" data-scene="solo" role="switch" aria-checked="false"
+                title="单人锁: 人数轴只出单词 (1girl/1boy/solo…), 禁多人词与互动槽"><i></i></button>
+      </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">简背景</span>
+        <button class="tl-sw tl-scene-btn" data-scene="bg" role="switch" aria-checked="false"
+                title="简洁背景: 禁具象场景/天气/粒子槽, 背景处理只出简洁族 (纯色/渐变/虚化/棚拍)"><i></i></button>
+      </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">特写</span>
+        <button class="tl-sw tl-scene-btn" data-scene="focus" role="switch" aria-checked="false"
+                title="人物特写: 禁杂物道具槽 (日用/食物/乐器/动物/束缚), 取景只出特写族"><i></i></button>
+      </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">防冲突</span>
+        <button class="tl-sw tl-conflict-btn" data-act="conflict" role="switch" aria-checked="true"
+                title="防冲突: 随机时同组互斥 (关闭后可能抽出互相冲突的词)"><i></i></button>
+      </div>
     </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
@@ -121,10 +134,27 @@ export function buildPanelWidget(node, container) {
       <button class="tl-roll-btn" data-act="roll" title="随机抽取标签填入框内 (按当前模式和设置)">🎲 填充</button>
     </div>
     <div class="tl-menu" hidden>
-      <button class="tl-menu-item" data-act="gender"><span class="tl-mi-k">性别过滤</span><span class="tl-mi-v tl-gender-val">⚥ 双性</span></button>
-      <button class="tl-menu-item" data-act="conflict"><span class="tl-mi-k">防冲突</span><span class="tl-mi-v tl-conflict-val">已开启</span></button>
-      <button class="tl-menu-item" data-act="lang"><span class="tl-mi-k">显示语言</span><span class="tl-mi-v tl-lang-val">双语</span></button>
-      <button class="tl-menu-item" data-act="pv"><span class="tl-mi-k">预览模式</span><span class="tl-mi-v tl-pv-val">简洁</span></button>
+      <div class="tl-menu-sec">预设</div>
+      <div class="tl-preset-row">
+        <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)">
+          <option value="">📦 场景预设…</option>
+        </select>
+        <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设">🗑</button>
+        <button class="tl-btn icon" data-act="preset-save" title="把当前钉选词/排除域/随机配置存为预设">💾</button>
+        <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库">📥</button>
+      </div>
+      <div class="tl-menu-sec">显示</div>
+      <div class="tl-mi-row"><span class="tl-mi-k">显示语言</span>
+        <select class="tl-sel tl-lang-sel" title="标签显示语言">
+          <option value="bilingual">双语</option><option value="zh">中文</option><option value="en">英文</option>
+        </select>
+      </div>
+      <div class="tl-mi-row"><span class="tl-mi-k">预览模式</span>
+        <select class="tl-sel tl-pv-sel" title="节点面板底部的预览文本怎么显示">
+          <option value="simple">简洁</option><option value="weighted">带权重</option><option value="debug">调试</option>
+        </select>
+      </div>
+      <div class="tl-menu-sec">其他</div>
       <button class="tl-menu-item" data-act="preset-mgr"><span class="tl-mi-k">📦 预设管理</span><span class="tl-mi-v">详情/编辑</span></button>
       <button class="tl-menu-item" data-act="explorer"><span class="tl-mi-k">🎲 批量探索</span><span class="tl-mi-v">一次看 N 条</span></button>
       <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
@@ -195,39 +225,46 @@ export function buildPanelWidget(node, container) {
     toast(`预览模式: ${PV_LABEL[next]}`);
   }
 
-  /* ---------- nsfw (二态按钮: 默认关, 开=绿色) ---------- */
+  /* ---------- NSFW —— **开关** ----------
+     ⚠ 用户明确要求: NSFW 是开关, 不是"可以 ✕ 掉的标签"。所以它就是开关的样子,
+     拨一下就切换; 不挂 ✕、不做"点一下循环"。 */
   function renderNsfw() {
     const on = getNsfwEffective(node);
     nsfwBtn.classList.toggle("on", on);
+    nsfwBtn.setAttribute("aria-checked", on ? "true" : "false");
     container.dataset.nsfw = on ? "1" : "0";
   }
 
   function toggleNsfw() {
-    const cur = getNsfwEffective(node);
-    setState(node, { nsfw: !cur });
+    setState(node, { nsfw: !getNsfwEffective(node) });
     renderNsfw();
     renderAll();
   }
   nsfwBtn.addEventListener("click", toggleNsfw);
 
-  /* ---------- 性别三态 (关闭 ⚥ / 女性 ♀ 剔除男性专属 / 男性 ♂ 剔除女性专属) ---------- */
+  /* ---------- 性别三态 —— **三分段** ----------
+     原来做成"点一下循环"的胶囊: 用户看不出能不能点、也不知道点完会变成什么。
+     现在是标准分段: 三个选项平铺, 当前项高亮, 点哪个就是哪个。 */
   function renderGender() {
     const g = getGender(node);
-    genderVal.textContent = GENDER_LABEL[g];
-    genderItem.title = GENDER_TITLE[g];
-    genderItem.classList.toggle("on", g !== "off");
-    genderItem.classList.toggle("g-female", g === "female");
-    genderItem.classList.toggle("g-male", g === "male");
+    container.querySelectorAll(".tl-gender-seg button").forEach((b) =>
+      b.classList.toggle("active", b.dataset.gender === g));
     container.dataset.gender = g;
   }
-  function cycleGender() {
-    const cur = getGender(node);
-    const next = GENDER_SEQ[(GENDER_SEQ.indexOf(cur) + 1) % GENDER_SEQ.length];
-    setState(node, { gender: next });
+  container.querySelector(".tl-gender-seg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-gender]");
+    if (!b) return;
+    setState(node, { gender: b.dataset.gender });
     renderGender();
     renderAll();
-    toast(GENDER_TITLE[next]);
-  }
+    toast(GENDER_TITLE[b.dataset.gender]);
+  });
+
+  /* 防冲突开关 —— ⚠ 必须单独绑!
+     它原来在 ⋯ 里是 .tl-menu-item[data-act="conflict"], 靠下面的 forEach 统一绑定;
+     搬成面板上的开关后 .tl-menu-item 的 forEach 不再覆盖它 → 变成没人绑的死按钮
+     (实测: 拨一下 true->true 毫无反应)。**凡是把控件移出 forEach 覆盖范围的, 都要补绑。** */
+  container.querySelector(".tl-conflict-btn").addEventListener("click", () => toggleConflict());
 
   /* ----------Added-tags view ----------
      chipzone 现在只渲染 state.tags —— 用户从 ➕窗口 添加进来的标签。
@@ -877,10 +914,11 @@ export function buildPanelWidget(node, container) {
 
   function renderConflictBtn() {
     const on = getState(node).avoid_conflicts !== false;
-    conflictVal.textContent = on ? "已开启" : "已关闭";
-    conflictItem.classList.toggle("on", on);
-    conflictItem.title = on ? "防冲突已开启 (随机时同组互斥) — 点击关闭"
-                            : "防冲突已关闭 — 点击开启";
+    const sw = container.querySelector(".tl-conflict-btn");
+    if (sw) {
+      sw.classList.toggle("on", on);
+      sw.setAttribute("aria-checked", on ? "true" : "false");
+    }
   }
 
   /* NSFW 强度三档 (1.8.0): 标准=原池占比 / 强调=×2.5 / 纯欲=×6.0 (涩词抽样权重乘数) */
@@ -894,14 +932,42 @@ export function buildPanelWidget(node, container) {
     renderNsfwIntensity();
     rollFill();   // 立刻按新强度重抽, 按钮点了就见效
   }
+  /* ---------- 涩度三档 —— **三分段**, 只在 NSFW 打开时出现 ---------- */
   function renderNsfwIntensity() {
-    const btn = container.querySelector(".tl-ninten-btn");
-    if (!btn) return;
     const on = getNsfwEffective(node);
-    btn.style.display = on ? "" : "none";
-    btn.textContent = "涩·" + NINTEN_LABEL[Number(getState(node).nsfw_intensity || 0)];
-    btn.classList.toggle("on", Number(getState(node).nsfw_intensity || 0) > 0);
+    const wrap = container.querySelector(".tl-ninten-wrap");
+    if (wrap) wrap.hidden = !on;
+    const cur = Number(getState(node).nsfw_intensity || 0);
+    container.querySelectorAll(".tl-ninten-seg button").forEach((b) =>
+      b.classList.toggle("active", Number(b.dataset.ninten) === cur));
   }
+  container.querySelector(".tl-ninten-seg").addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-ninten]");
+    if (!b) return;
+    setState(node, { nsfw_intensity: Number(b.dataset.ninten) });
+    renderNsfwIntensity();
+    renderAll();
+    rollFill();                       // 立刻按新强度重抽, 点了就见效
+    toast("涩度: " + (NINTEN_LABEL[Number(b.dataset.ninten)] || ""));
+  });
+
+  /* ---------- 显示语言 / 预览模式 —— **下拉** ----------
+     选择语义就该用下拉: 打开就看到全部选项、点一个就选定。
+     原来是"点一下循环到下一档", 用户得点好几次才知道有哪些档。 */
+  const langSel = container.querySelector(".tl-lang-sel");
+  langSel.onchange = () => {
+    setSetting(SET_LANG, langSel.value);
+    renderAll();                      // chip 文案随语言变, 要整块重渲染
+    toast("显示语言: " + (LANG_LABEL[langSel.value] || langSel.value));
+  };
+  const pvSel = container.querySelector(".tl-pv-sel");
+  pvSel.onchange = () => {
+    setState(node, { preview_mode: pvSel.value });
+    ui.previewMode = pvSel.value;
+    previewEl.textContent = outputPreview(getState(node).tags, pvSel.value);
+    renderMenuState();
+    toast("预览模式: " + (PV_LABEL[pvSel.value] || pvSel.value));
+  };
 
   function toggleConflict() {
     const cur = getState(node).avoid_conflicts !== false;
@@ -919,20 +985,22 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderNsfwIntensity(); renderSceneBar(); renderMenuState();
+    renderTags(); renderNsfw(); renderGender(); renderConflictBtn();
+    renderNsfwIntensity(); renderSceneBar(); renderMenuState();
   }
 
   /* ---------- ⋯ 更多菜单 ----------
      低频操作集中于此 (性别 / 防冲突 / 显示语言 / 预览模式 / 清空),
      同时充当"当前状态"的读数板; ⋯ 上小圆点提示有非默认项。 */
   function renderMenuState() {
-    container.querySelector(".tl-lang-val").textContent =
-      LANG_LABEL[getSetting(SET_LANG, "bilingual")] || "双语";
-    container.querySelector(".tl-pv-val").textContent =
-      PV_LABEL[getState(node).preview_mode || "simple"] || "简洁";
-    // 语言/预览的效果在 chip 上可见; 性别与防冲突的效果不明显, 用圆点提示
-    const dirty = getGender(node) !== "off" || getState(node).avoid_conflicts === false;
-    moreBtn.classList.toggle("dirty", dirty);
+    // 语言/预览模式已改成**下拉**(选择语义就该用下拉, 不是点胶囊循环)
+    const ls = container.querySelector(".tl-lang-sel");
+    if (ls) ls.value = getSetting(SET_LANG, "bilingual");
+    const ps = container.querySelector(".tl-pv-sel");
+    if (ps) ps.value = getState(node).preview_mode || "simple";
+    // 性别 / 防冲突 / NSFW 现在都直接摆在面板上, ⋯ 的圆点只提示"预设已选中"
+    const presetSel = container.querySelector(".tl-preset-sel");
+    moreBtn.classList.toggle("dirty", !!(presetSel && presetSel.value));
   }
 
   function closeMoreMenu() {
@@ -1262,7 +1330,9 @@ export function buildPanelWidget(node, container) {
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollFill;
   // 1.8.0: 预设 / 吸收器
-  container.querySelector('[data-act="ninten"]').onclick = cycleNsfwIntensity;
+  // ⚠ 涩度原先是 [data-act="ninten"] 单按钮 → 已改成 .tl-ninten-seg 三分段,
+  //   绑定在 renderNsfwIntensity 旁边 (留着这行会让 querySelector 取到 null,
+  //   整个面板构建抛 TypeError —— 实测踩过)
   container.querySelectorAll(".tl-scene-btn").forEach((b) => {
     b.onclick = () => {
       const st = getState(node);

@@ -4,36 +4,13 @@ from __future__ import annotations
 
 import json
 
-import gc as _gc
-import time as _tmod
-
-_gc_t0 = 0.0
-
-
-def _gc_cb(phase, info):
-    global _gc_t0
-    if phase == "start":
-        _gc_t0 = _tmod.perf_counter()
-    else:
-        _d = (_tmod.perf_counter() - _gc_t0) * 1000
-        if _d > 200:
-            print(f"[TagLibrary] 🗑 GC gen{info['generation']} 暂停 {_d:.0f}ms (进程级, 与本插件计算量无关)")
-
-
-try:
-    _gc.callbacks.append(_gc_cb)
-except Exception:
-    pass
-
 try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶层导入
     from . import library
-    from . import tagconflicts
     from . import runtime_snapshot
     from . import engine
     from . import nl
 except ImportError:  # pragma: no cover
     import library
-    import tagconflicts
     import runtime_snapshot
     import engine
     import nl
@@ -175,19 +152,8 @@ class TagLibraryNode:
             tags.append(self._format_tag(
                 {"en": p.en, "weight": p.weight}, use_weights_syntax))
 
-        if dedupe:
-            seen: set[str] = set()
-            uniq = []
-            for t in tags:
-                k = t.lower()
-                if k not in seen:
-                    seen.add(k)
-                    uniq.append(t)
-            tags = uniq
-
-        sep = ", " if separator == "comma" else " "
-        parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
-        text = sep.join(parts) if parts else ""
+        text = self._join_output(tags, dedupe=dedupe, separator=separator,
+                                 prefix=prefix, suffix=suffix)
         # ---- NL 尾段 (1.3.0: 自然语言是一等输出层; state.nl_tail 默认开) ----
         if state.get("nl_tail", True):
             tail = nl.compile_tail(snap, res.picks, seed)
@@ -249,14 +215,29 @@ class TagLibraryNode:
         except Exception:  # noqa: BLE001 — 元数据写入失败绝不影响出图
             pass
 
+    @staticmethod
+    def _join_output(tags: list[str], *, dedupe: bool, separator: str,
+                     prefix: str | None, suffix: str | None) -> str:
+        """标签列表 → 最终文本 (去重 + 分隔符 + 前后缀拼接)。
+
+        manual / auto 两路共用同一口径, 避免两处各写一遍导致行为漂移。
+        """
+        if dedupe:
+            seen: set[str] = set()
+            uniq = []
+            for t in tags:
+                k = t.lower()
+                if k not in seen:
+                    seen.add(k)
+                    uniq.append(t)
+            tags = uniq
+        sep = ", " if separator == "comma" else " "
+        parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "")
+                 if p and p.strip()]
+        return sep.join(parts) if parts else ""
+
     def build(self, *args, **kwargs):
-        import time as _t
-        _t0 = _t.perf_counter()
         result = self._build_impl(*args, **kwargs)
-        _ms = (_t.perf_counter() - _t0) * 1000
-        if _ms > 50:  # 正常应在个位数 ms; 超标才打日志便于排查
-            mode = kwargs.get("mode") or (args[1] if len(args) > 1 else "?")
-            print(f"[TagLibrary] ⏱ build 耗时 {_ms:.0f}ms (mode={mode})")
         # ---- PNG 元数据: manual/auto 两路在此汇合, 从返回值取最终文本单点写入 ----
         try:
             text = (result.get("result", (None,))[0]
@@ -396,19 +377,8 @@ class TagLibraryNode:
             chosen = [t for t in chosen if str(t.get("gender") or "").lower() != "female"]
         tags = [self._format_tag(t, use_weights_syntax) for t in chosen]
 
-        if dedupe:
-            seen: set[str] = set()
-            uniq = []
-            for t in tags:
-                k = t.lower()
-                if k not in seen:
-                    seen.add(k)
-                    uniq.append(t)
-            tags = uniq
-
-        sep = ", " if separator == "comma" else " "
-        parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
-        text = sep.join(parts) if parts else ""
+        text = self._join_output(tags, dedupe=dedupe, separator=separator,
+                                 prefix=prefix, suffix=suffix)
         neg = self.NEGATIVE_PRESET if state.get("negative_out", True) else ""
         return (text, text, neg)
 

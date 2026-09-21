@@ -310,6 +310,51 @@ html:not(.dark-theme) .tl-scope,
 .tl-menu-item.on .tl-mi-v { color: var(--tl-accent-text); font-weight: 600; }
 .tl-menu-item.g-female .tl-mi-v { color: #ff6b9d; }
 .tl-menu-item.g-male .tl-mi-v { color: var(--tl-accent); }
+
+/* 控件行 —— 什么语义给什么控件:
+   开关(.tl-sw) / 三分段(.tl-seg) / 下拉(.tl-sel)。
+   ⚠ 不再有"点胶囊循环": 用户看不出能不能点、也不知道点完会变成什么。 */
+.tl-controls { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center;
+               padding: 6px 10px 2px; }
+.tl-ctl { display: inline-flex; align-items: center; gap: 6px; }
+.tl-ctl[hidden] { display: none; }
+.tl-ctl-k { font-size: 11.5px; color: var(--tl-text-2); white-space: nowrap; }
+
+.tl-sw { position: relative; width: 30px; height: 17px; flex: 0 0 auto; padding: 0;
+         border-radius: 9px; cursor: pointer; border: 1px solid var(--tl-border-2);
+         background: var(--tl-input-bg); transition: background .16s, border-color .16s; }
+.tl-sw i { position: absolute; top: 1px; left: 1px; width: 13px; height: 13px;
+           border-radius: 50%; background: var(--tl-muted);
+           transition: transform .16s, background .16s; }
+.tl-sw.on { background: color-mix(in srgb, var(--tl-accent) 55%, transparent);
+            border-color: var(--tl-accent); }
+.tl-sw.on i { transform: translateX(13px); background: #fff; }
+.tl-sw:focus-visible { outline: 2px solid var(--tl-accent); outline-offset: 2px; }
+
+.tl-seg { display: inline-flex; background: var(--tl-input-bg);
+          border: 1px solid var(--tl-border-2); border-radius: 6px; padding: 1px; }
+.tl-seg button { border: none; background: transparent; color: var(--tl-text-2);
+                 font-size: 11px; padding: 2px 7px; border-radius: 4px; cursor: pointer; }
+.tl-seg button.active { background: var(--tl-hover); color: var(--tl-text); font-weight: 500; }
+
+.tl-mi-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
+.tl-mi-row .tl-mi-k { flex: 1; color: var(--tl-text-2); }
+.tl-sel { background: var(--tl-input-bg); border: 1px solid var(--tl-border-2);
+          border-radius: 5px; color: var(--tl-text); font-size: 11.5px; padding: 2px 6px; }
+.tl-stchip.hot { border-color: #4aa564; background: color-mix(in srgb, #4aa564 18%, transparent); }
+.tl-stchip.warn { border-color: var(--tl-warn); background: color-mix(in srgb, var(--tl-warn) 16%, transparent); }
+
+/* ⋯ 菜单里的分区标题 + 场景/预设行 (它们从面板主体搬进来了) */
+.tl-menu-sec {
+  padding: 7px 10px 3px; font-size: 10.5px; color: var(--tl-muted);
+  border-top: 1px solid var(--tl-border);
+}
+.tl-menu-sec:first-child { border-top: none; }
+.tl-menu .tl-scene-row { display: flex; gap: 6px; padding: 2px 10px 6px; }
+.tl-menu .tl-scene-row .tl-scene-btn { flex: 1; justify-content: center; }
+.tl-menu .tl-preset-row { display: flex; gap: 4px; align-items: center; padding: 2px 10px 6px; }
+.tl-menu .tl-preset-row .tl-preset-sel { flex: 1; min-width: 0; }
+.tl-menu .tl-nsfw-btn, .tl-menu .tl-ninten-btn { margin: 2px 10px 6px; }
 .tl-menu-item.danger .tl-mi-k { color: var(--tl-danger); }
 .tl-menu-item.danger:hover { background: rgba(255,71,87,.10); }
 .tl-ttag.nsfw.on {

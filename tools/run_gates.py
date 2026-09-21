@@ -47,6 +47,7 @@ OFFLINE = [
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
     ("api_security_test", "API 安全门禁 (CSRF 中间件/导出目录确认/双向删除精确匹配)"),
     ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
+    ("tag_edit_test", "标签就地编辑 (推导/新增/改字段/校验拒绝/首页分段/待完善)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
 ]
 
@@ -56,6 +57,7 @@ ONLINE = [
     ("node_output_test", "真机节点输出测试 (60 次生成 × 文本层断言)"),
     ("ui_v13_check", "CDP 浏览器 UI 巡检 (面板/页签/可编辑/开关)"),
     ("ui_theme_check", "CDP 浏览器主题一致性巡检 (深色/浅色/管理页)"),
+    ("ui_dialog_close_test", "弹层开关巡检 (⋯菜单/挑选器/面板弹层/管理页弹窗 能否关掉)"),
     ("feature_e2e_test", "全功能真机端到端 (预设/场景条/强度/重摇/批量/吸收/未成年锁/negative)"),
 ]
 

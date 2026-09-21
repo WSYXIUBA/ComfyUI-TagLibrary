@@ -12,6 +12,7 @@ import {
   SET_SCALE, SET_LANG, SETTING_PREFIX,
   LIB_CACHE, LIB_PATH, fetchLibrary, fetchPanelIndex, invalidateLibraryCache,
 } from "./taglib-common.js";
+import { renderPipeline, disposePipeline } from "./taglib-pipeline.js";
 
 /* --------------------------------------------- tag picker (全库挑选器) */
 
@@ -265,7 +266,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     <div class="tp-wrap">
       <div class="tp-head">
         <h2>🏷 从标签库添加</h2>
-        <button class="tp-tabbtn tp-picktab active">挑标签</button>
+        <button class="tp-tabbtn tp-hometab active">🏠 首页</button>
+        <button class="tp-tabbtn tp-picktab">挑标签</button>
         <button class="tp-tabbtn tp-proftab">⚔ 武器档案</button>
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
         <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
@@ -276,6 +278,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       </div>
       <div class="tp-cols">
         <aside class="tp-cats"></aside>
+        <section class="tp-homeview"></section>
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
         <section class="tp-profview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
@@ -636,6 +639,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   /* ---------- 排除类目视图 ---------- */
   const pickCols = [".tp-cats", ".tp-chips"].map((s) => rootEl.querySelector(s));
+  const homeView = $(".tp-homeview");
 
   function upstreamText() {
     // 收集上游 prefix 文本 (已连线的输入 widget / 上游节点预览)
@@ -1774,6 +1778,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   function switchTab(tab) {
     ui.tab = tab;
+    rootEl.querySelector(".tp-hometab")?.classList.toggle("active", tab === "home");
     rootEl.querySelector(".tp-picktab").classList.toggle("active", tab === "pick");
     rootEl.querySelector(".tp-settab").classList.toggle("active", tab === "settings");
     rootEl.querySelector(".tp-proftab")?.classList.toggle("active", tab === "prof");
@@ -1781,6 +1786,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
     rootEl.querySelector(".tp-prtab")?.classList.toggle("active", tab === "preset");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
+    homeView.style.display = tab === "home" ? "flex" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     profView.style.display = tab === "prof" ? "block" : "none";
     grpView.style.display = tab === "grp" ? "block" : "none";
@@ -1790,6 +1796,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const info = $(".tp-footinfo");
     if (tab === "pick") {
       info.innerHTML = `已挑选 <b class="tp-count">${ui.picked.length}</b> 个`;
+    } else if (tab === "home") {
+      info.innerHTML = `🏠 流水线首页 · 按官方六段次序 · 点方框放大, 再点进入该类目`;
     } else if (tab === "prof") {
       info.innerHTML = `⚔ 姿势只能随武器出生 · 改档案保存即生效`;
     } else if (tab === "grp") {
@@ -1810,6 +1818,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (tab === "nl") renderNlView();
     if (tab === "preset") renderPresetView();
   }
+  $(".tp-hometab").onclick = () => switchTab("home");
   rootEl.querySelector(".tp-picktab").onclick = () => switchTab("pick");
   rootEl.querySelector(".tp-prtab").onclick = () => switchTab("preset");
   rootEl.querySelector(".tp-settab").onclick = () => switchTab("settings");
@@ -1824,8 +1833,28 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
 
   renderCats();
   renderChips();
+
+  // 默认落到流水线首页: 先看"提示词是怎么拼起来的", 再点进具体类目。
+  // onPick 复用现成的挑标签视图 —— 直接设 activeAxis 后重渲染, 不另做一套筛选。
+  switchTab("home");
+  renderPipeline(homeView, {
+    onPick: (axisId, axisZh) => {
+      ui.activeAxis = axisId;
+      ui.activeSlot = null;
+      ui.openAxes?.add(axisZh);          // 展开该轴的槽位, 落地即是可挑状态
+      switchTab("pick");
+      renderCats();
+      renderChips();
+    },
+    onIncomplete: (inc) => {
+      const c = inc?.counts || {};
+      toast(`待完善 ${inc?.total ?? 0} 项 · 未建档武器 ${c.weapon_unregistered ?? 0} · ` +
+            `陈旧引用 ${c.dangling_ref ?? 0} · 缺句式族 ${c.pose_no_family ?? 0}`);
+    },
+  });
+
   return {
-    destroy() {},
+    destroy() { disposePipeline(homeView); },
     libTouched: () => ui.libTouched,
   };
 }

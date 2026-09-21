@@ -2,24 +2,16 @@
 
 from __future__ import annotations
 
-import json
 import os
 import re
-import time
 
 from aiohttp import web
 
-# 本模块位于 <root>/api/ 下, 路径常量统一以仓库根为基准
-_PKG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 from .. import library
 from .. import tagfiles
-from .. import tagconflicts
-from .. import runtime_snapshot
-from .. import profiles as _profiles
-from .. import grouprules as _grouprules
-from .. import nl as _nl
-from .. import engine as _engine
+
+# 本模块位于 <root>/api/ 下, 路径常量统一以仓库根为基准
+_PKG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 _WEB_DIR = os.path.join(_PKG_DIR, "web")

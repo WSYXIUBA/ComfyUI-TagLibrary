@@ -38,11 +38,33 @@ RARITY_SPAWN_RATE = {
 DEFAULT_RARITY = "common"
 
 # 一级分类名 → 推断 type (前缀匹配; 未命中 → other)
+#
+# ⚠ 表里必须同时有 **轴中文名**(新结构) 与 **旧 9 大类名**(迁移工具依赖)。
+#   S4 把第一级从「大类」换成「轴」之后, 这张表没跟着更新 —— 于是"新加的标签"
+#   会因为 infer_type("道具武器","武器装备") 命中不到任何前缀而拿到 `other`,
+#   而同类存量标签是 `content`/`pose` (它们的 type 是当年按旧大类名落的, 且
+#   migrate_tag 用 setdefault 不会改写)。实测 5 条轴受影响:
+#   count/character/appearance/prop → other (应为 content), action → other (应为 pose)。
+#   轴名条目排在旧大类名之前: 轴名更具体, 且是当前结构的真源。
 _TYPE_BY_CATEGORY = (
+    # ---- 当前结构: 13 条轴 (axes.AXIS_NAME_ZH) ----
+    ("画质规格", "quality"),
+    ("人数", "content"),
+    ("角色身份", "content"),
+    ("画师", "content"),
+    ("外貌特征", "content"),
+    ("服装", "descriptor"),
+    ("道具武器", "content"),
+    ("动作姿态", "pose"),
+    ("场景环境", "scene"),
+    ("光影氛围", "lighting"),
+    ("构图镜头", "composition"),
+    ("风格媒介", "style"),
+    ("材质特效", "material"),
+    # ---- 旧 9 大类名 (仅迁移期数据/工具用, 保留以保证旧路径行为不变) ----
     ("质量", "quality"),
     ("画质", "quality"),
     ("人物", "content"),
-    ("服装", "descriptor"),
     ("姿势", "pose"),
     ("构图", "composition"),
     ("镜头", "composition"),
