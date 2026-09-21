@@ -24,7 +24,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       /* 颜色全部走 .tl-scope 主题变量 (tagpanel-css.js) —— 深浅主题同一份样式 */
       .tp-wrap { display:flex; flex-direction:column; height:100%; color:var(--tl-text);
                  font:12.5px/1.5 "Segoe UI","Microsoft YaHei",sans-serif; }
-      .tp-head { display:flex; align-items:center; gap:8px; padding:12px 16px; border-bottom:1px solid var(--tl-border); }
+      .tp-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; row-gap:7px;
+                 padding:12px 16px; border-bottom:1px solid var(--tl-border); }
       .tp-head h2 { margin:0; font-size:15px; white-space:nowrap; }
       .tp-search { flex:1; min-width:150px; max-width:420px; background:var(--tl-input-bg);
                    border:1px solid var(--tl-border-2); border-radius:8px; color:var(--tl-text);
@@ -49,6 +50,65 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       .tp-chev { cursor:pointer; opacity:.7; }
       .tp-chev:hover { opacity:1; }
       .tp-chips { flex:1; overflow-y:auto; padding:14px 16px; }
+      /* ---------- 右栏: 道具姿势 + 已挑选 ----------
+         手动用户的主路径: 中栏点一个道具 → 右栏列出它的全部姿势 → 点姿势入选。
+         ⚠ 不要靠搜索。搜 holding gun 才看得到姿势 = 非人类交互 (用户原话)。 */
+      .tp-side { flex:0 0 238px; width:238px; border-left:1px solid var(--tl-border);
+                 overflow-y:auto; padding:10px 11px; display:flex; flex-direction:column; gap:9px;
+                 background:var(--tl-card-2); }
+      .tp-side[hidden] { display:none; }
+      .tp-side-h { font-size:11px; color:var(--tl-muted); letter-spacing:.03em; }
+      .tp-side-h b { color:var(--tl-text); font-size:12px; }
+      /* 右栏里的「编辑档案」入口 —— 档案编辑此前藏在「设置」里, 用户找不到
+         (原话: "武器档案其他编辑功能怎么没了")。放到他正在看道具的地方。 */
+      .tp-side-edit { border:1px solid var(--tl-border-2); background:var(--tl-input-bg);
+                      color:var(--tl-text-2); font:inherit; font-size:10.5px; padding:2px 7px;
+                      border-radius:6px; cursor:pointer; white-space:nowrap; }
+      .tp-side-edit:hover { color:var(--tl-text); background:var(--tl-hover); }
+      .tp-side-empty { font-size:11.5px; color:var(--tl-dim); line-height:1.7;
+                       border:1px dashed var(--tl-border-2); border-radius:9px; padding:9px 10px; }
+      .tp-picked-item { display:flex; align-items:center; gap:6px; font-size:11.5px;
+                        padding:3px 6px; border-radius:6px; color:var(--tl-text-2); }
+      .tp-picked-item:hover { background:var(--tl-hover); }
+      .tp-picked-item .en { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+      .tp-picked-item .rm { cursor:pointer; opacity:.5; padding:0 3px; }
+      .tp-picked-item .rm:hover { opacity:1; color:var(--tl-danger); }
+      /* ---------- 已挑选区 (1.9.0): 段位分组 + 权重入口 + 批量操作 + 手数预算 ----------
+         手动用户挑完 30 个词后, 旧界面只给一串平铺词 + 逐个 ✕ —— 看不出落在哪一段、
+         调不了权重、清不掉一批。这一块是那三条缺口的落点。 */
+      .tp-pick-tools { display:flex; gap:5px; margin:0 0 4px; }
+      .tp-pick-tool { flex:1; border:1px solid var(--tl-border-2); background:var(--tl-input-bg);
+                      color:var(--tl-text-2); border-radius:6px; font:inherit; font-size:10.5px;
+                      padding:2px 0; cursor:pointer; }
+      .tp-pick-tool:hover { color:var(--tl-text); background:var(--tl-hover); }
+      .tp-pick-sec { display:flex; align-items:center; gap:5px; font-size:10px; font-weight:700;
+                     letter-spacing:.05em; color:var(--tl-accent-text); opacity:.9;
+                     padding:6px 2px 2px; margin-top:3px; border-top:1px solid var(--tl-border); }
+      .tp-pick-sec .clr { margin-left:auto; cursor:pointer; opacity:.6; font-weight:400; font-size:10px; }
+      .tp-pick-sec .clr:hover { opacity:1; color:var(--tl-danger); }
+      .tp-w { width:44px; background:var(--tl-input-bg); border:1px solid var(--tl-border-2);
+              border-radius:5px; color:var(--tl-text); font-size:10.5px; padding:1px 3px;
+              text-align:center; }
+      .tp-w:focus { border-color:color-mix(in srgb, var(--tl-accent) 60%, transparent); outline:none; }
+      .tp-budget { font-size:10.5px; color:var(--tl-muted); white-space:nowrap; }
+      .tp-budget.over { color:var(--tl-danger); font-weight:600; }
+      .tp-kbd-hint { font-size:10px; color:var(--tl-dim); line-height:1.6; margin-top:4px; }
+      .tp-warnbox { font-size:10.5px; color:var(--tl-warn); line-height:1.6; border-radius:7px;
+                    border:1px solid color-mix(in srgb, var(--tl-warn) 40%, transparent);
+                    background:color-mix(in srgb, var(--tl-warn) 10%, transparent); padding:6px 8px; }
+      .tp-warnbox button { margin-top:5px; }
+      /* ---------- 窄屏 (1.9.0): 右栏下沉 + 左栏收窄 ----------
+         旧样式右栏固定 238px 且不换行, 弹窗窄到 min(92vw,1440px) 时中栏被挤没。 */
+      @media (max-width:1180px) {
+        .tp-cats { flex:0 0 168px; width:168px; }
+        .tp-side { flex:0 0 204px; width:204px; }
+      }
+      @media (max-width:980px) {
+        .tp-cols { flex-wrap:wrap; }
+        .tp-cats { flex:0 0 150px; width:150px; }
+        .tp-side { flex:1 0 100%; width:auto; max-height:38%; border-left:0;
+                   border-top:1px solid var(--tl-border); }
+      }
       .tp-sub { font-size:11px; color:var(--tl-muted); margin:10px 0 6px; letter-spacing:.03em; }
       .tp-grid { display:flex; flex-wrap:wrap; gap:5px; }
       .tp-tag { --c:var(--tl-accent);
@@ -95,6 +155,25 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
                         border-radius:6px; color:var(--tl-text); padding:3px 5px; font-size:11.5px; text-align:center; }
       .tp-range-hint { font-size:10.5px; color:var(--tl-dim); margin-top:5px; }
       .tp-empty { color:var(--tl-muted); }
+      /* ---------- 档案卡: 槽位下可直接手选的武器/道具姿势 (1.9.0) ---------- */
+      .tp-arch { border:1px solid var(--tl-border); border-radius:10px; background:var(--tl-card-2);
+                 padding:9px 11px; margin:0 0 7px; }
+      .tp-arch-h { display:flex; align-items:baseline; gap:8px; margin-bottom:7px; }
+      .tp-arch-h b { font-size:13px; }
+      .tp-arch-mount { font-size:10.5px; color:var(--tl-dim); }
+      .tp-arch-poses { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:5px; }
+      .tp-arch-poses:last-child { margin-bottom:0; }
+      .tp-pose { display:inline-flex; align-items:center; gap:6px;
+                 border:1px solid var(--tl-border-2); background:var(--tl-input-bg);
+                 color:var(--tl-text-2); border-radius:7px; padding:4px 9px;
+                 font:inherit; font-size:12px; cursor:pointer;
+                 transition:background .13s, color .13s, border-color .13s; }
+      .tp-pose:hover { color:var(--tl-text); }
+      .tp-pose.on { background:color-mix(in srgb, var(--tl-accent) 26%, transparent);
+                    border-color:color-mix(in srgb, var(--tl-accent) 58%, transparent);
+                    color:var(--tl-accent-text); font-weight:500; }
+      .tp-pose.tp-extra { border-style:dashed; }
+      .tp-pose-cost { font-size:10px; opacity:.7; }
       /* ---------- 行内编辑控件 (档案 / 互斥域 / NL 三视图共用) ---------- */
       .tp-ecell { background:var(--tl-input-bg); border:1px solid var(--tl-border-2); border-radius:6px;
                   color:var(--tl-text); font-size:11.5px; padding:3px 6px; outline:none; min-width:0; }
@@ -273,7 +352,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <h2>🏷 从标签库添加</h2>
         <button class="tp-tabbtn tp-hometab active">🏠 首页</button>
         <button class="tp-tabbtn tp-picktab">挑标签</button>
-        <button class="tp-tabbtn tp-proftab">⚔ 武器档案</button>
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
         <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
         <button class="tp-tabbtn tp-prtab">📦 预设</button>
@@ -285,6 +363,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <aside class="tp-cats"></aside>
         <section class="tp-homeview"></section>
         <section class="tp-chips"><div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">加载中…</div></section>
+        <aside class="tp-side"></aside>
         <section class="tp-profview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-grpview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
         <section class="tp-nlview" style="display:none;flex:1;overflow-y:auto;padding:16px 22px;"></section>
@@ -304,8 +383,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   const $ = (s) => rootEl.querySelector(s);
   const catsBox = $(".tp-cats");
   const chipsBox = $(".tp-chips");
+  const sideBox = $(".tp-side");
   const searchEl = $(".tp-search");
-  const countEl = $(".tp-count");
+  /* ⚠ 已挑选计数必须「每次现查 DOM」, 不能缓存引用。
+     历史 bug: 这里原本是 `const countEl = $(".tp-count")` —— 只在构建时抓一次,
+     而 switchTab 每次都会重建页脚 HTML, 旧引用随即脱离文档。后果是
+     勾了标签底部仍显示"已挑选 0 个"(切页签才刷新), 用户以为没点上。 */
+  function setPickedCount() {
+    const el = $(".tp-count");
+    if (el) el.textContent = String(ui.picked.length);
+  }
 
   function libCats() { return (LIB_CACHE && LIB_CACHE.categories) || []; }
 
@@ -341,6 +428,29 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   const AXIS_ORDER = ["meta", "style", "count", "character", "artist", "appearance",
                       "clothing", "prop", "action", "environment", "lighting",
                       "camera", "material", "misc"];
+  /* 段位序下的轴序列 (右栏「已挑选」按它分段) —— 先按段位号, 同段内保持 AXIS_ORDER 的次序。 */
+  const AXIS_BY_SECTION = [...AXIS_ORDER].sort((a, b) =>
+    ((AXIS_SECTION[a] || 9) - (AXIS_SECTION[b] || 9)) || (AXIS_ORDER.indexOf(a) - AXIS_ORDER.indexOf(b)));
+
+  /* 词 → 轴 索引 (段位提示用)。库对象变了才重建, 别每次渲染遍历 4700 词。 */
+  let _enAxis = null, _enAxisSrc = null;
+  function enAxisOf(en) {
+    const lib = LIB_CACHE;
+    if (!_enAxis || _enAxisSrc !== lib) {
+      _enAxis = new Map();
+      eachTag(lib || { categories: [] }, (t) => {
+        const k = String(t.en || "").trim().toLowerCase();
+        if (k && !_enAxis.has(k)) _enAxis.set(k, t.axis || "misc");
+      });
+      _enAxisSrc = lib;
+    }
+    return _enAxis.get(String(en || "").trim().toLowerCase()) || "";
+  }
+  /* 该词会落在哪一段 (手动输出保持挑选次序, 段位只用于"告诉你它属于哪一段") */
+  const axisOfPicked = (p) => p._axis || enAxisOf(p.en) || "misc";
+  const getUseWeights = () => !!getState(node)?.use_weights_syntax;
+  /* AXES_ZH 带 emoji 前缀 ("💎 画质规格") —— 分段标题里要纯名字 */
+  const axZh = (ax) => String(AXES_ZH[ax] || ax).replace(/^[^A-Za-z\u4e00-\u9fa5]+/, "");
 
   function eachTag(lib, fn) {
     for (const c of lib.categories || [])
@@ -481,6 +591,10 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange, toggle, leaf }) {
     const el = document.createElement("div");
     el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
+    // 可定位标识: 前端此前零门禁覆盖, 而这些行没有任何 data 属性 → 选择器无从下手。
+    // 补上之后, 门禁/走查能用 [data-cat="reorg.s10"] 精确点到某一行。
+    if (id) el.dataset.cat = String(id);
+    if (depth !== undefined) el.dataset.depth = String(depth);
     // 分类自带色 (用户自定义) 才内联; 未配置时交给 CSS 变量 → 深浅主题自动适配
     if (color) el.style.color = color;
     if (depth === 1) el.style.paddingLeft = "22px";
@@ -493,6 +607,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       </span>` : "";
     el.innerHTML =
       (toggle ? `<input type="checkbox" class="tp-row-tog" ${toggle.on ? "checked" : ""}`
+                + ` aria-label="${esc(String(name))}"`
                 + ` title="${toggle.title || "启用/关闭"}" style="margin-right:2px"/>` : "") +
       `${chevron ? `<span class="tp-chev">${open ? "▾" : "▸"}</span>` : (depth > 0 ? '<span class="tp-chev">·</span>' : "")}` +
       `<span>${esc(String(icon))}</span><span class="nm">${esc(String(name))}</span><span class="ct">${count}</span>` +
@@ -544,13 +659,68 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
   let WEAPON_POSES = null;   // 武器档案束成员词集 (⚔ 标记用), 懒加载一次
+  let PROFILES = null;       // 档案原文 (含 mount_sub / poses / extras)
+  let POSE_INDEX = null;     // 束成员词(lower) -> [{arch, kind, pose}] — 搜索时可点
+  let ARCHIVES_BY_MOUNT = null;  // "道具武器/武器装备" -> [档案]
+  let TAG_TO_PROP = null;    // 道具身份词(lower) -> [档案] — 中栏点中道具即可列姿势
+
   async function fetchWeaponPoses() {
     if (WEAPON_POSES) return;
     try {
       const r = await fetch("/taglib/api/profiles");
       const d = await r.json();
       WEAPON_POSES = new Set((d.weapon_poses || []).map((x) => x.toLowerCase()));
-    } catch { WEAPON_POSES = new Set(); }
+      PROFILES = (d.data && d.data.profiles) || [];
+      buildArchiveIndex();
+    } catch { WEAPON_POSES = new Set(); PROFILES = []; buildArchiveIndex(); }
+  }
+
+  /* 档案索引 —— 把「档案世界」接进「挑标签」的右栏 (1.9.0)。
+     ⚠ 修一个实测出来的断裂: 以前 archives 只在「武器档案」页编辑, 手动用户
+     在挑标签里搜都搜不到 (实测 29 个姿势词全库零命中, 而它们的出词就写在档案里)。 */
+  function buildArchiveIndex() {
+    POSE_INDEX = new Map();
+    ARCHIVES_BY_MOUNT = new Map();
+    TAG_TO_PROP = new Map();
+    for (const p of PROFILES || []) {
+      const mount = String(p.mount_sub || "").trim();
+      if (mount) {
+        if (!ARCHIVES_BY_MOUNT.has(mount)) ARCHIVES_BY_MOUNT.set(mount, []);
+        ARCHIVES_BY_MOUNT.get(mount).push(p);
+      }
+      for (const t of p.tags || []) {
+        const k = String(t).trim().toLowerCase();
+        if (!k) continue;
+        if (!TAG_TO_PROP.has(k)) TAG_TO_PROP.set(k, []);
+        TAG_TO_PROP.get(k).push(p);
+      }
+      for (const [kind, arr] of [["pose", p.poses || []], ["extra", p.extras || []]]) {
+        for (const x of arr) {
+          for (const t of (x.tags || [])) {
+            const k = String(t).trim().toLowerCase();
+            if (!k) continue;
+            if (!POSE_INDEX.has(k)) POSE_INDEX.set(k, []);
+            POSE_INDEX.get(k).push({ arch: p, kind, pose: x });
+          }
+        }
+      }
+    }
+  }
+
+  /* 档案改动后必须整份失效重取 —— 否则右栏还按旧档案列姿势。 */
+  function invalidateArchiveIndex() {
+    WEAPON_POSES = null; PROFILES = null; POSE_INDEX = null;
+    ARCHIVES_BY_MOUNT = null; TAG_TO_PROP = null;
+  }
+
+  /* 当前左栏选中的槽位, 挂着哪些档案 (mount_sub 的末段 = 槽位名)。 */
+  function archivesForActiveSlot() {
+    if (!ARCHIVES_BY_MOUNT || !ui.activeSlot) return [];
+    const hit = [];
+    for (const [mount, arr] of ARCHIVES_BY_MOUNT) {
+      if (mount.split("/").pop() === ui.activeSlot) hit.push(...arr);
+    }
+    return hit;
   }
 
   /* 按轴分桶 —— 全库遍历一次后缓存 (库对象变了才重建)。
@@ -574,6 +744,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const existing = getExisting();
     const lib = LIB_CACHE || { categories: [] };
     const byAxis = axisBucketsOf(lib);
+    const q = ui.filter.trim().toLowerCase();
     fetchWeaponPoses().finally(() => {
       let shown = 0;
       for (const a of AXIS_ORDER) {
@@ -585,7 +756,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         const head = document.createElement("div");
         head.className = "tp-sub tp-axis-head";
         head.innerHTML = `${AXES_ZH[a] || a} <span class="tp-axis-n">${rows.length}</span>`
-          + (a === "prop" || a === "action" ? ` <span class="tp-axis-hint">⚔=武器档案束成员, 随武器自动出生</span>` : "");
+          + (a === "prop" || a === "action"
+            ? ` <span class="tp-axis-hint">⚔=道具档案的身份词; 点中它, 右栏会列出该道具的全部姿势</span>` : "");
         chipsBox.appendChild(head);
         const grid = document.createElement("div");
         grid.className = "tp-grid";
@@ -594,7 +766,16 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         }
         chipsBox.appendChild(grid);
       }
-      if (!shown) chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">没找到匹配的标签</div>`;
+      renderSideLane();   // 右栏与中栏同步 (姿势 / 已挑选)
+      setRoving(chipsInGrid()[0] || null);
+      if (!shown) {
+        chipsBox.innerHTML = `<div class="tp-empty" style="padding:40px;text-align:center;color:#8b93a5">`
+          + `没找到匹配的标签`
+          + (q ? `<div style="margin-top:10px;font-size:11.5px;opacity:.85;line-height:1.75">`
+              + `武器 / 道具的<b>持握姿势</b>（如 holding gun、two-handed sword）不在标签库里。<br>`
+              + `点左栏「道具武器 ▸ 武器装备」选中一把武器，<b>右栏就会列出它的全部姿势</b>。</div>` : "")
+          + `</div>`;
+      }
     });
   }
 
@@ -603,12 +784,20 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const isExisting = existing.has(t.en.toLowerCase());
     const isBundled = WEAPON_POSES && WEAPON_POSES.has(t.en.toLowerCase());
     const el = document.createElement("span");
+    el.dataset.en = String(t.en);   // 可定位: 门禁/走查用 [data-en="katana"] 精确点某个标签
     el.className = "tp-tag" + (t.nsfw ? " nsfw" : "") + (t.gender ? " gender" : "")
       + (isPicked ? " picked" : "") + (isExisting ? " dim" : "")
       + (isBundled ? " bundled" : "");
     if (isExisting) { el.title = "已在节点上"; el.style.opacity = ".38"; }
     else {
-      el.title = (isBundled ? "⚔ 武器档案束成员 (抽中武器自动带出, 一般无需手点)\n" : "")
+      // 键盘可达 (1.9.0): roving tabindex —— 整片标签云只占 1 个 Tab 位, 进去后方向键走。
+      // 之前 98 个 chip 全是不可聚焦的 span, 键盘用户一个也点不到 (Tab 也不该走 98 次)。
+      el.tabIndex = -1;
+      el.dataset.kbd = "1";              // 参与 roving 的标记 (已在节点上的灰 chip 不参与)
+      el.setAttribute("role", "button");
+      el.setAttribute("aria-pressed", isPicked ? "true" : "false");
+      el.setAttribute("aria-label", `${t.en}${t.zh ? " " + t.zh : ""}`);
+      el.title = (isBundled ? "⚔ 档案姿势/配件成员 (自动模式下随武器带出; 手动可在「道具武器 ▸ 武器装备」下方直接点选)\n" : "")
         + (t.nsfw ? "🔞 NSFW 标签"
           : t.gender === "female" ? "♀ 女性专属标签"
           : t.gender === "male" ? "♂ 男性专属标签" : "")
@@ -617,8 +806,11 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         const i = ui.picked.findIndex((p) => p.en.toLowerCase() === t.en.toLowerCase());
         if (i >= 0) ui.picked.splice(i, 1);
         else ui.picked.push({ en: t.en, zh: t.zh, nsfw: !!t.nsfw, gender: t.gender || "" });
-        countEl.textContent = ui.picked.length;
+        setPickedCount();
         el.classList.toggle("picked", i < 0);
+        el.setAttribute("aria-pressed", i < 0 ? "true" : "false");
+        // 点中的若是道具/武器身份词 → 右栏立刻列出它的持握姿势 (手动主路径)
+        renderSideLane();
       };
     }
     el.innerHTML = (isBundled ? '<span class="tl-bsym">⚔</span>' : "")
@@ -627,6 +819,301 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       + `${esc(t.en)}${t.zh ? `<span style="opacity:.55"> ${esc(t.zh)}</span>` : ""}`;
     return el;
   }
+
+  /* ---------- 档案束: 手动可选 (1.9.0) ----------
+     一个「姿势」= 一整束词 + 手数/视线/状态槽, 整束进出 (不再"抽中武器才带出")。 */
+  const poseTags = (pose) =>
+    (pose.tags || []).map((t) => String(t).trim()).filter(Boolean);
+
+  function poseIsPicked(pose) {
+    const ts = poseTags(pose).map((t) => t.toLowerCase());
+    return ts.length > 0 && ts.every((en) => ui.picked.some((p) => p.en.toLowerCase() === en));
+  }
+
+  function dropPicked(en) {
+    const i = ui.picked.findIndex((p) => p.en.toLowerCase() === String(en).toLowerCase());
+    if (i >= 0) ui.picked.splice(i, 1);
+  }
+
+  /* 点一个束 = 整束进出。同一档案的其它束一律让位 ——
+     一把武器同时只有一个持握姿势 (这条约束在档案里是隐式的, 界面要显式化)。
+     ⚠ 让位时必须避开两类词, 否则会误删别人:
+       ① 本次要选的束自己用到的词;
+       ② **别的档案束已占用的共享词** —— 姿势词跨档案共享 (holding weapon two-handed
+          同属 武士刀·双手持刀 与 枪械·双手端枪), 实机验出过: 点枪械的单手持枪
+          → 把武士刀那束的 holding weapon two-handed 一起删了 (束从 2 个词变 1 个)。
+     另外: 某个词若是用户先前手点进来的散词, 选束时归入本束, 不留双份。 */
+  function togglePose(arch, pose) {
+    const wasOn = poseIsPicked(pose);
+    const keep = new Set(poseTags(pose).map((t) => t.toLowerCase()));
+    const myPrefix = `${arch.zh || arch.id} · `;
+    const foreign = new Set();
+    for (const p of ui.picked) {
+      if (p._bundle && !String(p._bundle).startsWith(myPrefix)) {
+        foreign.add(p.en.toLowerCase());
+      }
+    }
+    for (const other of (arch.poses || []).concat(arch.extras || [])) {
+      if (other === pose) continue;
+      for (const t of poseTags(other)) {
+        const k = t.toLowerCase();
+        if (keep.has(k) || foreign.has(k)) continue;
+        dropPicked(t);
+      }
+    }
+    if (wasOn) {
+      for (const t of poseTags(pose)) dropPicked(t);
+    } else {
+      const label = `${arch.zh || arch.id} · ${pose.zh || pose.id}`;
+      // 手数/视线/状态槽随身带上 —— 右栏的手数预算与段位分组都靠它们,
+      // 否则用户挑了 3 个姿势也不知道已经用掉 5 只手。
+      const axis = AXIS_ZH_TO_ID[String(arch.mount_sub || "").split("/")[0]] || "prop";
+      for (const t of poseTags(pose)) {
+        const k = t.toLowerCase();
+        const got = ui.picked.find((p) => p.en.toLowerCase() === k);
+        if (got) {
+          // 散词归入本束 (不然一个姿势会显示成"只有 1 个词")
+          if (!got._bundle) {
+            got._bundle = label;
+            got._axis = axis;
+            got._hands = Number(pose.hands) || 0;
+            got._gaze = Number(pose.gaze) || 0;
+          }
+          continue;
+        }
+        ui.picked.push({ en: t, zh: pose.zh || "", _bundle: label, _axis: axis,
+                         _hands: Number(pose.hands) || 0, _gaze: Number(pose.gaze) || 0 });
+      }
+    }
+    setPickedCount();
+  }
+
+  const poseCost = (pose) => {
+    const c = [];
+    if (pose.hands) c.push(`手${pose.hands}`);
+    if (pose.gaze) c.push("视线");
+    return c;
+  };
+  const poseState = (pose) => pose.state_slot
+    ? Object.entries(pose.state_slot).map(([k, v]) => `${k}=${v}`).join(" ") : "";
+
+  function poseTitle(pose) {
+    const cost = poseCost(pose), st = poseState(pose);
+    return `出词: ${poseTags(pose).join(", ")}`
+      + (cost.length ? `\n占用: ${cost.join(" · ")}` : "")
+      + (st ? `\n状态: ${st}` : "")
+      + ((pose.conflicts_with || []).length ? `\n互斥: ${pose.conflicts_with.join(", ")}` : "");
+  }
+
+  /* 右栏 = 手动用户的主路径。
+     ⚠ 上一版把档案摊在中栏标签云下面, 而且只能靠"搜 holding gun"才看得到 ——
+     用户原话: 「靠搜索实现的? 你这什么逆天逻辑, 完全是非人类交互」。
+     现在改成: 中栏点一个道具 → 右栏立即列出它的全部姿势。不需要搜索。 */
+  function pickedProps() {
+    if (!TAG_TO_PROP || !ui.picked.length) return [];
+    const out = [], seen = new Set();
+    for (const p of ui.picked) {
+      for (const a of TAG_TO_PROP.get(String(p.en).toLowerCase()) || []) {
+        if (seen.has(a.id)) continue;
+        seen.add(a.id);
+        out.push(a);
+      }
+    }
+    return out;
+  }
+
+  /* 当前槽位里「还没有档案」的道具词 —— 用户报"很多道具分错了/没分类",
+     这些词点了不会出姿势, 必须直接暴露出来而不是让他自己一个个试。 */
+  function uncoveredInSlot() {
+    if (!ui.activeSlot) return [];
+    const covered = new Set();
+    for (const a of archivesForActiveSlot()) {
+      for (const t of a.tags || []) covered.add(String(t).trim().toLowerCase());
+    }
+    const out = [];
+    for (const c of (LIB_CACHE && LIB_CACHE.categories) || []) {
+      for (const s of c.subcategories || []) {
+        if (s.name !== ui.activeSlot) continue;
+        for (const t of s.tags || []) {
+          const en = String(t.en || "").trim();
+          if (en && !covered.has(en.toLowerCase())) out.push(en);
+        }
+      }
+    }
+    return out;
+  }
+
+  function renderSideLane() {
+    if (!sideBox) return;
+    const props = pickedProps();
+    let html = `<div class="tp-side-h" style="display:flex;align-items:center;gap:6px">`
+      + `<span style="flex:1">⚔ 道具姿势</span>`
+      + `<button type="button" class="tp-side-edit"`
+      + ` title="编辑全部道具档案: 归类身份词 / 增删姿势 / 手数·视线·状态槽">⚙ 编辑档案</button>`
+      + `</div>`;
+    if (!props.length) {
+      const slotArchs = archivesForActiveSlot();
+      html += `<div class="tp-side-empty">`
+        + `先在中栏点一个<b>道具 / 武器</b>（如 katana · 武士刀、枪械），`
+        + `这里就会列出它的全部持握姿势。`;
+      if (slotArchs.length) {
+        html += `<br><br>当前槽位「${esc(ui.activeSlot || "")}」下有 <b>${slotArchs.length}</b> 个道具带姿势：<br>`
+          + slotArchs.slice(0, 10).map((a) => esc(a.zh || a.id)).join(" · ")
+          + (slotArchs.length > 10 ? " …" : "");
+      } else {
+        html += `<br>左栏选「道具武器 ▸ 武器装备」能看到全部武器。`;
+      }
+      html += `</div>`;
+    } else {
+      for (const arch of props) {
+        html += `<div class="tp-arch">`
+          + `<div class="tp-arch-h"><b>${esc(arch.zh || arch.id)}</b>`
+          + `<span class="tp-arch-mount">${esc(arch.mount_sub || "")}</span></div>`;
+        for (const [kind, arr] of [["pose", arch.poses || []], ["extra", arch.extras || []]]) {
+          if (!arr.length) continue;
+          html += `<div class="tp-arch-poses">`;
+          arr.forEach((pose, i) => {
+            const cost = poseCost(pose);
+            html += `<button type="button" class="tp-pose${kind === "extra" ? " tp-extra" : ""}`
+              + `${poseIsPicked(pose) ? " on" : ""}" data-arch="${esc(arch.id)}"`
+              + ` data-kind="${kind}" data-i="${i}" title="${esc(poseTitle(pose))}">`
+              + `${esc(pose.zh || pose.id)}`
+              + (kind === "extra" ? `<span class="tp-pose-cost">配件</span>`
+                : (cost.length ? `<span class="tp-pose-cost">${esc(cost.join(" "))}</span>` : ""))
+              + `</button>`;
+          });
+          html += `</div>`;
+        }
+        html += `</div>`;
+      }
+    }
+
+    // 本槽位「没有档案」的道具: 暴露漏归类清单 (用户报"很多道具分错了")
+    const unc = uncoveredInSlot();
+    if (unc.length) {
+      html += `<div class="tp-side-h" style="margin-top:3px">⚠ 本槽位未归类 <b>${unc.length}</b> 个</div>`
+        + `<div class="tp-side-empty">这些词还没有档案, <b>点它们不会出姿势</b>：<br>`
+        + unc.slice(0, 16).map(esc).join(" · ") + (unc.length > 16 ? " …" : "")
+        + `<br><br>点上方「⚙ 编辑档案」把它们归到某个档案。</div>`;
+    }
+
+    // ---- 已挑选: 段位分组 + 权重入口 + 批量操作 + 手数预算 ----
+    const bySec = new Map();
+    ui.picked.forEach((p, i) => {
+      const ax = axisOfPicked(p);
+      if (!bySec.has(ax)) bySec.set(ax, []);
+      bySec.get(ax).push({ p, i });
+    });
+    // 手数/视线按「姿势束」计一次 —— 一个姿势常出 2 个词 (如 two-handed sword +
+    // holding weapon two-handed), 按词累加会翻倍 (实机验算出过"手 4/2", 真实占用是 2)。
+    const handOf = new Map();
+    for (const p of ui.picked) {
+      if (!p._bundle) continue;
+      if (!handOf.has(p._bundle)) {
+        handOf.set(p._bundle, { h: Number(p._hands) || 0, g: Number(p._gaze) || 0 });
+      }
+    }
+    const hands = [...handOf.values()].reduce((n, x) => n + x.h, 0);
+    const gazes = [...handOf.values()].filter((x) => x.g).length;
+    const over = hands > 2 || gazes > 1;
+    html += `<div class="tp-side-h" style="margin-top:3px;display:flex;align-items:center;gap:6px">`
+      + `<span style="flex:1">已挑选 <b>${ui.picked.length}</b> 个</span>`
+      + `<span class="tp-budget${over ? " over" : ""}" title="档案姿势占用的手数/视线预算 (引擎按 2 手 / 1 视线分配)">`
+      + `手 ${hands}/2 · 视线 ${gazes}/1</span></div>`;
+    if (!ui.picked.length) {
+      html += `<div class="tp-side-empty">还没挑任何标签。点中栏的标签、或上面的姿势即可加入。</div>`;
+    } else {
+      html += `<div class="tp-pick-tools">`
+        + `<button type="button" class="tp-pick-tool" data-bulk="all">🗑 全部清空</button>`
+        + `<button type="button" class="tp-pick-tool" data-bulk="loose" title="清掉逐个点的散词, 只留档案姿势词 (⚔)">只留姿势</button>`
+        + `</div>`;
+      if (over) {
+        html += `<div class="tp-warnbox">⚠ 手数/视线已超预算：引擎在自动模式下会拦这类组合，`
+          + `手动模式会照你选的出。多个道具姿势同时选中时记得取舍。</div>`;
+      }
+      for (const ax of AXIS_BY_SECTION) {
+        const list = bySec.get(ax);
+        if (!list || !list.length) continue;
+        const sec = AXIS_SECTION[ax] || 9;
+        html += `<div class="tp-pick-sec">${esc(SECTION_ZH[sec] || "")} · ${esc(axZh(ax))}`
+          + `<span class="clr" data-bulk-axis="${esc(ax)}" title="清掉这一段 (${list.length} 个)">✕ 本段</span></div>`;
+        for (const { p, i } of list) {
+          const w = Number(p.weight) || 1;
+          html += `<div class="tp-picked-item"><span class="en" title="${esc(p.en)}">${esc(p.en)}`
+            + (p._bundle ? `<span class="tl-bsym" title="${esc(String(p._bundle))}">⚔</span>` : "")
+            + `</span>`
+            + `<input class="tp-w" type="number" step="0.05" min="0" max="3" value="${w}"`
+            + ` data-w="${i}" title="权重: 输出成 (词:权重)。需要在节点上开启「权重语法」">`
+            + `<span class="rm" data-rm="${i}" title="移除">✕</span></div>`;
+        }
+      }
+      // 权重语法没开 → 权重不会进输出。直接给开关, 不做"改完看不到变化"。
+      if (!getUseWeights() && ui.picked.some((p) => Math.abs((Number(p.weight) || 1) - 1) > 1e-6)) {
+        html += `<div class="tp-warnbox">⚠ 节点当前<b>没开权重语法</b>，设了权重也不会写进输出。`
+          + `<button type="button" class="tp-pick-tool" data-w-enable="1">开启权重语法</button></div>`;
+      }
+      html += `<div class="tp-kbd-hint">⌨ <b>/</b> 聚焦搜索 · <b>←→↑↓</b> 在标签间移动 · <b>Enter</b> 选中 / 取消</div>`;
+    }
+    sideBox.innerHTML = html;
+
+    for (const btn of sideBox.querySelectorAll(".tp-pose")) {
+      btn.onclick = () => {
+        const arch = (PROFILES || []).find((x) => x.id === btn.dataset.arch);
+        if (!arch) return;
+        const arr = btn.dataset.kind === "extra" ? (arch.extras || []) : (arch.poses || []);
+        const pose = arr[Number(btn.dataset.i)];
+        if (!pose) return;
+        togglePose(arch, pose);
+        renderChips();
+        renderSideLane();
+      };
+    }
+    for (const x of sideBox.querySelectorAll(".rm")) {
+      x.onclick = () => {
+        ui.picked.splice(Number(x.dataset.rm), 1);
+        setPickedCount();
+        renderChips();
+        renderSideLane();
+      };
+    }
+    // 权重入口: 每个已挑选词一个数字框 (change 而非 input —— 输入中途重渲染会抢焦点)
+    for (const wEl of sideBox.querySelectorAll(".tp-w")) {
+      wEl.onchange = () => {
+        const i = Number(wEl.dataset.w);
+        const v = Math.max(0, Math.min(3, Number(wEl.value) || 1));
+        const p = ui.picked[i];
+        if (!p) return;
+        if (Math.abs(v - 1) < 1e-6) delete p.weight; else p.weight = v;
+        renderSideLane();
+      };
+      wEl.onkeydown = (e) => { if (e.key === "Enter") { e.preventDefault(); wEl.blur(); } };
+    }
+    // 批量操作: 全清 / 只留姿势 / 清掉某一段
+    for (const b of sideBox.querySelectorAll("[data-bulk]")) {
+      b.onclick = () => {
+        const kind = b.dataset.bulk;
+        if (kind === "all") ui.picked.length = 0;
+        else if (kind === "loose") ui.picked = ui.picked.filter((p) => p._bundle);
+        setPickedCount();
+        renderChips();
+        renderSideLane();
+      };
+    }
+    for (const b of sideBox.querySelectorAll("[data-bulk-axis]")) {
+      b.onclick = () => {
+        const ax = b.dataset.bulkAxis;
+        ui.picked = ui.picked.filter((p) => axisOfPicked(p) !== ax);
+        setPickedCount();
+        renderChips();
+        renderSideLane();
+      };
+    }
+    const we = sideBox.querySelector("[data-w-enable]");
+    if (we) we.onclick = () => { setState(node, { use_weights_syntax: true }); onNodeState?.(); renderSideLane(); };
+    const eb = sideBox.querySelector(".tp-side-edit");
+    if (eb) eb.onclick = () => switchTab("prof");
+  }
+
   function renderChips() {
     // v1.6.2: 树视图已删除 —— 只有"段位序"一种显示方式 (轴=引擎真实结构)。
     renderAxisChips();
@@ -733,6 +1220,23 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     host.innerHTML = `<summary>🚫 排除类目 <span class="tp-gn">${excN ? excN + " 项" : "无"}</span></summary>
       <div class="tp-exc-body"></div>`;
     const body = host.querySelector(".tp-exc-body");
+    // 排除过多 → 自动模式的可用池变小, 输出可能凑不满「总词数」下界。
+    // 实测: 排除整条「道具武器」轴 (293 词 / 60 槽位) 后 seed11 只出 28 词 (下界 30),
+    // 引擎不提示 —— 用户只会觉得"这次怎么这么短"。这里补上量化提示。
+    let totalWords = 0, excWords = 0;
+    for (const c of libCats()) {
+      if (c.id === "nsfwcat") continue;
+      const catN = countTags(c);
+      totalWords += catN;
+      if (catFullyExcluded(c, ex)) { excWords += catN; continue; }
+      for (const s of c.subcategories || []) {
+        if (subExcluded(c, s, ex)) { excWords += (s.tags || []).length; continue; }
+        for (const g of s.groups || []) {
+          if (groupExcluded(c, s, g, ex)) excWords += (g.tags || []).length;
+        }
+      }
+    }
+    const excPct = totalWords ? Math.round((excWords / totalWords) * 100) : 0;
     body.innerHTML = `
       <div class="tp-exc-hint">
         勾选要<b>排除</b>的层级: 可排除<b>整类</b>, 也可展开后只排除<b>子分类</b>或<b>孙分类</b>。<br/>
@@ -740,6 +1244,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         排除对应层级避免冲突。
         ${Object.keys(hints).length ? '<br/>💡 检测到上游提示词可能已包含以下内容 (粉色标记): ' + Object.entries(hints).map(([k, v]) => `<b>${esc(k)}</b>(${esc(v.join(","))})`).join(" ") : ""}
       </div>
+      ${excWords ? `<div class="tp-warnbox" style="margin-bottom:8px">🚫 已排除 <b>${excWords}</b> 词 / 全库 ${totalWords} 词 (${excPct}%)`
+        + (excPct >= 25 ? `<br>⚠ 排除比例偏高：自动模式的可用池会明显变小，输出可能凑不满「总词数」下界（实测：排除整条「道具武器」轴后曾只出 28 词）。` : "")
+        + `</div>` : ""}
     `;
     for (const cat of libCats()) {
       if (cat.id === "nsfwcat") continue;
@@ -841,6 +1348,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (!ui.libTouched) return;
     ui.libTouched = false;
     invalidateLibraryCache();   // 两级缓存一起清: 面板索引 + 挑选器全量库
+    invalidateArchiveIndex();   // 档案也可能被改过 -> 右栏别拿旧档案列姿势
     Promise.all([fetchLibrary(), fetchPanelIndex()])
       .then(() => { renderCats(); renderChips(); });
   }
@@ -1066,9 +1574,20 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           "输出永远只有英文; 这里只控制面板里标签按钮的显示文字")}
       </div>
       </details>
+      <details class="tp-set-sec">
+      <summary>⚔ 道具 / 武器档案 <span class="sub">· 高级维护; 日常选用在「挑标签」右栏直接点</span></summary>
+      <div class="tp-set-card">
+        <div class="tp-set-hint" style="margin-bottom:8px">
+          档案定义「一把武器有哪些持握姿势、各占几只手、带什么状态槽、和哪些词互斥」。
+          这里只影响<b>自动模式</b>与<b>挑标签右栏列出的姿势列表</b>；选用入口在挑标签页右栏。
+        </div>
+        <div class="tp-jrow"><button class="tp-goprof">打开档案编辑器 →</button></div>
+      </div>
+      </details>
       <div class="tp-sync-note">💡 节点参数即改即存; 全局偏好写入 ComfyUI 设置 (设置面板搜「标签库」是同一批值, 两边改都生效)。</div>
     `;
     // 节点参数: 即改即存 + 让节点面板实时跟随
+    $(".tp-goprof").onclick = () => switchTab("prof");
     const saveNode = (patch) => { setState(node, patch); onNodeState?.(); };
     $(".sv-sep").onchange = (e) => saveNode({ separator: e.target.value });
     $(".sv-w").onchange = (e) => saveNode({ use_weights_syntax: e.target.checked });
@@ -1115,7 +1634,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(getData(payload)) });
         const d = await r.json();
-        if (d.ok) { msg.textContent = "✅ 已保存, 引擎即时生效"; msg.style.color = "var(--tl-ok)"; WEAPON_POSES = null; }
+        if (d.ok) { msg.textContent = "✅ 已保存, 引擎即时生效"; msg.style.color = "var(--tl-ok)"; invalidateArchiveIndex(); }
         else { msg.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 160); msg.style.color = "var(--tl-danger)"; }
       } catch (e) { msg.textContent = "❌ " + e.message; msg.style.color = "var(--tl-danger)"; }
       btn.disabled = false;
@@ -1179,7 +1698,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       if (d.ok) {
         msgEl.textContent = okText || "✅ 已保存, 引擎即时生效";
         msgEl.style.color = "var(--tl-ok)";
-        WEAPON_POSES = null;
+        invalidateArchiveIndex();
         return true;
       }
       msgEl.textContent = "❌ " + String(d.error || JSON.stringify(d.errors || "")).slice(0, 200);
@@ -1296,24 +1815,31 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const profs = (profWork.profiles = profWork.profiles || []);
     const nPose = profs.reduce((n, p) => n + (p.poses || []).length + (p.extras || []).length, 0);
     let html = `
+      <div style="margin-bottom:10px">
+        <button class="tp-btn tp-goback">← 返回挑标签</button>
+        <span class="tp-exc-hint" style="margin-left:10px">
+          左栏「身份词」= 哪些道具标签归到这份档案 (给道具打武器分类就改这里)
+        </span>
+      </div>
       <div class="tp-h1">⚔ 武器 / 物品档案 ${langBtnHtml()}
-        <span class="tp-h1-sub">${profs.length} 份 · ${nPose} 条束</span>
+        <span class="tp-h1-sub">${profs.length} 份 · ${nPose} 条姿势/配件</span>
         <button class="tp-eadd tp-addprof" style="margin-left:auto">＋ 新增档案</button></div>
-      <div class="tp-note">全部字段可直接改: 档案 id / 中文名 / 挂载槽位 / 身份词, 以及每条束的 id、出词、手数、视线、权重、状态槽。改完点底部「💾 保存档案」写入 <code>profiles.json</code>。
-      姿势不独立存在 —— 每条束挂在档案下, 抽中/钉选身份词时按概率自动带出一条; 束成员词在随机池里永不单抽。</div>`;
+      <div class="tp-note">全部字段可直接改: 档案 id / 中文名 / 挂载槽位 / 身份词, 以及每条姿势的 id、出词、手数、视线、权重、状态槽。改完点底部「💾 保存档案」写入 <code>profiles.json</code>。
+      姿势不独立存在 —— 每条挂在档案下。⚠ <b>这里只是维护入口; 想手选姿势请到「挑标签」选「道具武器 ▸ 武器装备」, 下方会列出全部可手选姿势。</b>
+      姿势成员词在随机池里永不单抽。</div>`;
     if (!profs.length) html += `<div class="tp-empty" style="padding:24px">还没有档案, 点右上「＋ 新增档案」开始。</div>`;
     profs.forEach((p, pi) => {
       const dg = (profDiag || []).find((x) => x.id === p.id) || {};
       const row = (x, xi, kind) => `
         <tr>
-          <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="id" value="${esc(x.id || "")}" placeholder="束 id"/></td>
+          <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="id" value="${esc(x.id || "")}" placeholder="姿势 id"/></td>
           <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="zh" value="${esc(x.zh || "")}" placeholder="中文"/></td>
           <td><input class="tp-ecell wide" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="tags" value="${esc((x.tags || []).join(", "))}" placeholder="出词, 逗号分隔"/></td>
-          <td><input class="tp-ecell num" type="number" min="0" max="2" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="hands" value="${x.hands ?? 0}"/></td>
-          <td><input class="tp-ecell num" type="number" min="0" max="1" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="gaze" value="${x.gaze ?? 0}"/></td>
-          <td><input class="tp-ecell num" type="number" min="0" max="3" step="0.1" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="weight" value="${x.weight ?? 1}"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="2" aria-label="手数" title="占用手数 0~2" placeholder="手" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="hands" value="${x.hands ?? 0}"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="1" aria-label="视线" title="是否占用视线 0/1" placeholder="眼" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="gaze" value="${x.gaze ?? 0}"/></td>
+          <td><input class="tp-ecell num" type="number" min="0" max="3" step="0.1" aria-label="权重" title="抽取权重" placeholder="权" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="weight" value="${x.weight ?? 1}"/></td>
           <td><input class="tp-ecell" data-p="${pi}" data-k="${kind}" data-x="${xi}" data-f="state_slot" value="${esc(Object.entries(x.state_slot || {}).map(([k, v]) => k + "=" + v).join(", "))}" placeholder="drawn=yes"/></td>
-          <td><button class="tp-edel" data-p="${pi}" data-k="${kind}" data-x="${xi}" title="删除该条束">✕</button></td>
+          <td><button class="tp-edel" data-p="${pi}" data-k="${kind}" data-x="${xi}" title="删除该条姿势/配件">✕</button></td>
         </tr>`;
       html += `
       <div class="tp-pcard">
@@ -1330,7 +1856,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         </div>
         <div class="tp-prow"><span class="tp-pl">身份词</span><span class="tp-echips" data-p="${pi}"></span></div>
         <table class="tp-ptab">
-          <tr><th>束 id</th><th>中文</th><th>出词</th><th>手</th><th>视线</th><th>权重</th><th>状态槽</th><th></th></tr>
+          <tr><th>姿势 id</th><th>中文</th><th>出词</th><th>手数</th><th>视线</th><th>权重</th><th>状态槽</th><th></th></tr>
           ${(p.poses || []).map((x, xi) => row(x, xi, "poses")).join("")}
           ${(p.extras || []).map((x, xi) => row(x, xi, "extras")).join("")}
         </table>
@@ -1350,6 +1876,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <div class="tp-jrow"><button class="tp-jsave">💾 保存档案</button><span class="tp-jmsg"></span></div>
       </details>`;
     profView.innerHTML = html;
+    profView.querySelector(".tp-goback").onclick = () => switchTab("pick");
     bindLang(profView, drawProf);
 
     // chip 列表 (身份词)
@@ -1791,6 +2318,8 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     rootEl.querySelector(".tp-nltab")?.classList.toggle("active", tab === "nl");
     rootEl.querySelector(".tp-prtab")?.classList.toggle("active", tab === "preset");
     for (const el of pickCols) el.style.display = tab === "pick" ? "" : "none";
+    // 右栏只在挑标签页出现 (它是手动挑选的工作区, 其他页用不到)
+    if (sideBox) sideBox.hidden = tab !== "pick";
     homeView.style.display = tab === "home" ? "flex" : "none";
     setView.style.display = tab === "settings" ? "block" : "none";
     profView.style.display = tab === "prof" ? "block" : "none";
@@ -1804,7 +2333,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     } else if (tab === "home") {
       info.innerHTML = `🏠 流水线首页 · 按官方六段次序 · 点入口直接进该类目`;
     } else if (tab === "prof") {
-      info.innerHTML = `⚔ 姿势只能随武器出生 · 改档案保存即生效`;
+      info.innerHTML = `⚔ 档案维护 (高级) · 挑标签页右栏可直接选姿势`;
     } else if (tab === "grp") {
       info.innerHTML = `🧬 同域任意两词永不共存 (引擎抽取期拦截)`;
     } else if (tab === "nl") {
@@ -1836,6 +2365,56 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   $(".tp-cancel").onclick = onCancel;
   $(".tp-ok").onclick = () => onConfirm(ui.picked);
 
+  /* ---------- 键盘可达 (1.9.0 批次 5) ----------
+     现状缺口: 标签云里的 chip 全是不可聚焦的 span, 键盘用户一个都点不到。
+     用 roving tabindex: 整片云只占一个 Tab 位, 进去之后方向键在 chip 间走, Enter 选中。 */
+  function chipsInGrid() {
+    return [...chipsBox.querySelectorAll(".tp-tag[data-kbd]")].filter((el) => el.offsetParent !== null);
+  }
+  function setRoving(el) {
+    for (const x of chipsBox.querySelectorAll(".tp-tag[data-kbd]")) {
+      x.tabIndex = x === el ? 0 : -1;
+    }
+  }
+  function moveChipFocus(from, dir) {
+    const els = chipsInGrid();
+    const i = els.indexOf(from);
+    if (i < 0) return;
+    let target = null;
+    if (dir === "left") target = els[i - 1];
+    else if (dir === "right") target = els[i + 1];
+    else {
+      const r = from.getBoundingClientRect();
+      let best = Infinity;
+      for (const el of els) {
+        if (el === from) continue;
+        const b = el.getBoundingClientRect();
+        if (dir === "down" ? b.top <= r.top + 2 : b.top >= r.top - 2) continue;
+        const dy = Math.abs(b.top - r.top);
+        const dx = Math.abs(b.left - r.left);
+        const score = dy + dx * 2;         // 同列优先, 其次最近的
+        if (score < best) { best = score; target = el; }
+      }
+    }
+    if (!target) return;
+    setRoving(target);
+    target.focus();
+    target.scrollIntoView({ block: "nearest" });
+  }
+  rootEl.addEventListener("keydown", (e) => {
+    const t = e.target;
+    const inField = t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA"
+      || t.tagName === "SELECT" || t.isContentEditable);
+    if (e.key === "/" && !inField) { e.preventDefault(); searchEl.focus(); return; }
+    if (e.key === "Escape" && t === searchEl && searchEl.value) {
+      e.preventDefault(); searchEl.value = ""; ui.filter = ""; renderChips(); return;
+    }
+    if (!t || !t.classList || !t.classList.contains("tp-tag")) return;
+    if (e.key === "Enter" || e.key === " ") { e.preventDefault(); t.click(); return; }
+    const dir = { ArrowLeft: "left", ArrowRight: "right", ArrowUp: "up", ArrowDown: "down" }[e.key];
+    if (dir) { e.preventDefault(); moveChipFocus(t, dir); }
+  });
+
   renderCats();
   renderChips();
 
@@ -1861,6 +2440,14 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   return {
     destroy() { disposePipeline(homeView); },
     libTouched: () => ui.libTouched,
+    /* 供节点面板"排除类目"控件直接跳到对应位置用 (避免在面板里再实现一套排除 UI)。 */
+    openTab(tab, opts) {
+      switchTab(tab || "pick");
+      if (opts && opts.openExclude) {
+        const d = catsBox.querySelector(".tp-exc");
+        if (d) { d.open = true; d.scrollIntoView({ block: "nearest" }); }
+      }
+    },
   };
 }
 

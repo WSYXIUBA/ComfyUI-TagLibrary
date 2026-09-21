@@ -505,8 +505,7 @@
     "energy gun",
     "laser pistol",
     "rocket launcher",
-    "dual pistols",
-    "magic wand"
+    "dual pistols"
    ],
    "poses": [
     {
@@ -801,10 +800,9 @@
    "tags": [
     "staff",
     "magical staff",
-    "scythe",
     "chain whip",
     "grimoire",
-    "trident"
+    "magic wand"
    ],
    "poses": [
     {
@@ -919,7 +917,8 @@
     "spear",
     "naginata",
     "halberd",
-    "scythe"
+    "scythe",
+    "trident"
    ],
    "poses": [
     {

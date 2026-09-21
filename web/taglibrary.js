@@ -10,7 +10,7 @@
 import { app } from "../../scripts/app.js";
 import { injectPanelStyle } from "./tagpanel-css.js";
 import {
-  escapeHtml, toast, SETTING_PREFIX, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
+  escapeHtml, toast, undoToast, SETTING_PREFIX, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
   SET_SCALE, SET_LANG, LIB_CACHE, PANEL_CATS, PANEL_NSFW, LIB_PATH, LIB_GENDER,
   tagGender, fetchPanelIndex, fetchLibrary, invalidateLibraryCache,
   getSetting, setSetting, currentTheme, managerUrl, pushThemeToFrames,
@@ -112,22 +112,26 @@ export function buildPanelWidget(node, container) {
         </div>
       </div>
       <div class="tl-ctl"><span class="tl-ctl-k">单人</span>
-        <button class="tl-sw tl-scene-btn" data-scene="solo" role="switch" aria-checked="false"
+        <button class="tl-sw" data-scene="solo" role="switch" aria-checked="false"
                 title="单人锁: 人数轴只出单词 (1girl/1boy/solo…), 禁多人词与互动槽"><i></i></button>
       </div>
       <div class="tl-ctl"><span class="tl-ctl-k">简背景</span>
-        <button class="tl-sw tl-scene-btn" data-scene="bg" role="switch" aria-checked="false"
+        <button class="tl-sw" data-scene="bg" role="switch" aria-checked="false"
                 title="简洁背景: 禁具象场景/天气/粒子槽, 背景处理只出简洁族 (纯色/渐变/虚化/棚拍)"><i></i></button>
       </div>
       <div class="tl-ctl"><span class="tl-ctl-k">特写</span>
-        <button class="tl-sw tl-scene-btn" data-scene="focus" role="switch" aria-checked="false"
+        <button class="tl-sw" data-scene="focus" role="switch" aria-checked="false"
                 title="人物特写: 禁杂物道具槽 (日用/食物/乐器/动物/束缚), 取景只出特写族"><i></i></button>
       </div>
       <div class="tl-ctl"><span class="tl-ctl-k">防冲突</span>
         <button class="tl-sw tl-conflict-btn" data-act="conflict" role="switch" aria-checked="true"
                 title="防冲突: 随机时同组互斥 (关闭后可能抽出互相冲突的词)"><i></i></button>
       </div>
+      <div class="tl-ctl"><span class="tl-ctl-k">排除类目</span>
+        <button class="tl-excbtn" data-act="exclude" type="button" aria-label="排除类目设置">无</button>
+      </div>
     </div>
+    <div class="tl-mode-hint"></div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
@@ -290,6 +294,177 @@ export function buildPanelWidget(node, container) {
     root.setProperty("--taglib-chip-radius", (!Number.isNaN(radius) ? radius : 7) + "px");
   }
 
+  /* ---------- 档案束: 复合 chip (1.9.0 方案 C) ----------
+     挑选器里点一个姿势 = 整束入面板 (如 holding sword + one handed gun hold)。
+     旧界面把它们拆成各自独立的 chip —— 用户看不出"这几个词是一把刀的姿势",
+     换姿势只能删了重挑。现在整束 = 一个对象: 一起进出 / 点一下换姿势 / ✕ 整束移除。 */
+  let _profCache = null;
+  let _bundleMenuEl = null;
+  const bundleLabelOf = (t) => String((t && t._bundle) || "");
+
+  async function loadProfiles() {
+    if (_profCache) return _profCache;
+    const d = await apiJson("/taglib/api/profiles");
+    _profCache = (d && d.data && d.data.profiles) || [];
+    return _profCache;
+  }
+
+  function bundleGroups(tags) {
+    const m = new Map();
+    (tags || []).forEach((t, i) => {
+      const k = bundleLabelOf(t);
+      if (!k) return;
+      if (!m.has(k)) m.set(k, { label: k, idxs: [], items: [] });
+      const b = m.get(k);
+      b.idxs.push(i);
+      b.items.push(t);
+    });
+    return m;
+  }
+
+  const archOfBundle = (label) => {
+    const head = String(label).split(" · ")[0];
+    return (_profCache || []).find((p) => String(p.zh || "") === head || String(p.id) === head) || null;
+  };
+
+  function setBundleTags(label, replacer) {
+    const tags = getState(node).tags.slice();
+    setState(node, { tags: replacer(tags) });
+    renderTags();
+  }
+
+  const removeBundle = (b) => setBundleTags(b.label,
+    (tags) => tags.filter((t) => bundleLabelOf(t) !== b.label));
+
+  function moveBundle(label, before) {
+    const tags = getState(node).tags.slice();
+    const moving = tags.filter((t) => bundleLabelOf(t) === label);
+    if (!moving.length) return;
+    const anchor = tags[before];
+    const rest = tags.filter((t) => bundleLabelOf(t) !== label);
+    let at = anchor ? rest.indexOf(anchor) : rest.length;
+    if (at < 0) at = rest.length;
+    rest.splice(at, 0, ...moving);
+    setState(node, { tags: rest });
+    renderTags();
+  }
+
+  /* 换姿势: 整束成员原地替换成新姿势的出词, 已调过的权重/中文名跟着走 */
+  function applyBundlePose(b, arch, pose) {
+    const label = `${arch.zh || arch.id} · ${pose.zh || pose.id}`;
+    setBundleTags(b.label, (tags) => {
+      const at = tags.findIndex((t) => bundleLabelOf(t) === b.label);
+      if (at < 0) return tags;
+      const fresh = (pose.tags || []).map((en) => {
+        const old = b.items.find((x) => String(x.en).toLowerCase() === String(en).toLowerCase());
+        const nt = { en, zh: (old && old.zh) || "", enabled: old ? old.enabled !== false : true, _bundle: label };
+        if (old && old.weight) nt.weight = old.weight;
+        if (old && old.nsfw) nt.nsfw = true;
+        return nt;
+      });
+      tags.splice(at, b.idxs.length, ...fresh);
+      return tags;
+    });
+  }
+
+  function closeBundleMenu() { if (_bundleMenuEl) _bundleMenuEl.style.display = "none"; }
+
+  function showBundleMenu(anchor, b, items) {
+    if (!_bundleMenuEl) {
+      _bundleMenuEl = document.createElement("div");
+      _bundleMenuEl.className = "tl-bundle-menu tl-scope";
+      _bundleMenuEl.style.display = "none";
+      document.body.appendChild(_bundleMenuEl);
+    }
+    const el = _bundleMenuEl;
+    const { pid, isLight } = currentTheme();
+    el.dataset.theme = pid;
+    el.classList.toggle("tl-light", isLight);
+    el.innerHTML = `<div class="bm-h">⚔ ${escapeHtml(b.label)} · ${b.items.length} 个词</div>`;
+    for (const it of items) {
+      if (it.sep) {
+        const d = document.createElement("div");
+        d.className = "bm-sep";
+        el.appendChild(d);
+        continue;
+      }
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = (it.checked ? "checked " : "") + (it.danger ? "danger" : "");
+      btn.textContent = (it.checked ? "✓ " : "") + it.label;
+      if (it.disabled) { btn.disabled = true; btn.style.opacity = ".5"; }
+      else btn.onclick = (ev) => { ev.stopPropagation(); closeBundleMenu(); it.onClick(); };
+      el.appendChild(btn);
+    }
+    el.style.display = "flex";
+    const r = el.getBoundingClientRect();
+    const a = anchor.getBoundingClientRect();
+    el.style.left = Math.min(a.left, innerWidth - r.width - 8) + "px";
+    el.style.top = Math.min(a.bottom + 4, innerHeight - r.height - 8) + "px";
+    const off = (ev) => { if (!el.contains(ev.target)) closeBundleMenu(); };
+    setTimeout(() => document.addEventListener("click", off, { once: true }), 0);
+  }
+
+  async function openBundleMenu(anchor, b) {
+    await loadProfiles();
+    const arch = archOfBundle(b.label);
+    const cur = String(b.label).split(" · ").slice(1).join(" · ");
+    const items = [];
+    if (arch) {
+      for (const [kind, arr] of [["pose", arch.poses || []], ["extra", arch.extras || []]]) {
+        for (const p of arr) {
+          const nm = String(p.zh || p.id);
+          items.push({ label: nm + (kind === "extra" ? " · 配件" : ""), checked: nm === cur,
+                       onClick: () => applyBundlePose(b, arch, p) });
+        }
+      }
+    } else {
+      items.push({ label: "找不到对应档案 (可能已被删改)", disabled: true });
+    }
+    items.push({ sep: true });
+    const on = b.items.every((x) => x.enabled !== false);
+    items.push({ label: on ? "⏸ 整束停用" : "▶ 整束启用",
+                 onClick: () => setBundleTags(b.label, (tags) => tags.map((t) =>
+                   bundleLabelOf(t) === b.label ? { ...t, enabled: !on } : t)) });
+    items.push({ label: "✕ 移除整束", danger: true, onClick: () => removeBundle(b) });
+    showBundleMenu(anchor, b, items);
+  }
+
+  function bundleChip(b, idx) {
+    const on = b.items.every((x) => x.enabled !== false);
+    const el = document.createElement("span");
+    el.className = "tl-ttag tl-bundle" + (on ? " on" : "");
+    el.dataset.bundle = b.label;
+    el.draggable = true;
+    el.title = `⚔ ${b.label}\n出词: ${b.items.map((x) => x.en).join(", ")}\n`
+      + `点击 = 换姿势 · 右键 = 更多 · ✕ = 整束移除`;
+    el.innerHTML = `<b>⚔ ${escapeHtml(b.label)}</b><span class="tl-bw">${b.items.length}</span>`
+      + `<span class="tl-x" title="移除整束">✕</span>`;
+    el.onclick = () => openBundleMenu(el, b);
+    el.oncontextmenu = (e) => { e.preventDefault(); e.stopPropagation(); openBundleMenu(el, b); };
+    el.querySelector(".tl-x").onclick = (e) => { e.stopPropagation(); removeBundle(b); };
+    el.ondragstart = (e) => { e.dataTransfer.setData("text/plain", "b:" + b.label); el.classList.add("dragging"); };
+    el.ondragend = () => {
+      el.classList.remove("dragging");
+      chipzoneEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target"));
+    };
+    el.ondragover = (e) => { e.preventDefault(); el.classList.add("drop-target"); };
+    el.ondragleave = () => el.classList.remove("drop-target");
+    el.ondrop = (e) => { e.preventDefault(); dropOnChip(e.dataTransfer.getData("text/plain"), idx); };
+    return el;
+  }
+
+  function dropOnChip(raw, idx) {
+    if (String(raw).startsWith("b:")) { moveBundle(String(raw).slice(2), idx); return; }
+    const from = parseInt(raw);
+    if (Number.isNaN(from) || from === idx) return;
+    const cur = getState(node).tags.slice();
+    const [moved] = cur.splice(from, 1);
+    cur.splice(idx, 0, moved);
+    setState(node, { tags: cur });
+    renderTags();
+  }
+
   function renderTags() {
     const st = getState(node);
     chipzoneEl.innerHTML = "";
@@ -310,6 +485,9 @@ export function buildPanelWidget(node, container) {
     const filledSet = new Set();
     if (fillCats) for (const list of fillCats.values()) for (const t of list) filledSet.add(t.en.toLowerCase());
 
+    const bundles = bundleGroups(st.tags);   // 档案束: 整束画成一个复合 chip
+    const bundleDrawn = new Set();
+
     let shown = 0;
     let lastGroup = null;
     st.tags.forEach((t, idx) => {
@@ -317,6 +495,14 @@ export function buildPanelWidget(node, container) {
         t.en.toLowerCase().includes(q) ||
         (t.zh || "").toLowerCase().includes(q))) return;
       shown++;
+      // 束成员只画一次 (画在第一个可见成员的位置) —— 复合 chip 代表整束
+      const bk = bundleLabelOf(t);
+      if (bk) {
+        if (bundleDrawn.has(bk)) return;
+        bundleDrawn.add(bk);
+        chipzoneEl.appendChild(bundleChip(bundles.get(bk), idx));
+        return;
+      }
       // 填充标签按大类插入分组标题 (用户手动添加的排前面, 不受影响)
       if (fillCats && filledSet.has(t.en.toLowerCase())) {
         let grp = null;
@@ -348,14 +534,19 @@ export function buildPanelWidget(node, container) {
       const gmode = getGender(node);
       const tg = tagGender(t);
       const gdrop = (gmode === "female" && tg === "male") || (gmode === "male" && tg === "female");
+      // NSFW 开关为「关」时 nsfw chip 会在出口被剔除 —— 必须显式标出。
+      // 这是手动路径上仅剩的"静默丢失": 用户看不出为什么少了一个词。
+      const ndrop = !!t.nsfw && !getNsfwEffective(node);
       el.className = "tl-ttag" + (t.enabled === false ? "" : " on") + (t.nsfw ? " nsfw" : "")
-        + (tg ? " gender" : "") + (dropped ? " tl-dropped" : "") + (gdrop ? " tl-gdrop" : "");
+        + (tg ? " gender" : "") + (dropped ? " tl-dropped" : "") + (gdrop ? " tl-gdrop" : "")
+        + (ndrop ? " tl-ndrop" : "");
       el.draggable = true;
       el.title = (t.enabled === false
         ? "已停用 — 点击启用"
         : (t.pinned ? "📌 已钉选 (随机/填充不覆盖) · 拖动排序 / ✕移除"
                     : "已启用 · 拖动排序 / 右键📌钉选 / ✕移除"))
-        + (gdrop ? `\n⚧ 性别过滤中: 此${tg === "male" ? "男性" : "女性"}专属标签不会参与输出/随机/填充` : "");
+        + (gdrop ? `\n⚧ 性别过滤中: 此${tg === "male" ? "男性" : "女性"}专属标签不会参与输出/随机/填充` : "")
+        + (ndrop ? "\n🔞 NSFW 开关为「关」: 此标签不会输出 (打开 NSFW 后才出)" : "");
       el.innerHTML =
         (t.pinned ? `<span class="tl-pin pinned" title="随机时必含">📌</span>` : ``) +
         `<b>${chipLabel(t)}</b>` +
@@ -378,16 +569,7 @@ export function buildPanelWidget(node, container) {
       el.ondragend = () => { el.classList.remove("dragging"); chipzoneEl.querySelectorAll(".drop-target").forEach((x) => x.classList.remove("drop-target")); };
       el.ondragover = (e) => { e.preventDefault(); el.classList.add("drop-target"); };
       el.ondragleave = () => el.classList.remove("drop-target");
-      el.ondrop = (e) => {
-        e.preventDefault();
-        const from = parseInt(e.dataTransfer.getData("text/plain"));
-        if (Number.isNaN(from) || from === idx) return;
-        const cur = getState(node).tags.slice();
-        const [moved] = cur.splice(from, 1);
-        cur.splice(idx, 0, moved);
-        setState(node, { tags: cur });
-        renderTags();
-      };
+      el.ondrop = (e) => { e.preventDefault(); dropOnChip(e.dataTransfer.getData("text/plain"), idx); };
       chipzoneEl.appendChild(el);
     });
 
@@ -500,11 +682,17 @@ export function buildPanelWidget(node, container) {
     return t;
   }
 
-  async function rollFill() {
+  /* opts.quiet = true 时抑制"成功"提示 (用于场景开关切换后的自动重抽,
+     避免每拨一下都弹一条); 失败提示与撤销按钮不受它影响。 */
+  async function rollFill(opts) {
+    const quiet = !!(opts && opts.quiet);
     const st = getState(node);
     const nsfwOn = getNsfwEffective(node);
     const excluded = new Set(st.exclude_categories || []);
     const keepPins = true;  // 钉选必含常开 (设置开关已移除): 📌 标签填充时必保留且占子类目名额
+    // 撤销快照: 填充会清掉非钉选/非排除类目的词 (不可逆), 必须留退路
+    const prevTags = st.tags.map((t) => ({ ...t }));
+    const prevFillGroups = ui.fillGroups;
     // ① 清空: 非"排除类目"的已有标签清掉; 📌钉选标签(必含开关开时)与排除类目标签保留
     const keptTags = st.tags.filter((t) => {
       if (keepPins && t.pinned) return true;
@@ -534,8 +722,20 @@ export function buildPanelWidget(node, container) {
         body: JSON.stringify({ state: { ...st, nsfw: nsfwOn },
                                seed: Math.floor(Math.random() * 0xffffffff) }),
       }).then((r) => r.json());
-    } catch (e) { console.warn("[taglib] draw 失败", e); return; }
-    if (!drawRes?.ok) { console.warn("[taglib] draw 返回异常", drawRes); return; }
+    } catch (e) {
+      console.warn("[taglib] draw 失败", e);
+      toast("抽取失败: 请求没送到, 请重试", true);
+      return;
+    }
+    if (!drawRes?.ok) {
+      console.warn("[taglib] draw 返回异常", drawRes);
+      toast(`抽取失败: ${(drawRes && drawRes.error) || "服务端返回异常"}`, true);
+      return;
+    }
+    // 服务端本来就告诉我们有多少候选被互斥/资源账本挡下了 —— 以前这里全扔了,
+    // 于是"点了没反应"和"被规则过滤了"在用户眼里长得一模一样。
+    const dropped = Array.isArray(drawRes.dropped) ? drawRes.dropped : [];
+    const droppedMutex = (drawRes.stats && drawRes.stats.dropped_mutex) || 0;
     const picked = [];
     for (const pk of drawRes.picks) {
       const lo = String(pk.en).toLowerCase();
@@ -546,7 +746,15 @@ export function buildPanelWidget(node, container) {
       if (pk.src === "implied") item._implied = true;
       picked.push(item);
     }
-    if (!picked.length && !keptTags.some((t) => t.pinned)) return;
+    const pinnedKeptCount = keptTags.filter((t) => t.pinned).length;
+    if (!picked.length && !pinnedKeptCount) {
+      // 以前这里是裸 return —— "点了没反应"与"被规则挡住了"在用户眼里完全一样
+      const why = droppedMutex
+        ? `候选与已选互斥 (挡下 ${droppedMutex} 个)`
+        : (excluded.size ? `已排除 ${excluded.size} 个类目` : "当前设置下没有可抽的词");
+      toast(`本次没抽到词 —— ${why}`, true);
+      return;
+    }
     // ③ 写回: 全部按库类目顺序排列 (钉选不顶置, 随类目走); 分组标题含钉选保留词
     const pinnedKept = keepPins ? keptTags.filter((t) => t.pinned && t._cat) : [];
     ui.fillGroups = groupByCat([...pinnedKept, ...picked]);
@@ -556,6 +764,25 @@ export function buildPanelWidget(node, container) {
     });
     renderTags();
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
+    // ④ 反馈 + 撤销。说清"填了几个 / 换掉几个 / 跳过几个"。
+    //    只有真的替换掉过词才弹撤销 —— 否则没什么可撤, 弹出来只是噪声。
+    const replaced = prevTags.length - keptTags.length;
+    const bits = [`已填入 ${picked.length} 个词`];
+    if (replaced > 0) bits.push(`替换掉 ${replaced} 个`);
+    if (pinnedKeptCount) bits.push(`保留 ${pinnedKeptCount} 个📌`);
+    if (dropped.length || droppedMutex) bits.push(`跳过 ${dropped.length || droppedMutex} 个互斥词`);
+    const msg = bits.join(" · ");
+    if (replaced > 0) {
+      undoToast(msg, () => {
+        setState(node, { tags: prevTags });
+        ui.fillGroups = prevFillGroups;
+        renderTags();
+        previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
+        toast("已撤销, 标签回到填充前的状态");
+      });
+    } else if (!quiet) {
+      toast(msg);
+    }
   }
 
   /* ---------- 1.8.0 场景预设 / 分轴重摇 / 吸收器 ---------- */
@@ -904,13 +1131,17 @@ export function buildPanelWidget(node, container) {
     const tg = tagGender(t);
     const gsym = tg === "female" ? '<span class="tl-gsym g-f">♀</span>'
                : tg === "male" ? '<span class="tl-gsym g-m">♂</span>' : "";
-    const bsym = t._bundle ? '<span class="tl-bsym" title="武器档案束成员 (姿势/配件, 随武器出生)">⚔</span>' : "";
+    const bsym = t._bundle ? `<span class="tl-bsym" title="档案姿势/配件成员${t._bundle ? " (" + String(t._bundle).replace(/"/g, "") + ")" : ""}">⚔</span>` : "";
+    // 手调过权重就标出来 —— 否则"设了权重没看到变化"又是一次静默
+    const w = Number(t.weight);
+    const wsym = (w && Math.abs(w - 1) > 1e-6)
+      ? `<span class="tl-wsym" title="权重 ${w} (输出成 (词:${w})，需开启权重语法)">×${w}</span>` : "";
     // 库内文本统一转义 —— 词来自可导入的 .md/JSON, 不能直接进 innerHTML
     const en = escapeHtml(t.en);
     const zh = t.zh ? escapeHtml(t.zh) : "";
-    if (lang === "en") return bsym + gsym + en;
-    if (lang === "zh") return bsym + gsym + (t.zh ? zh : en);
-    return bsym + gsym + `${en}${t.zh ? `<span style="opacity:.8;font-size:10px">${zh}</span>` : ""}`;
+    if (lang === "en") return bsym + gsym + en + wsym;
+    if (lang === "zh") return bsym + gsym + (t.zh ? zh : en) + wsym;
+    return bsym + gsym + `${en}${t.zh ? `<span style="opacity:.8;font-size:10px">${zh}</span>` : ""}` + wsym;
   }
 
   function renderConflictBtn() {
@@ -976,18 +1207,50 @@ export function buildPanelWidget(node, container) {
     renderConflictBtn(); renderMenuState();
   }
 
+  /* 场景三档 (单人锁 / 简背景 / 特写) —— 与 NSFW、防冲突同为"开关"语义。
+     ⚠ 必须同时更新 aria-checked: 曾经这里只 toggle 视觉类名, 读屏软件永远
+     回报"关", 而屏幕上是开 —— 状态自相矛盾。 */
   function renderSceneBar() {
     const st = getState(node);
-    const on = (k) => container.querySelector(`.tl-scene-btn[data-scene="${k}"]`);
-    const b1 = on("solo"), b2 = on("bg"), b3 = on("focus");
-    if (b1) b1.classList.toggle("on", !!st.solo_lock);
-    if (b2) b2.classList.toggle("on", st.bg_mode === "simple");
-    if (b3) b3.classList.toggle("on", st.focus_mode === "portrait");
+    const setSw = (el, on) => {
+      if (!el) return;
+      el.classList.toggle("on", on);
+      el.setAttribute("aria-checked", on ? "true" : "false");
+    };
+    setSw(container.querySelector('[data-scene="solo"]'), !!st.solo_lock);
+    setSw(container.querySelector('[data-scene="bg"]'), st.bg_mode === "simple");
+    setSw(container.querySelector('[data-scene="focus"]'), st.focus_mode === "portrait");
+  }
+
+  /* 排除类目读数 + 入口 —— 这是审查里挂了很久的 P0:
+     默认就排除了「画师」轴, 而面板上此前**没有任何地方显示或可改**,
+     用户会判定"画师词抽不出来 = 库坏了"。 */
+  function renderExcludeBtn() {
+    const btn = container.querySelector('[data-act="exclude"]');
+    if (!btn) return;
+    const list = getState(node).exclude_categories || [];
+    btn.textContent = list.length ? `${list.length} 项` : "无";
+    btn.classList.toggle("on", list.length > 0);
+    btn.title = list.length
+      ? `已排除 ${list.length} 项 (抽取时整条跳过):\n${list.join("\n")}\n\n点这里修改`
+      : "未排除任何类目。\n点这里打开排除设置\n(注意: 抽取时手动挑的词不受排除约束)";
+  }
+
+  /* ---------- 模式说明 (1.9.0) ----------
+     「手动模式下总词数 40~60 还生效吗?」旧界面从不回答, 用户只能猜。
+     实情: manual 走 chosen 列表原样输出 (不受配额约束), auto 才按配额随机组合。 */
+  function renderModeHint() {
+    const el = $(".tl-mode-hint");
+    if (!el) return;
+    el.innerHTML = ui.mode === "auto"
+      ? `🎲 <b>自动</b>：queue 时按排除类目随机组合，受「总词数」配额与冲突规则约束；<b>下面挑的词不参与输出</b>。`
+      : `✍ <b>手动</b>：只输出下面挑的词（按挑选顺序），<b>不受「总词数」配额约束</b>；🎲 填充才按配额抽。`;
   }
 
   function renderAll() {
     renderTags(); renderNsfw(); renderGender(); renderConflictBtn();
-    renderNsfwIntensity(); renderSceneBar(); renderMenuState();
+    renderModeHint();
+    renderNsfwIntensity(); renderSceneBar(); renderMenuState(); renderExcludeBtn();
   }
 
   /* ---------- ⋯ 更多菜单 ----------
@@ -1272,7 +1535,7 @@ export function buildPanelWidget(node, container) {
   }
 
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
-  async function openTagPicker() {
+  async function openTagPicker(opts) {
     // 挑选器需要标签正文 (全量库) -> 首次打开才拉; 面板本身只用轻量索引
     if (!LIB_CACHE) {
       toast("正在加载标签库…");
@@ -1303,6 +1566,7 @@ export function buildPanelWidget(node, container) {
       if (handle?.libTouched()) {
         // 内嵌管理页可能改过库 -> 刷新缓存, 全部节点面板跟随
         invalidateLibraryCache();
+        _profCache = null;      // 档案也可能被改过 -> 复合 chip 的换姿势菜单别用旧档案
         fetchPanelIndex().then(renderAll);
         window.dispatchEvent(new CustomEvent("taglib-updated"));
       }
@@ -1311,14 +1575,20 @@ export function buildPanelWidget(node, container) {
     const handle = mountTagPicker(dlg.querySelector("#taglib-picker-root"), {
       onCancel: () => closePicker(),
       onConfirm: (picked) => {
-        // picked: [{en, zh?, nsfw?}] -> 追加到 state.tags
+        // picked: [{en, zh?, nsfw?, gender?, weight?, _bundle?}] -> 追加到 state.tags
+        // ⚠ 只落盘有意义的字段: weight 是功能字段 (手动权重), _bundle 是既有约定 (⚔ 标识);
+        // _hands/_gaze/_axis 是挑选器的界面态, 写进 selection_state 会污染用户工作流。
         const st = getState(node);
         const have = new Set(st.tags.map((t) => t.en.toLowerCase()));
         for (const p of picked) {
-          if (!have.has(p.en.toLowerCase())) {
-            st.tags.push({ ...p, enabled: true });
-            have.add(p.en.toLowerCase());
-          }
+          if (have.has(p.en.toLowerCase())) continue;
+          const item = { en: p.en, zh: p.zh || "", enabled: true };
+          if (p.nsfw) item.nsfw = true;
+          if (p.gender) item.gender = p.gender;
+          if (p._bundle) item._bundle = p._bundle;
+          if (typeof p.weight === "number" && Math.abs(p.weight - 1) > 1e-6) item.weight = p.weight;
+          st.tags.push(item);
+          have.add(item.en.toLowerCase());
         }
         setState(node, { tags: st.tags });
         renderTags();
@@ -1331,6 +1601,9 @@ export function buildPanelWidget(node, container) {
       onGlobalChange: () => { applyScale(); renderAll(); },
       node,
     });
+    // 面板上的「排除类目」控件直接跳到排除抽屉 —— 不在面板里重复实现一套排除 UI。
+    // (opts 若来自 onclick 的 Event, 取不到 tab, 自然跳过)
+    if (opts && opts.tab) handle.openTab(opts.tab, opts);
     // 点弹窗外遮罩 = 关闭 (与管理页一致); Esc 走 cancel/close 两条路兜底
     dlg.addEventListener("click", (e) => { if (e.target === dlg) closePicker(); });
     dlg.addEventListener("close", cleanupPicker);
@@ -1341,12 +1614,15 @@ export function buildPanelWidget(node, container) {
 
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
+  // 排除类目: 打开挑选器并展开侧栏排除抽屉 (不在面板里重复实现一套排除 UI)
+  container.querySelector('[data-act="exclude"]').onclick = () =>
+    openTagPicker({ tab: "pick", openExclude: true });
   container.querySelector('[data-act="roll"]').onclick = rollFill;
   // 1.8.0: 预设 / 吸收器
   // ⚠ 涩度原先是 [data-act="ninten"] 单按钮 → 已改成 .tl-ninten-seg 三分段,
   //   绑定在 renderNsfwIntensity 旁边 (留着这行会让 querySelector 取到 null,
   //   整个面板构建抛 TypeError —— 实测踩过)
-  container.querySelectorAll(".tl-scene-btn").forEach((b) => {
+  container.querySelectorAll("[data-scene]").forEach((b) => {
     b.onclick = () => {
       const st = getState(node);
       if (b.dataset.scene === "solo") setState(node, { solo_lock: !st.solo_lock });
@@ -1355,7 +1631,7 @@ export function buildPanelWidget(node, container) {
       else if (b.dataset.scene === "focus")
         setState(node, { focus_mode: st.focus_mode === "portrait" ? "normal" : "portrait" });
       renderSceneBar();
-      rollFill();   // 切换立刻按新约束重抽 (面板词立即变化, 不用自己去按 🎲)
+      rollFill({ quiet: true });   // 切换立刻按新约束重抽 (面板词立即变化, 不用自己去按 🎲)
     };
   });
   container.querySelector('[data-act="preset-save"]').onclick = savePreset;

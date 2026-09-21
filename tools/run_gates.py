@@ -52,6 +52,7 @@ OFFLINE = [
     ("sync_idempotent_test", "文件夹镜像幂等性 (.md 收敛 / 标记往返不丢字段)"),
     ("lint_check", "死代码门禁 (ruff: 死导入 / 重复定义 / 死变量)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
+    ("heavy_prompt_test", "重度提示词矩阵 (708 条 × 模式/NSFW档/性别/场景/排除 + 3000 次压力)"),
 ]
 
 # 需要 ComfyUI 在跑的在线门禁 (--with-online 才跑)

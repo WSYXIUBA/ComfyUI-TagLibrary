@@ -170,9 +170,9 @@ html:not(.dark-theme) .tl-scope,
 /* NSFW 二态按钮: 默认关(灰), 开=绿色 */
 .tl-nsfw-btn { padding: 3px 8px; font-weight: 600; letter-spacing: .3px; }
 .tl-nsfw-btn.on {
-  background: linear-gradient(135deg, rgba(46,204,113,.35), rgba(46,204,113,.18));
-  border-color: rgba(46,204,113,.65);
-  color: #7dffb0;
+  background: color-mix(in srgb, var(--tl-ok) 30%, transparent);
+  border-color: color-mix(in srgb, var(--tl-ok) 62%, transparent);
+  color: var(--tl-ok);
 }
 .tl-nsfw-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.55); }
 
@@ -182,6 +182,8 @@ html:not(.dark-theme) .tl-scope,
 .tl-gsym.g-f { color: #ff6b9d; }
 .tl-gsym.g-m { color: #54a0ff; }
 .tl-bsym { font-weight: 700; margin-right: 3px; color: #f0a35e; }
+/* 手调权重标记 (1.9.0): chip 上直接看得见 (词:权重) 的效果 */
+.tl-wsym { margin-left: 4px; font-size: .78em; opacity: .85; color: var(--tl-warn); }
 /* 性别词 chip 边框提亮 (旧值 .25/.35 观感发灰发浅) */
 .tl-ttag.gender { border-color: color-mix(in srgb, #54a0ff 45%, rgba(255,255,255,.16)); }
 .tl-ttag.gender:has(.g-f) { border-color: rgba(255,107,157,.6); }
@@ -202,7 +204,7 @@ html:not(.dark-theme) .tl-scope,
 .tl-toolbar { display: flex; align-items: center; gap: 6px; padding: 7px 10px 2px; }
 .tl-search {
   flex: 1; min-width: 40px;
-  background: rgba(0,0,0,0.38);
+  background: var(--tl-input-bg);
   border: 1px solid var(--tl-border);
   border-radius: 7px;
   color: var(--tl-text);
@@ -210,27 +212,23 @@ html:not(.dark-theme) .tl-scope,
   padding: 4px 9px;
   outline: none;
 }
-.tl-search:focus { border-color: rgba(84,160,255,.6); box-shadow: 0 0 0 2px rgba(84,160,255,.12); }
+.tl-search:focus {
+  border-color: color-mix(in srgb, var(--tl-accent) 60%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--tl-accent) 12%, transparent);
+}
 .tl-search::placeholder { color: var(--tl-muted); }
 
-.tl-seg { display: inline-flex; border: 1px solid var(--tl-border); border-radius: 7px; overflow: hidden; }
-.tl-seg button {
-  border: none; background: transparent; color: var(--tl-muted);
-  font: inherit; font-size: 10.5px;
-  padding: 4px 8px; cursor: pointer;
-  transition: background .13s, color .13s;
-}
-.tl-seg button + button { border-left: 1px solid var(--tl-border); }
-.tl-seg button:hover { color: var(--tl-text); background: rgba(255,255,255,.05); }
-.tl-seg button.active { color: #fff; background: rgba(84,160,255,.30); }
+/* ⚠ 分段按钮样式统一在下方「控件原语」一节定义, 此处不得重复定义。
+   历史事故: 这里原本另有一份同名规则, 靠书写顺序取胜, 静默覆盖了下方定义,
+   使选中态与悬停态同色 —— 用户看不出当前选中哪一档。 */
 
 
 /* ---------- chips 区 ---------- */
 .tl-chipzone {
   margin: 4px 10px 6px;
-  border: 1px solid rgba(255,255,255,0.07);
+  border: 1px solid var(--tl-border);
   border-radius: 9px;
-  background: rgba(0,0,0,0.22);
+  background: var(--tl-card-2);
   padding: 7px;
   flex: 1;
   min-height: 58px;
@@ -260,28 +258,35 @@ html:not(.dark-theme) .tl-scope,
 .tl-ttag b { font-weight: 600; }
 .tl-ttag .t-zh { font-style: normal; opacity: .55; font-size: .82em; }
 
-/* 停用: 灰色 */
+/* 停用: 中性灰 (走 token —— 曾经的 rgba(255,255,255,.16) 在白底上边框消失) */
 .tl-ttag {
-  background: rgba(255,255,255,.05);
-  border: 1px solid rgba(255,255,255,.16);
-  color: #99a2b3;
+  background: var(--tl-card);
+  border: 1px solid var(--tl-border-2);
+  color: var(--tl-text-2);
 }
 
-/* 启用: 绿色 */
+/* 启用: 绿 (走 --tl-ok —— 曾经的 #d9ffe8 在浅色主题下几乎不可读) */
 .tl-ttag.on {
-  background: color-mix(in srgb, #2ecc71 20%, transparent);
-  border-color: rgba(46,204,113,.65);
-  color: #d9ffe8;
-  box-shadow: 0 0 6px -2px rgba(46,204,113,.5);
+  background: color-mix(in srgb, var(--tl-ok) 20%, transparent);
+  border-color: color-mix(in srgb, var(--tl-ok) 58%, transparent);
+  color: var(--tl-ok);
+  box-shadow: 0 0 6px -2px color-mix(in srgb, var(--tl-ok) 55%, transparent);
 }
-.tl-ttag.on:hover { background: color-mix(in srgb, #2ecc71 30%, transparent); }
-.tl-ttag.nsfw:not(.on) { border-color: rgba(255,107,107,.35); color: #d9a0a0; }
+.tl-ttag.on:hover { background: color-mix(in srgb, var(--tl-ok) 30%, transparent); }
+.tl-ttag.nsfw:not(.on) {
+  border-color: color-mix(in srgb, var(--tl-danger) 45%, transparent);
+  color: var(--tl-danger-soft);
+}
 /* mutex 让位 (auto 回显): 灰显 + 删除线 */
 .tl-ttag.tl-dropped { opacity: .42; text-decoration: line-through; }
 .tl-ttag.tl-dropped::before { content: "🚫 "; font-size: 9px; }
 /* 性别过滤剔除 (♀ 时男性专属 / ♂ 时女性专属): 虚线 + 灰显 + 删除线, chip 自带 ♂♀ 符号 */
 .tl-ttag.tl-gdrop { opacity: .45; border-style: dashed; text-decoration: line-through; }
 .tl-ttag.tl-gdrop.on { background: transparent; box-shadow: none; }
+/* NSFW 开关为「关」时不输出的词: 同样虚线+删除线, 但描红边区分原因 */
+.tl-ttag.tl-ndrop { opacity: .45; border-style: dashed; text-decoration: line-through;
+                    border-color: color-mix(in srgb, var(--tl-danger) 55%, transparent) !important; }
+.tl-ttag.tl-ndrop.on { background: transparent; box-shadow: none; }
 /* ---------- ⋯ 更多菜单 (低频操作集中地, 同时是状态读数板) ---------- */
 .tl-more-btn { position: relative; font-size: 14px; line-height: 1; padding: 2px 7px; }
 .tl-more-dot { display: none; }
@@ -331,16 +336,32 @@ html:not(.dark-theme) .tl-scope,
 .tl-sw.on i { transform: translateX(13px); background: #fff; }
 .tl-sw:focus-visible { outline: 2px solid var(--tl-accent); outline-offset: 2px; }
 
+/* ---------- 分段按钮 (多档语义: 手动/自动 · 性别 · 涩度三档) ----------
+   ⚠ 全文件只此一份定义。历史事故: 上方原本还有第二份同名规则, 同特异性
+   靠书写顺序取胜, 使选中态被悬停色覆盖 —— 用户看不出选了哪档。 */
 .tl-seg { display: inline-flex; background: var(--tl-input-bg);
           border: 1px solid var(--tl-border-2); border-radius: 6px; padding: 1px; }
 .tl-seg button { border: none; background: transparent; color: var(--tl-text-2);
-                 font-size: 11px; padding: 2px 7px; border-radius: 4px; cursor: pointer; }
-.tl-seg button.active { background: var(--tl-hover); color: var(--tl-text); font-weight: 500; }
+                 font-size: 11px; padding: 2px 7px; border-radius: 4px; cursor: pointer;
+                 transition: background .13s, color .13s; }
+.tl-seg button:hover { color: var(--tl-text); }
+.tl-seg button.active {
+  background: color-mix(in srgb, var(--tl-accent) 28%, transparent);
+  color: var(--tl-accent-text); font-weight: 500;
+}
 
 .tl-mi-row { display: flex; align-items: center; gap: 8px; padding: 6px 10px; }
 .tl-mi-row .tl-mi-k { flex: 1; color: var(--tl-text-2); }
 .tl-sel { background: var(--tl-input-bg); border: 1px solid var(--tl-border-2);
           border-radius: 5px; color: var(--tl-text); font-size: 11.5px; padding: 2px 6px; }
+/* 排除类目读数按钮: 「无」= 中性; 「N 项」= 警示色 (有东西被排除掉) */
+.tl-excbtn { border: 1px solid var(--tl-border-2); background: var(--tl-input-bg);
+             color: var(--tl-muted); font: inherit; font-size: 11px; padding: 2px 8px;
+             border-radius: 6px; cursor: pointer; transition: background .13s, color .13s; }
+.tl-excbtn:hover { color: var(--tl-text); }
+.tl-excbtn.on { background: color-mix(in srgb, var(--tl-warn) 22%, transparent);
+                border-color: color-mix(in srgb, var(--tl-warn) 55%, transparent);
+                color: var(--tl-text); font-weight: 500; }
 .tl-stchip.hot { border-color: #4aa564; background: color-mix(in srgb, #4aa564 18%, transparent); }
 .tl-stchip.warn { border-color: var(--tl-warn); background: color-mix(in srgb, var(--tl-warn) 16%, transparent); }
 
@@ -350,11 +371,9 @@ html:not(.dark-theme) .tl-scope,
   border-top: 1px solid var(--tl-border);
 }
 .tl-menu-sec:first-child { border-top: none; }
-.tl-menu .tl-scene-row { display: flex; gap: 6px; padding: 2px 10px 6px; }
-.tl-menu .tl-scene-row .tl-scene-btn { flex: 1; justify-content: center; }
 .tl-menu .tl-preset-row { display: flex; gap: 4px; align-items: center; padding: 2px 10px 6px; }
 .tl-menu .tl-preset-row .tl-preset-sel { flex: 1; min-width: 0; }
-.tl-menu .tl-nsfw-btn, .tl-menu .tl-ninten-btn { margin: 2px 10px 6px; }
+.tl-menu .tl-nsfw-btn { margin: 2px 10px 6px; }
 .tl-menu-item.danger .tl-mi-k { color: var(--tl-danger); }
 .tl-menu-item.danger:hover { background: rgba(255,71,87,.10); }
 .tl-ttag.nsfw.on {
@@ -364,6 +383,43 @@ html:not(.dark-theme) .tl-scope,
   box-shadow: 0 0 6px -2px rgba(255,71,87,.55);
 }
 
+/* ---------- 模式说明 (1.9.0) ----------
+   「手动模式下总词数 40~60 还生效吗?」—— 旧界面从不回答这个问题, 用户只能靠猜。
+   实情: manual 走 chosen 列表原样输出 (不受配额约束), auto 才按配额随机组合。 */
+.tl-mode-hint {
+  padding: 0 10px 6px;
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--tl-muted);
+}
+.tl-mode-hint b { color: var(--tl-text-2); font-weight: 600; }
+/* 档案束复合 chip: [⚔ 武士刀 · 拔刀 ✕] —— 一束是一个对象, 不是一个词 */
+.tl-ttag.tl-bundle { border-color: color-mix(in srgb, #f0a35e 55%, rgba(255,255,255,.16)); }
+.tl-ttag.tl-bundle.on { background: color-mix(in srgb, #f0a35e 22%, transparent); }
+.tl-ttag.tl-bundle .tl-bw {
+  margin-left: 5px; font-size: .78em; opacity: .7;
+  border: 1px solid currentColor; border-radius: 99px; padding: 0 5px;
+}
+.tl-bundle-menu {
+  position: fixed; z-index: 10050; display: flex; flex-direction: column;
+  min-width: 190px; max-height: 60vh; overflow-y: auto;
+  background: var(--tl-card); border: 1px solid var(--tl-border-2); border-radius: 10px;
+  box-shadow: 0 12px 32px rgba(0,0,0,.45); padding: 5px; font-size: 12px;
+}
+.tl-bundle-menu .bm-h {
+  padding: 5px 9px 6px; font-size: 10.5px; color: var(--tl-muted);
+  border-bottom: 1px solid var(--tl-border); margin-bottom: 4px;
+}
+.tl-bundle-menu button {
+  display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
+  background: transparent; border: 0; color: var(--tl-text-2); font: inherit;
+  font-size: 12px; padding: 5px 9px; border-radius: 7px; cursor: pointer;
+}
+.tl-bundle-menu button:hover { background: var(--tl-hover); color: var(--tl-text); }
+.tl-bundle-menu button.checked { color: var(--tl-ok); font-weight: 600; }
+.tl-bundle-menu button.danger { color: var(--tl-danger); }
+.tl-bundle-menu .bm-sep { height: 1px; background: var(--tl-border); margin: 4px 2px; }
+
 /* ---------- 底部预览 ---------- */
 .tl-preview-row {
   display: flex; align-items: center; gap: 6px;
@@ -372,18 +428,20 @@ html:not(.dark-theme) .tl-scope,
 .tl-preview {
   flex: 1;
   font-size: 10.5px;
-  color: var(--tl-muted);
+  color: var(--tl-text-2);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: rgba(0,0,0,0.25);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: var(--tl-code-bg);
+  border: 1px solid var(--tl-border);
   border-radius: 7px;
   padding: 4px 8px;
 }
 .tl-roll-btn {
   display: inline-flex; align-items: center; gap: 5px;
-  border: 1px solid rgba(84,160,255,.5);
-  background: linear-gradient(135deg, rgba(84,160,255,.30), rgba(84,160,255,.14));
-  color: #fff;
+  border: 1px solid color-mix(in srgb, var(--tl-accent) 50%, transparent);
+  background: linear-gradient(135deg,
+              color-mix(in srgb, var(--tl-accent) 30%, transparent),
+              color-mix(in srgb, var(--tl-accent) 14%, transparent));
+  color: var(--tl-accent-text);
   border-radius: 8px;
   font: inherit; font-size: 11px; font-weight: 600;
   padding: 4px 12px;
@@ -409,27 +467,17 @@ html:not(.dark-theme) .tl-scope,
 .tl-chip-menu button.danger { color: var(--tl-danger); }
 /* 自动载入标签的 📌 (半透明, 仅提示可右键钉选) — 已废弃: 只在真钉选时显示 */
 
-/* ---- 1.8.1 场景条 + 强度按钮 (全部走主题变量, 深浅主题自适应) ---- */
-.tl-scene-row { display: flex; gap: 4px; margin-top: 4px; align-items: center; }
-.tl-scene-btn {
-  flex: 1; padding: 3px 0; font-size: 11px; font: inherit;
-  border-radius: 7px; border: 1px solid var(--tl-border);
-  background: var(--tl-card); color: var(--tl-text);
-  cursor: pointer; transition: .12s;
-}
-.tl-scene-btn:hover { background: var(--tl-hover); }
+/* ---- 1.8.1 场景条 + 强度按钮 (全部走主题变量, 深浅主题自适应) ----
+   ⚠ .tl-scene-row / .tl-scene-btn 已删除 (2026-09-20):
+   场景三档 (单人锁/简背景/特写) 已改为面板上的标准开关 (.tl-sw), 与 NSFW、
+   防冲突统一为蓝色拨杆。旧类名是"菜单宽按钮"时代的遗留, 它把同一个元素
+   既当 30×17 拨杆又当 flex:1 宽按钮, 并把 .on 刷成绿色 (#2ecc71) —— 于是
+   同一个面板里"开"出现了两种颜色。类名在 JS 中已无创建点。 */
 .tl-preset-sel {
   flex: 1; min-width: 0; font: inherit; font-size: 11px; padding: 3px 4px;
   background: var(--tl-input-bg); color: var(--tl-text);
   border: 1px solid var(--tl-border-2); border-radius: 7px;
 }
-.tl-scene-btn.on {
-  background: color-mix(in srgb, #2ecc71 24%, var(--tl-card));
-  border-color: rgba(46, 204, 113, .65);
-  color: var(--tl-accent-text);
-  font-weight: 600;
-}
-.tl-scene-btn.on:hover { box-shadow: 0 0 10px -2px rgba(46,204,113,.45); }
 .tl-ninten-btn { padding: 3px 8px; font-size: 10px; }
 .tl-ninten-btn.on {
   background: color-mix(in srgb, #e67e22 26%, var(--tl-card));

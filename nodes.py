@@ -9,11 +9,13 @@ try:  # ComfyUI 以包方式加载 -> 相对导入; 独立脚本/测试 -> 顶�
     from . import runtime_snapshot
     from . import engine
     from . import nl
+    from . import slotpolicy
 except ImportError:  # pragma: no cover
     import library
     import runtime_snapshot
     import engine
     import nl
+    import slotpolicy
 
 
 
@@ -329,46 +331,51 @@ class TagLibraryNode:
                                     suffix=suffix,
                                     exclude_keys=exclude_keys)
 
-        def tag_excluded(cat_name: str, sub: dict, g, exclude_keys: set) -> bool:
-            """前端同名逻辑: 标签级排除判断。"""
-            if cat_name in exclude_keys:
-                return True
-            if g and f"{cat_name}/{sub.get('name', '')}/{g.get('name', '')}" in exclude_keys:
-                return True
-            if f"{cat_name}/{sub.get('name', '')}" in exclude_keys:
-                return True
-            return False
-
         # ---- 手动模式: 只查已选标签, 不做全库过滤拷贝 ----
-        # NSFW/性别/排除全部在 chosen 层复核 (与原出口级过滤同规则, 旧工作流
-        # selected ids 路径的排除语义由 en_path 反查补齐); en/id 索引按库缓存。
-        full_by_en, en_path, by_id = _manual_index(lib)
+        # 规则分层 (2026-09-20 用户决策 + 合规底线):
+        #   · 排除类目 → **豁免**。用户手选的词以手选为准 —— 旧行为在这里静默丢弃,
+        #     用户看不出"为什么少了一个词"。语义与引擎 pin_ignore_exclude 对齐。
+        #   · 性别 / NSFW 开关 → 保留 (面板分别有 .tl-gdrop / .tl-ndrop 标记, 是可见的)。
+        #   · 未成年锁 → **新增拦截**。⚠ 旧手动路径完全不查这一条, 是真漏洞:
+        #     手动钉选未成年年龄词 + 露骨词时引擎拦、手动不拦。
+        full_by_en, _en_path, by_id = _manual_index(lib)
         chosen: list[dict] = []
         if state.get("tags"):
             for st_tag in state["tags"]:
                 if not isinstance(st_tag, dict) or st_tag.get("enabled") is False:
                     continue
                 en_l = str(st_tag.get("en", "")).strip().lower()
-                path = en_path.get(en_l)
-                if path and tag_excluded(path[0].get("name", ""), path[1], path[2],
-                                         exclude_keys):
-                    continue
                 lib_t = full_by_en.get(en_l)
                 if lib_t is None:
                     lib_t = {"en": st_tag.get("en", ""), "zh": st_tag.get("zh", ""),
                              "weight": 1.0}
-                chosen.append(dict(lib_t))
+                else:
+                    lib_t = dict(lib_t)
+                # 面板里给某个词单独调过权重 -> 以手调的为准 (手选即为准, 与
+                # "豁免排除类目"同一语义)。没调过就不写这个键, 保持库默认。
+                if isinstance(st_tag.get("weight"), (int, float)):
+                    lib_t["weight"] = float(st_tag["weight"])
+                chosen.append(lib_t)
         else:
             # v2 旧工作流 selected ids 结构仍兼容
             for i in selected_ids:
                 t = by_id.get(i)
-                if t is None:
-                    continue
-                path = en_path.get(str(t.get("en", "")).strip().lower())
-                if path and tag_excluded(path[0].get("name", ""), path[1], path[2],
-                                         exclude_keys):
-                    continue
-                chosen.append(dict(t))
+                if t is not None:
+                    chosen.append(dict(t))
+
+        # 未成年锁 (与 engine.tag_ok 同规则): 出现未成年年龄词 → 整场封禁屏蔽词。
+        # 词表取快照 (出厂表 ∪ 扩展包 minor_block 词), 与自动路径同一个真源。
+        _ens = {str(t.get("en", "")).strip().lower() for t in chosen}
+        if _ens & set(slotpolicy.MINOR_AGE_WORDS):
+            try:
+                _snap = runtime_snapshot.get_snapshot(lib)
+                _block = set(getattr(_snap, "minor_block_words", None)
+                             or slotpolicy.MINOR_BLOCK_WORDS)
+            except Exception:  # noqa: BLE001 — 快照不可用时不阻断输出, 退回出厂表
+                _block = set(slotpolicy.MINOR_BLOCK_WORDS)
+            chosen = [t for t in chosen
+                      if str(t.get("en", "")).strip().lower() not in _block]
+
         if not nsfw_on:
             chosen = [t for t in chosen if not t.get("nsfw", False)]
         # 手动输出也受性别过滤 (出口级复核, 与引擎 tag_ok 同规则)

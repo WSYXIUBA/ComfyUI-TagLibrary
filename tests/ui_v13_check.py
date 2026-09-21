@@ -467,9 +467,14 @@ def _run(cdp, tab):
     if not ex.get("hasAxis"):
         ui_errs.append(f"轴开关未写入排除列表: {ex}")
 
-    # 5) 武器档案 (可编辑)
-    click_tab(".tp-proftab", "ui_prof.png",
-              """(() => {
+    # 5) 道具/武器档案 (可编辑) —— 1.9.0 起它从主导航降为二级:
+    #    设置 → ⚔ 道具/武器档案 (高级) → 打开档案编辑器。
+    #    ⚠ 别改回 .tp-proftab: 那个页签已删 (用户要求"武器档案这一页删掉, 集成进挑标签")。
+    cdp.ev("document.querySelector('.tp-settab').click()")
+    time.sleep(1.5)
+    cdp.ev("document.querySelector('.tp-goprof').click()")
+    time.sleep(2.0)
+    print("PROF: " + str(cdp.ev("""(() => {
                 const cards=document.querySelectorAll('.tp-pcard').length;
                 const rows=document.querySelectorAll('.tp-ptab tr').length;
                 const h1=(document.querySelector('.tp-h1')||{}).textContent;
@@ -479,7 +484,8 @@ def _run(cdp, tab):
                 const saves=document.querySelectorAll('.tp-save').length;
                 return JSON.stringify({h1:h1, cards, poseRows:rows, editableCells:cells,
                                        editableChips:chips, addBtns:adds, saveBtns:saves});
-              })()""", "PROF")
+              })()""")))
+    cdp.shot("ui_prof.png")
     prof_v = json.loads(cdp.ev("""JSON.stringify({
       cells: document.querySelectorAll('.tp-ecell').length,
       add: document.querySelectorAll('.tp-eadd').length,

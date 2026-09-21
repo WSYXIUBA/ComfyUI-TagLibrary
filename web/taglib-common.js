@@ -39,6 +39,52 @@ function toast(msg, isErr = false) {
   clearTimeout(_toastTimer);
   _toastTimer = setTimeout(() => { el.style.opacity = "0"; }, 2400);
 }
+/* 带「撤销」的提示条 —— 专给破坏性操作。
+   🎲 填充会清掉用户手动挑的词且不可逆, 必须给退路; 普通 toast 是
+   pointer-events:none, 放不了按钮, 所以单独一支。同时只保留一条。 */
+let _undoTimer = null;
+let _undoFn = null;
+function hideUndoToast() {
+  const el = document.getElementById("taglib-undo-toast");
+  if (el) el.style.opacity = "0";
+  _undoFn = null;
+  clearTimeout(_undoTimer);
+}
+function undoToast(msg, onUndo, ms = 7000) {
+  let el = document.getElementById("taglib-undo-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "taglib-undo-toast";
+    el.className = "tl-scope";
+    el.style.cssText =
+      "position:fixed;left:50%;bottom:56px;transform:translateX(-50%);z-index:100001;" +
+      "display:flex;align-items:center;gap:12px;padding:8px 12px 8px 16px;border-radius:10px;" +
+      "font-size:13px;border:1px solid var(--tl-border-2);background:var(--tl-bg-solid);" +
+      "box-shadow:0 6px 24px rgba(0,0,0,.35);opacity:0;transition:opacity .2s;";
+    const span = document.createElement("span");
+    span.id = "taglib-undo-msg";
+    const btn = document.createElement("button");
+    btn.id = "taglib-undo-btn";
+    btn.type = "button";
+    btn.textContent = "撤销";
+    btn.style.cssText =
+      "border:1px solid var(--tl-border-2);background:var(--tl-input-bg);" +
+      "color:var(--tl-accent-text);font:inherit;font-size:12px;padding:3px 10px;" +
+      "border-radius:6px;cursor:pointer;flex:0 0 auto;";
+    btn.onclick = () => { const f = _undoFn; hideUndoToast(); if (f) f(); };
+    el.append(span, btn);
+    document.body.appendChild(el);
+  }
+  const { pid, isLight } = currentTheme();
+  el.dataset.theme = pid;
+  el.classList.toggle("tl-light", isLight);
+  el.querySelector("#taglib-undo-msg").textContent = msg;
+  el.style.color = "var(--tl-text)";
+  el.style.opacity = "1";
+  _undoFn = onUndo || null;
+  clearTimeout(_undoTimer);
+  _undoTimer = setTimeout(hideUndoToast, ms);
+}
 const MANAGER_URL = "/taglib?embed=1";
 const SETTING_PREFIX = "TagLibrary.";
 
@@ -256,7 +302,7 @@ function setState(node, patch) {
 
 
 export {
-  escapeHtml, toast, MANAGER_URL, SETTING_PREFIX, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
+  escapeHtml, toast, undoToast, hideUndoToast, MANAGER_URL, SETTING_PREFIX, SET_DEFAULT_MODE, SET_DEFAULT_NSFW,
   SET_SCALE, SET_LANG, LIB_CACHE, PANEL_CATS, PANEL_NSFW, LIB_PATH, LIB_GENDER,
   tagGender, fetchPanelIndex, fetchLibrary, invalidateLibraryCache,
   getSetting, setSetting, currentTheme, managerUrl, pushThemeToFrames,
