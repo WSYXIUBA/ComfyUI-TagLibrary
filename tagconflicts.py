@@ -36,6 +36,12 @@ except ImportError:  # pragma: no cover
 
 CONFLICTS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "conflicts.json")
 LEGACY_GROUPS_PATH = os.path.join(os.path.dirname(tagfiles.LIBRARY_DIR), "conflicts.json")
+# 1.8.0: NSFW 跨池规则 (ext 扩展包配套, 不入 git/发布); 与出厂规则合并生效。
+# 路径由 CONFLICTS_PATH 派生 (测试沙箱替换 CONFLICTS_PATH 时自动跟随, 隔离才成立)
+
+
+def _nsfw_conflicts_path() -> str:
+    return os.path.join(os.path.dirname(CONFLICTS_PATH), "nsfw_conflicts.json")
 
 _DOC_TEXT = (
     "这是 ComfyUI-TagLibrary 的反冲突文件 (conflicts.json)。"
@@ -98,14 +104,21 @@ def _norm_en(x) -> str:
 
 
 def _mtime_c() -> float:
+    m1 = m2 = 0.0
     try:
-        return os.stat(CONFLICTS_PATH).st_mtime
+        m1 = os.stat(CONFLICTS_PATH).st_mtime
     except OSError:
-        return 0.0
+        pass
+    try:
+        m2 = os.stat(_nsfw_conflicts_path()).st_mtime
+    except OSError:
+        pass
+    return max(m1, m2)
 
 
 def _lib_key() -> tuple:
-    return (library._mtime(library.DEFAULT_PATH), library._mtime(library.USER_PATH))
+    return (library._mtime(library.DEFAULT_PATH), library._mtime(library.USER_PATH),
+            library._mtime(library.EXT_PATH))
 
 
 def _write_file(payload: dict) -> None:
@@ -192,6 +205,15 @@ def load_rules() -> list[dict]:
                     rules.append(r)
         except (OSError, ValueError):
             rules = [dict(r) for r in DEFAULT_RULES]
+        # 1.8.0: NSFW 扩展规则并入 (文件缺失 = 无; 规则引用解析失败时自动跳过)
+        try:
+            with open(_nsfw_conflicts_path(), "r", encoding="utf-8") as f:
+                nfw = json.load(f)
+            for r in nfw.get("rules", []) or []:
+                if _valid_shape(r) and str(r.get("id") or "").startswith("ext."):
+                    rules.append(r)
+        except (OSError, ValueError):
+            pass
         _cache, _cache_key = {"rules": rules}, key
         return rules
 

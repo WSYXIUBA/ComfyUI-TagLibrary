@@ -203,7 +203,9 @@ SUB_TO_AXIS_V2: dict[str, tuple[str, int]] = {
     "外貌特征/情绪与状态": ("appearance", 307),
     "外貌特征/皮肤与印记": ("appearance", 308),
     "外貌特征/非人特征": ("appearance", 309),
+    "外貌特征/身体细节": ("appearance", 310),   # ext 扩展包: 解剖细节 (NSFW)
     # ---- 服装 (clothing) ----
+    "服装/服装状态": ("clothing", 399),          # ext 扩展包: 半脱机制 (NSFW), 先于裸露
     "服装/裸露与暴露": ("clothing", 400),
     "服装/上装": ("clothing", 401),
     "服装/下装": ("clothing", 402),
@@ -223,7 +225,10 @@ SUB_TO_AXIS_V2: dict[str, tuple[str, int]] = {
     "道具武器/日用道具": ("prop", 502),
     "道具武器/乐器与运动": ("prop", 503),
     "道具武器/动物伙伴": ("prop", 504),
+    "道具武器/束缚道具": ("prop", 505),          # ext 扩展包 (NSFW)
     # ---- 动作姿态 (action) ----
+    "动作姿态/体位": ("action", 599),            # ext 扩展包 (NSFW): 先于姿态基线,
+                                                 # NSFW 开时体位优先占据 posture_base 组
     "动作姿态/站走与动态": ("action", 600),
     "动作姿态/坐姿": ("action", 601),
     "动作姿态/躺跪与趴伏": ("action", 602),
@@ -231,6 +236,9 @@ SUB_TO_AXIS_V2: dict[str, tuple[str, int]] = {
     "动作姿态/头颈与倚靠": ("action", 604),
     "动作姿态/手部动作": ("action", 605),
     "动作姿态/视线": ("action", 606),
+    "动作姿态/性行为": ("action", 610),          # ext 扩展包 (NSFW)
+    "动作姿态/束缚与调教": ("action", 611),      # ext 扩展包 (NSFW)
+    "动作姿态/高潮与体液": ("action", 612),      # ext 扩展包 (NSFW)
     # ---- 场景环境 (environment) ----
     "场景环境/室内": ("environment", 700),
     "场景环境/自然景观": ("environment", 701),

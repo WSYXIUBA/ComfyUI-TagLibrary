@@ -22,6 +22,10 @@ except ImportError:  # pragma: no cover
     import tagfiles
 
 GROUPRULES_PATH = os.path.join(tagfiles.LIBRARY_DIR, "grouprules.json")
+# 1.8.0: NSFW 互斥域扩展文件 (ext 扩展包配套, 不入 git/发布)。
+# 与出厂文件同名 id 的域按**并集**合并 —— 口部域 (legacy.mouth) 等资源账本
+# 由两侧词共同守护, 而不必把 NSFW 词写进出厂文件。
+NSFW_GROUPS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nsfw_grouprules.json")
 
 _lock = threading.Lock()
 _cache: dict | None = None
@@ -29,25 +33,26 @@ _cache_key: float | None = None
 
 
 def _mtime() -> float:
+    m1 = m2 = 0.0
     try:
-        return os.stat(GROUPRULES_PATH).st_mtime
+        m1 = os.stat(GROUPRULES_PATH).st_mtime
     except OSError:
-        return 0.0
-
-
-def load_grouprules() -> list[dict]:
-    """→ [{id, members(lower)}]。文件缺失 = 空 (不炸)。"""
-    global _cache, _cache_key
-    key = _mtime()
-    with _lock:
-        if _cache is not None and _cache_key == key:
-            return _cache
+        pass
     try:
-        with open(GROUPRULES_PATH, "r", encoding="utf-8") as f:
+        m2 = os.stat(NSFW_GROUPS_PATH).st_mtime
+    except OSError:
+        pass
+    return max(m1, m2)
+
+
+def _read_groups(path: str) -> list[dict]:
+    """→ [{id, members(lower)}] 文件级解析; 缺失/损坏 = 空。"""
+    try:
+        with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
         groups = data.get("groups") or []
     except (OSError, json.JSONDecodeError):
-        groups = []
+        return []
     out = []
     for g in groups:
         gid = str(g.get("id") or "").strip()
@@ -55,6 +60,20 @@ def load_grouprules() -> list[dict]:
                    if str(m).strip()}
         if gid and len(members) >= 2:
             out.append({"id": gid, "members": members})
+    return out
+
+
+def load_grouprules() -> list[dict]:
+    """→ [{id, members(lower)}]。出厂文件 + NSFW 扩展文件, 同名 id 并集。"""
+    global _cache, _cache_key
+    key = _mtime()
+    with _lock:
+        if _cache is not None and _cache_key == key:
+            return _cache
+    merged: dict[str, set] = {}
+    for g in _read_groups(GROUPRULES_PATH) + _read_groups(NSFW_GROUPS_PATH):
+        merged.setdefault(g["id"], set()).update(g["members"])
+    out = [{"id": gid, "members": frozenset(m)} for gid, m in merged.items()]
     with _lock:
         _cache = out
         _cache_key = key

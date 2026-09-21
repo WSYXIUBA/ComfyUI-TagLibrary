@@ -1392,6 +1392,200 @@ ${TPL_RULES}
       toast(`切换失败: ${err.message}`, true);
     }
   };
+  /* ---------------- 1.8.0 批量工具 (全部客户端操作, 改工作树后统一保存) ---------------- */
+
+  function bulkIterSubs(scopeSub) {
+    // scopeSub = {cat, sub} 或 null (全库) → [{cat, sub, name}]
+    const out = [];
+    for (const c of lib.categories || []) {
+      for (const s of c.subcategories || []) {
+        if (scopeSub && (c.id !== scopeSub.cat.id || s.id !== scopeSub.sub.id)) continue;
+        out.push({ c, s, path: `${c.name}/${s.name}` });
+      }
+    }
+    return out;
+  }
+
+  function openBulkTools() {
+    const old = document.getElementById("bulkDlg");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "bulkDlg";
+    dlg.style.cssText = "background:#1a1d24;color:#e3e7ee;border:1px solid #333845;border-radius:12px;"
+      + "padding:16px;width:min(680px,94vw);max-height:84vh;overflow:auto;";
+    const curCat = (lib.categories || []).find((c) => c.id === activeCatId);
+    const curSub = curCat?.subcategories?.find((s) => s.id === activeSubId);
+    const subOpts = bulkIterSubs(null)
+      .map((x) => `<option value="${escapeHtml(x.c.id)}||${escapeHtml(x.s.id)}">${escapeHtml(x.path)} (${(x.s.tags || []).length})</option>`)
+      .join("");
+    const scopeNote = curSub
+      ? `当前子分类: <b>${escapeHtml(curCat.name)}/${escapeHtml(curSub.name)}</b>`
+      : "当前未选中子分类, 只能用「全库」范围";
+    dlg.innerHTML = `
+      <div style="font-weight:600;font-size:15px;margin-bottom:10px;">🧰 批量工具 <span style="opacity:.6;font-size:11px;">改动先落工作树, 点「💾 保存更改」才生效</span></div>
+      <div style="opacity:.7;font-size:12px;margin-bottom:10px;">${scopeNote}</div>
+
+      <details open style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;">1️⃣ 正则重命名</summary>
+        <div style="padding:8px 0;display:grid;gap:6px;font-size:12px;">
+          <label>范围 <select id="bt-ren-scope"><option value="sub">当前子分类</option><option value="all">全库</option></select>
+                字段 <select id="bt-ren-field"><option value="en">英文 en</option><option value="zh">中文 zh</option></select></label>
+          <label>查找 (正则) <input id="bt-ren-find" style="width:100%;" placeholder="例如  \\(medium\\)  或  ^old_" /></label>
+          <label>替换为 <input id="bt-ren-rep" style="width:100%;" placeholder="支持 $1 引用分组; 留空即删除匹配段" /></label>
+          <button id="bt-ren-go" class="btn small primary">应用重命名</button>
+          <div id="bt-ren-out" style="opacity:.85;"></div>
+        </div>
+      </details>
+
+      <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;">2️⃣ 批量移动</summary>
+        <div style="padding:8px 0;display:grid;gap:6px;font-size:12px;">
+          <div>从当前子分类移动到目标槽位 (可用正则筛选词, 留空 = 全部):</div>
+          <label>筛选 (en 正则, 可空) <input id="bt-mv-q" style="width:100%;" /></label>
+          <label>目标槽位 <select id="bt-mv-to" style="max-width:100%;">${subOpts}</select></label>
+          <button id="bt-mv-go" class="btn small primary">移动匹配词</button>
+          <div id="bt-mv-out" style="opacity:.85;"></div>
+        </div>
+      </details>
+
+      <details style="margin-bottom:8px;"><summary style="cursor:pointer;font-weight:600;">3️⃣ NSFW 批量标记</summary>
+        <div style="padding:8px 0;display:grid;gap:6px;font-size:12px;">
+          <label>词表 (逗号或换行分隔, 支持正则; 匹配 en):</label>
+          <textarea id="bt-nsfw-words" rows="3" style="width:100%;" placeholder="nude, topless, micro bikini, .*panties.*"></textarea>
+          <label>动作 <select id="bt-nsfw-mode"><option value="on">标记为 NSFW (自动带未成年锁定)</option><option value="off">取消 NSFW</option></select></label>
+          <button id="bt-nsfw-go" class="btn small primary">应用标记</button>
+          <div id="bt-nsfw-out" style="opacity:.85;"></div>
+        </div>
+      </details>
+
+      <details><summary style="cursor:pointer;font-weight:600;">4️⃣ 跨槽位查重</summary>
+        <div style="padding:8px 0;font-size:12px;">
+          <button id="bt-dup-go" class="btn small">扫描全库重复词</button>
+          <div id="bt-dup-out" style="margin-top:6px;"></div>
+        </div>
+      </details>
+
+      <div style="text-align:right;margin-top:10px;"><button id="bt-close" class="btn">关闭</button></div>
+    `;
+    document.body.appendChild(dlg);
+    dlg.querySelector("#bt-close").onclick = () => dlg.close();
+
+    // 1) 正则重命名
+    dlg.querySelector("#bt-ren-go").onclick = () => {
+      const scope = dlg.querySelector("#bt-ren-scope").value;
+      const field = dlg.querySelector("#bt-ren-field").value;
+      const find = dlg.querySelector("#bt-ren-find").value;
+      const rep = dlg.querySelector("#bt-ren-rep").value;
+      let re;
+      try { re = new RegExp(find, "g"); } catch (e) { toast("正则不合法: " + e.message, true); return; }
+      if (!find) { toast("查找内容不能为空", true); return; }
+      const scopeSub = scope === "sub" && curCat && curSub ? { cat: curCat, sub: curSub } : null;
+      const changes = [];
+      for (const { c, s, path } of bulkIterSubs(scopeSub)) {
+        for (const t of s.tags || []) {
+          const v = String(t[field] || "");
+          const nv = v.replace(re, rep);
+          if (nv !== v && nv.trim()) {
+            changes.push(`${path}: ${v} → ${nv}`);
+            t[field] = nv.trim();
+            if (field === "en") t.id = `${s.id}.${t.en.toLowerCase().replace(/[^a-z0-9_-]+/g, "-").slice(0, 40) || "tag"}`;
+          }
+        }
+      }
+      dlg.querySelector("#bt-ren-out").textContent =
+        changes.length ? `已改 ${changes.length} 词 (前 20):\n` + changes.slice(0, 20).join("\n") : "没有匹配";
+      if (changes.length) { markDirty(); renderAll(); }
+    };
+
+    // 2) 批量移动
+    dlg.querySelector("#bt-mv-go").onclick = () => {
+      if (!curCat || !curSub) { toast("请先在左侧选中一个子分类作为来源", true); return; }
+      const q = dlg.querySelector("#bt-mv-q").value.trim();
+      let re = null;
+      try { if (q) re = new RegExp(q, "i"); } catch (e) { toast("正则不合法: " + e.message, true); return; }
+      const [tcid, tsid] = dlg.querySelector("#bt-mv-to").value.split("||");
+      const tc = (lib.categories || []).find((c) => c.id === tcid);
+      const ts = tc?.subcategories?.find((s) => s.id === tsid);
+      if (!tc || !ts) { toast("目标槽位无效", true); return; }
+      if (tc.id === curCat.id && ts.id === curSub.id) { toast("来源与目标相同", true); return; }
+      const keep = [], moved = [];
+      for (const t of curSub.tags || []) {
+        if ((!re || re.test(String(t.en || ""))) && !t.pinned2) moved.push(t);
+        else keep.push(t);
+      }
+      if (!moved.length) { dlg.querySelector("#bt-mv-out").textContent = "没有匹配的词"; return; }
+      const taken = new Set((ts.tags || []).map((x) => String(x.en || "").toLowerCase()));
+      const really = moved.filter((t) => !taken.has(String(t.en || "").toLowerCase()));
+      ts.tags = [...(ts.tags || []), ...really];
+      curSub.tags = keep;
+      dlg.querySelector("#bt-mv-out").textContent =
+        `移动 ${really.length} 词 → ${tc.name}/${ts.name}` + (moved.length - really.length ? ` (跳过 ${moved.length - really.length} 个已存在)` : "");
+      markDirty(); renderAll();
+    };
+
+    // 3) NSFW 批量标记
+    dlg.querySelector("#bt-nsfw-go").onclick = () => {
+      const raw = dlg.querySelector("#bt-nsfw-words").value.trim();
+      if (!raw) { toast("词表不能为空", true); return; }
+      let patterns;
+      try { patterns = raw.split(/[\n,]+/).map((x) => x.trim()).filter(Boolean).map((x) => new RegExp(x, "i")); }
+      catch (e) { toast("正则不合法: " + e.message, true); return; }
+      const on = dlg.querySelector("#bt-nsfw-mode").value === "on";
+      let n = 0;
+      for (const { s } of bulkIterSubs(null)) {
+        for (const t of s.tags || []) {
+          const en = String(t.en || "");
+          if (patterns.some((re) => re.test(en))) {
+            t.nsfw = on;
+            if (on) t.minor_block = true; else delete t.minor_block;
+            n++;
+          }
+        }
+      }
+      dlg.querySelector("#bt-nsfw-out").textContent = on ? `已标记 ${n} 词为 NSFW` : `已取消 ${n} 词的 NSFW`;
+      if (n) { markDirty(); renderAll(); }
+    };
+
+    // 4) 查重
+    dlg.querySelector("#bt-dup-go").onclick = () => {
+      const byEn = new Map();
+      for (const { c, s, path } of bulkIterSubs(null)) {
+        for (const t of s.tags || []) {
+          const k = String(t.en || "").toLowerCase();
+          if (!k) continue;
+          if (!byEn.has(k)) byEn.set(k, []);
+          byEn.get(k).push({ path, t, s });
+        }
+      }
+      const dups = [...byEn.entries()].filter(([, lst]) => lst.length > 1);
+      const out = dlg.querySelector("#bt-dup-out");
+      if (!dups.length) { out.textContent = "没有跨槽位重复词 ✅"; return; }
+      out.innerHTML = "";
+      const head = document.createElement("div");
+      head.style.cssText = "margin-bottom:4px;";
+      head.textContent = `发现 ${dups.length} 个重复词:`;
+      out.appendChild(head);
+      for (const [en, lst] of dups) {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:8px;align-items:center;padding:2px 0;flex-wrap:wrap;";
+        row.innerHTML = `<b>${escapeHtml(en)}</b><span style="opacity:.6;">${lst.map((x) => escapeHtml(x.path)).join(" / ")}</span>`;
+        // 保留第一份, 其余一键删
+        const btn = document.createElement("button");
+        btn.className = "btn small";
+        btn.textContent = `删多余 ${lst.length - 1} 份`;
+        btn.onclick = () => {
+          for (const x of lst.slice(1)) {
+            x.s.tags = (x.s.tags || []).filter((t) => t !== x.t);
+          }
+          btn.disabled = true;
+          btn.textContent = "已删";
+          markDirty(); renderAll();
+        };
+        row.appendChild(btn);
+        out.appendChild(row);
+      }
+    };
+  }
+  $("#btnBulkTools").onclick = openBulkTools;
+
   (async () => {
     try {
       const out = await (await fetch("/taglib/api/settings")).json();

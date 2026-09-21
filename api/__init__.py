@@ -31,6 +31,9 @@ from .v13_routes import (
     get_profiles, save_profiles, get_grouprules, save_grouprules,
     get_nl, save_nl, draw_tags,
 )
+from .v18_routes import (
+    get_presets, draw_batch, draw_reroll, absorb, absorb_add,
+)
 
 try:
     from server import PromptServer
@@ -78,3 +81,8 @@ def register_routes() -> None:
     app.router.add_get("/taglib/api/nl", get_nl)
     app.router.add_post("/taglib/api/nl", save_nl)
     app.router.add_post("/taglib/api/draw", draw_tags)
+    app.router.add_get("/taglib/api/presets", get_presets)
+    app.router.add_post("/taglib/api/draw_batch", draw_batch)
+    app.router.add_post("/taglib/api/draw_reroll", draw_reroll)
+    app.router.add_post("/taglib/api/absorb", absorb)
+    app.router.add_post("/taglib/api/absorb_add", absorb_add)

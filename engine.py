@@ -188,16 +188,19 @@ def _migrate_excludes(raw, snap) -> list[str]:
     return list(dict.fromkeys(out))
 
 
-def _trim_to_budget(picks: list, tmax: int, snap) -> list:
+def _trim_to_budget(picks: list, tmax: int, snap, *, protect_nsfw=False) -> list:
     """按**槽位贡献数**从多到少削词, 直到落进总预算。
 
     不能做朴素截断 (`(keep + rest)[:tmax]`): `rest` 是按轴序排的, 靠后的
     style / material / camera 会被**系统性砍光** —— 修一个缺陷引入另一个。
     这里改为按槽位削, 并保证每个槽位不少于其配额下限; pinned/bundle/implied 永不削。
+    protect_nsfw (纯欲档): nsfw 词也免削 —— 否则配额加成放出来的涩词
+    会被"按槽位贡献数从多到少削"第一时间砍回去 (实测 6.4 被削回 5.5)。
     """
     fixed_sources = ("pinned", "bundle", "implied")
-    fixed = [p for p in picks if p.source in fixed_sources]
-    free = [p for p in picks if p.source not in fixed_sources]
+    fixed = [p for p in picks if p.source in fixed_sources
+             or (protect_nsfw and p.nsfw)]
+    free = [p for p in picks if p not in fixed]
     room = max(0, tmax - len(fixed))
     if len(free) <= room:
         return picks
@@ -241,6 +244,29 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
 
     gmode = str(state.get("gender") or "off").strip().lower()
 
+    # 1.8.0 纯欲档: 排除动物伙伴槽 —— 动物↔性行为跨池规则是双向的, 抽到猫狗
+    # 会把全部行为词封锁掉 (实测 ~25% 条目显式词归零); 纯欲场景不要宠物。
+    if int(state.get("nsfw_intensity") or 0) >= 2             and "道具武器/动物伙伴" not in {str(e) for e in (state.get("exclude_categories") or [])}:
+        state = {**state, "exclude_categories":
+                 list(state.get("exclude_categories") or []) + ["道具武器/动物伙伴"]}
+
+    # NSFW 强度 (1.8.0): 0=标准 1=强调 2=纯欲 —— nsfw 词的抽样权重乘数。
+    # 实测标准档 NSFW 词仅 ~5% 池占比, 显式内容出词率 ~15%; 纯欲档拉到主导。
+    _NSFW_INTENSITY_FACTOR = {0: 1.0, 1: 2.5, 2: 6.0}
+    _NSFW_EXPLICIT_EXTRA = {0: 1.0, 1: 2.0, 2: 2.5}   # 显式档 (explicit 字段) 再乘
+    try:
+        nsfw_intensity = int(state.get("nsfw_intensity") or 0)
+    except (TypeError, ValueError):
+        nsfw_intensity = 0
+    nsfw_factor = _NSFW_INTENSITY_FACTOR.get(nsfw_intensity, 1.0)
+    explicit_extra = _NSFW_EXPLICIT_EXTRA.get(nsfw_intensity, 1.0)
+
+    # 1.8.0: 未成年屏蔽词 = 出厂人工表 ∪ 扩展包 minor_block 词 (快照编译期并集)
+    minor_block_words = getattr(snap, "minor_block_words", None) or slotpolicy.MINOR_BLOCK_WORDS
+    # 1.8.0 分轴重摇: pin_ignore_exclude=true 时钉选词只过 NSFW/性别/未成年闸门,
+    # 不受排除类目约束 (重摇轴 X 时, 其余轴的保留词经"排除其余轴"钉入)
+    pin_force = bool(state.get("pin_ignore_exclude"))
+
     # 未成年锁定: 任一年龄词出生后, 成人向词在候选级全池屏蔽 (词级黑名单,
     # 覆盖裸露/内衣/泳装/体型/表情等 9 个槽位, 见 slotpolicy.MINOR_*)。
     # 必须在 tag_ok 定义前赋值 —— 钉选阶段就会调 tag_ok。
@@ -250,7 +276,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
         if not nsfw_on and snap.nsfw_flag[tid]:
             return False
-        if minor_age and snap.tag_lower[tid] in slotpolicy.MINOR_BLOCK_WORDS:
+        # 纯欲档: 未成年年龄词源头排除 (否则未成年锁触发后整场显式词全灭)
+        if nsfw_intensity >= 2 and snap.tag_lower[tid] in slotpolicy.MINOR_AGE_WORDS:
+            return False
+        if minor_age and (snap.tag_lower[tid] in minor_block_words):
             return False
         g = snap.gender_flag[tid]
         if gmode == "female" and g == 2:
@@ -403,7 +432,24 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         lo = snap.tag_lower[tid]
         if lo in led.used_lower or tid in led.used_ids:
             return
-        if not tag_ok(tid):
+        if pin_force:
+            # 重摇钉入: 过 NSFW/未成年/性别闸门, 豁免排除类目
+            if not nsfw_on and snap.nsfw_flag[tid]:
+                return
+            if nsfw_intensity >= 2 and lo in slotpolicy.MINOR_AGE_WORDS:
+                return
+            if minor_age and lo in minor_block_words:
+                return
+            g = snap.gender_flag[tid]
+            if gmode == "female" and g == 2:
+                return
+            if gmode == "male" and g == 1:
+                return
+            if led.gender_lock == 1 and g == 2:
+                return
+            if led.gender_lock == 2 and g == 1:
+                return
+        elif not tag_ok(tid):
             return
         if tid not in pinned_tids:
             pinned_tids.append(tid)
@@ -508,6 +554,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 return False, 0
         if master:
             cap = slotpolicy.caps_for(sub_key)[1]      # max_n
+            if nsfw_intensity >= 2:
+                cap += slotpolicy.nsfw_boost(sub_key)  # 纯欲档: NSFW 槽位配额加成
         else:
             r = (sub_ranges.get(sub_ids_str[si]) or {})
             cap = max(_int_or(r.get("min"), 1), _int_or(r.get("max"), 1))
@@ -534,8 +582,17 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 continue  # 动态闸门: 性别锁 (count 词入账后生效)
             if not tag_match(lo, tid):
                 continue
+            # 词级双手预算 (1.8.0): 乳交=2 / 手交·指交=1 —— 手已被武器/姿势占满时
+            # 这类词不再出生, 与档案束共用同一本手账
+            _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
+            if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
+                continue
             w = (snap.base_weights[tid] * snap.spawn_rate[tid]
                  * snap.priority_factor[tid] * cat_weight(cname))
+            if nsfw_factor > 1.0 and snap.nsfw_flag[tid]:
+                w *= nsfw_factor   # NSFW 强度: 涩词在加权抽样里赢面放大
+                if explicit_extra > 1.0 and snap.explicit_flag[tid]:
+                    w *= explicit_extra   # 行为/解剖级词再乘一层 (防 mild 词稀释)
             if w <= 0.0001:
                 continue
             cands.append((rng.random() ** (1.0 / max(w, 1e-6)), tid))
@@ -550,6 +607,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             lo = snap.tag_lower[tid]
             if lo in led.used_lower:
                 continue
+            # 词级双手预算 (1.8.0) —— 必须在提交时复查: 候选收集阶段的账本值
+            # 是池启动前的快照, 同池先提交的词会改变剩余手数
+            _hcost = snap.hands_cost[tid] if tid < len(snap.hands_cost) else 0
+            if _hcost and led.hands + _hcost > BODY_RESOURCES["hands"]:
+                continue
             if avoid_conflicts:
                 if led.used_groups & snap.group_sets[tid]:
                     stats["dropped_mutex"] += 1
@@ -563,6 +625,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                     continue
             commit_tag(tid)
             got += 1
+            if _hcost:
+                led.hands += _hcost
             if excl_gid:
                 excl_used.add(excl_gid)
             if snap.axis_arr[tid] == "count":
@@ -590,6 +654,9 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         sub_key = snap.sub_keys[si]
         if master:
             mn, mx = slotpolicy.caps_for(sub_key)      # (min_n, max_n)
+            if nsfw_intensity >= 2:
+                mx += slotpolicy.nsfw_boost(sub_key)
+                mn += slotpolicy.nsfw_min_boost(sub_key)   # 保底: 性行为/服装状态至少 1
         else:
             r = (sub_ranges.get(sub_ids_str[si]) or {})
             a = _int_or(r.get("min"), 1)
@@ -640,7 +707,8 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         except (TypeError, ValueError):
             tmax = 0
         if tmax and len(picks) > tmax:
-            picks = _trim_to_budget(picks, tmax, snap)
+            picks = _trim_to_budget(picks, tmax, snap,
+                                    protect_nsfw=(nsfw_intensity >= 2))
             picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
 
     return AutoResult(picks, dropped, stats)

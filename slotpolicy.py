@@ -58,12 +58,15 @@ SLOT_MAX: dict[str, tuple[int, int]] = {
     "外貌特征/情绪与状态": (1, 0),
     "外貌特征/皮肤与印记": (1, 0),
     "外貌特征/非人特征": (1, 0),
+    "外貌特征/身体细节": (2, 0),     # ext: 解剖细节, 可出 2 个 (如 puffy nipples + pubic hair)
+    "服装/服装状态": (2, 0),         # ext: 半脱机制 (clothes lift + panties aside 可同现)
     "服装/裸露与暴露": (1, 0),
     "道具武器/武器装备": (2, 0),
     "道具武器/日用道具": (2, 0),
     "道具武器/乐器与运动": (1, 0),
     "道具武器/食物饮品": (1, 0),
     "道具武器/动物伙伴": (1, 0),
+    "道具武器/束缚道具": (1, 0),     # ext: 成人玩具/拘束具
 
     "服装/上装": (2, 1),
     "服装/下装": (1, 0),
@@ -81,10 +84,14 @@ SLOT_MAX: dict[str, tuple[int, int]] = {
     "动作姿态/站走与动态": (1, 0),
     "动作姿态/坐姿": (1, 0),
     "动作姿态/躺跪与趴伏": (1, 0),
+    "动作姿态/体位": (1, 0),         # ext: 性体位; 与站/坐/躺同属 posture_base 组
     "动作姿态/互动与双人": (1, 0),
     "动作姿态/头颈与倚靠": (1, 0),
     "动作姿态/手部动作": (2, 0),
     "动作姿态/视线": (1, 0),
+    "动作姿态/性行为": (2, 0),       # ext: 行为动词 (oral+vaginal 类可同现)
+    "动作姿态/束缚与调教": (1, 0),   # ext
+    "动作姿态/高潮与体液": (2, 0),   # ext
 
     "场景环境/室内": (1, 0),
     "场景环境/自然景观": (1, 0),
@@ -149,9 +156,10 @@ EXCLUSIVE: list[tuple[str, tuple[str, ...]]] = [
     ("style_photo_art", ("风格媒介/写实摄影", "风格媒介/艺术媒介")),
     # 主光源: 自然光与人工光互斥
     ("light_type", ("光影氛围/自然光", "光影氛围/人工光")),
-    # 姿态基线: 站 / 坐 / 躺 只能一种
+    # 姿态基线: 站 / 坐 / 躺 / 性体位 只能一种
+    # (体位槽是 ext 扩展包 NSFW 槽位, SFW 模式下空池不影响)
     ("posture_base", ("动作姿态/站走与动态", "动作姿态/坐姿",
-                      "动作姿态/躺跪与趴伏")),
+                      "动作姿态/躺跪与趴伏", "动作姿态/体位")),
     # 时段与星空: 白天不该配星空
     ("day_night", ("场景环境/时间时段", "场景环境/月与星空")),
 ]
@@ -161,6 +169,37 @@ _SLOT_TO_EXCL: dict[str, str] = {}
 for _gid, _keys in EXCLUSIVE:
     for _k in _keys:
         _SLOT_TO_EXCL[_k] = _gid
+
+
+# ---------------------------------------------------------------- NSFW 配额加成 (1.8.0)
+# NSFW 强度=纯欲 时叠加到槽位 max_n 上的词数 —— 权重乘数(×6)单独只能到配额顶,
+# 实测 3.8→5.5 就撞墙; 配额同步放开后纯欲档才能让涩词主导画面。
+NSFW_SLOT_BOOST: dict[str, int] = {
+    "动作姿态/性行为": 2,
+    "动作姿态/体位": 0,        # 体位仍单选 (posture_base 组), 配额不放大
+    "服装/服装状态": 2,
+    "动作姿态/高潮与体液": 2,
+    "外貌特征/身体细节": 2,
+    "道具武器/束缚道具": 1,
+    "动作姿态/束缚与调教": 1,
+    "服装/裸露与暴露": 1,
+}
+
+
+def nsfw_boost(sub_key: str) -> int:
+    return NSFW_SLOT_BOOST.get(sub_key, 0)
+
+
+# 纯欲档保底: 这些 NSFW 槽位至少出 N 词 (叠加到 min_n) —— 保底行为词在场,
+# 解决"显式词被 mild 词稀释, ×6 权重也才 0.9 个/条"的实测问题。
+NSFW_SLOT_MIN: dict[str, int] = {
+    "动作姿态/性行为": 1,
+    "服装/服装状态": 1,
+}
+
+
+def nsfw_min_boost(sub_key: str) -> int:
+    return NSFW_SLOT_MIN.get(sub_key, 0)
 
 
 def exclusive_group(sub_key: str) -> str:
@@ -194,6 +233,8 @@ MULTI_COUNT_WORDS = frozenset({
     # 1.7.0 补齐 (此前漏分类: "large group + She has..." 人称错位实测)
     "group of girls", "group of boys", "trio", "quartet", "ensemble",
     "pair", "large group", "small group",
+    # 1.8.0 ext 扩展包新增人数词 (新增人数词必须同步本表与 nl._PRONOUN)
+    "4boys", "5boys", "6+boys",
 })
 
 # 仅在多人场景成立的槽位
@@ -252,4 +293,10 @@ MINOR_BLOCK_WORDS = frozenset({
     "covering breasts", "holding own breast",
     "seductive", "seductive smile", "erotic mood",
     "swimsuit", "competition swimsuit",
+    # 1.8.0 补齐: 工厂库带 nsfw 标志但此前未入黑名单的 13 词
+    # (门禁 nsfw_pack_test E1 固化: 所有 nsfw 词必须被未成年锁覆盖)
+    "heart-shaped pupils", "sucking", "aroused", "post-orgasm", "afterglow",
+    "covered chest", "navel piercing",
+    "kissing", "deep kiss", "neck kiss", "french kiss",
+    "implied masturbation", "sensual atmosphere",
 })

@@ -1,0 +1,64 @@
+{
+ "version": 1,
+ "_说明": "出厂场景预设 (SFW 示例)。用户保存的预设存于用户库 settings.presets, 两处合并展示。字段: pinned=钉选词(英), exclude=排除的轴/槽位路径, sub_ranges=槽位配额覆盖 {槽位键:{min,max}}, config=随机参数覆盖。",
+ "presets": [
+  {
+   "id": "p.city-night",
+   "name": "都市夜景",
+   "kind": "场景",
+   "pinned": [
+    "night",
+    "city street",
+    "neon"
+   ],
+   "exclude": [
+    "场景环境/自然景观",
+    "场景环境/城镇人文"
+   ],
+   "sub_ranges": {},
+   "config": {},
+   "note": "夜景+霓虹, 排除自然景观避免场景打架"
+  },
+  {
+   "id": "p.pure-portrait",
+   "name": "纯净人像",
+   "kind": "场景",
+   "pinned": [
+    "simple background",
+    "upper body"
+   ],
+   "exclude": [
+    "场景环境/自然景观",
+    "场景环境/城镇人文",
+    "场景环境/幻想科幻",
+    "道具武器/武器装备"
+   ],
+   "sub_ranges": {},
+   "config": {
+    "total_max": 45
+   },
+   "note": "虚化背景半身像, 减词"
+  },
+  {
+   "id": "p.ikki-battle",
+   "name": "战斗·持刃",
+   "kind": "局面",
+   "pinned": [
+    "dynamic pose"
+   ],
+   "exclude": [
+    "场景环境/节日与季节"
+   ],
+   "sub_ranges": {
+    "动作姿态/手部动作": {
+     "min": 1,
+     "max": 2
+    }
+   },
+   "config": {
+    "bundle_pose_prob": 1.0
+   },
+   "note": "武器档案束必出, 动作感拉满"
+  }
+ ]
+}

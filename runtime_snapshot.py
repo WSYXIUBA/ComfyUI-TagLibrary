@@ -23,6 +23,7 @@ try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
     from . import axes
     from . import grouprules
     from . import profiles as profiles_mod
+    from . import slotpolicy
 except ImportError:  # pragma: no cover
     import library
     import schema
@@ -30,6 +31,7 @@ except ImportError:  # pragma: no cover
     import axes
     import grouprules
     import profiles as profiles_mod
+    import slotpolicy
 
 ALL = object()  # banned 集合中的全禁哨兵
 
@@ -97,6 +99,9 @@ class RuntimeSnapshot:
         "cross_banned",
         "bundled_only",      # 只能经档案束出生的库内 tag id 集 (池抽取永跳过)
         "en_groups",         # en_lower → grouprules 组名 (ext 词不在库内, 按词查表)
+        "minor_block_words",  # 未成年在场时全池屏蔽词 (出厂表 ∪ 扩展包 minor_block 词)
+        "hands_cost",        # per-tag 双手资源占用 (lib 词级, 如乳交=2; 0 = 无)
+        "explicit_flag",     # 显式档标记 (NSFW 强度旋钮的分层加权输入)
         # ---- 旧编译规则 (conflicts 页语义保留; 1.3.0 起仅作兜底黑名单)
         "conflict_map", "require_closure", "boost_map", "cond_effects",
         "mutex_rules", "invalid_rules",
@@ -144,6 +149,9 @@ class RuntimeSnapshot:
         self.cross_banned: dict[int, frozenset] = {}
         self.bundled_only: frozenset = frozenset()
         self.en_groups: dict[str, frozenset] = {}
+        self.minor_block_words: frozenset = frozenset(slotpolicy.MINOR_BLOCK_WORDS)
+        self.hands_cost: list[int] = []
+        self.explicit_flag = bytearray()
         self.tags_ext: list[dict] = []
         self.profiles: list = []
         self.profile_errors: list[dict] = []
@@ -188,6 +196,7 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
     pools_nonsfw: dict[int, list[int]] = {}
     pools_nofemale: dict[int, list[int]] = {}
     pools_nomale: dict[int, list[int]] = {}
+    _minor_extra: set[str] = set()
 
     tid = 0
     for cat in lib.get("categories", []) or []:
@@ -241,9 +250,18 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
                 snap.enabled_flag.append(1 if enabled else 0)
                 g = str(t.get("gender") or "").strip().lower()
                 snap.gender_flag.append(1 if g == "female" else (2 if g == "male" else 0))
+                # 1.8.0: 词级双手占用 (paizuri=2, handjob=1 …)
+                try:
+                    snap.hands_cost.append(max(0, int(t.get("hands_cost") or 0)))
+                except (TypeError, ValueError):
+                    snap.hands_cost.append(0)
+                snap.explicit_flag.append(1 if t.get("explicit") else 0)
 
                 snap.sub_of.append(si)
                 _low = en.lower()
+                # 未成年屏蔽词扩展 (1.8.0): 扩展包 nsfw 词带 minor_block: true
+                if t.get("minor_block"):
+                    _minor_extra.add(_low)
                 tag_lower.append(_low)
                 snap.en_to_id[_low] = i
                 _oid = str(t.get("id") or "")
@@ -275,6 +293,7 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
     snap.tag_zh = tag_zh
     snap.tag_lower = tag_lower
     snap.tag_aliases = tag_aliases
+    snap.minor_block_words = frozenset(slotpolicy.MINOR_BLOCK_WORDS | _minor_extra)
     snap.cat_names = cat_names
     snap.cat_tag_ids = cat_tag_ids
     snap.cat_subs = cat_subs
@@ -307,14 +326,20 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
             continue
         snap.cross_rules.append((frozenset(lids), tuple(sorted(rids))))
 
-    # 全局互斥域 (grouprules.json) 在此并集进 group_sets —— 标签身上的
+    # 全局互斥域 (grouprules.json + nsfw 扩展) 在此并集进 group_sets —— 标签身上的
     # groups 字段会被热同步重导入抹掉, 独立文件按 en 查表才免疫。
+    # 1.8.0: 同名 en 的多个副本 (跨槽位重复) 全部并组 —— en_to_id 只指向最后一个,
+    # 只给最后一个并组会让其余副本绕过互斥 (实测 egg vibrator 双副本漏拦)。
     gr_membership = grouprules.en_membership()
     snap.en_groups = gr_membership  # 档案 ext 词 (不在库内) 出生时按词查这张表
-    for en_l, gs in gr_membership.items():
-        tid = snap.en_to_id.get(en_l)
-        if tid is not None:
-            snap.group_sets[tid] = snap.group_sets[tid] | gs
+    if gr_membership:
+        en_tids: dict[str, list[int]] = {}
+        for _i, _l in enumerate(tag_lower):
+            if _l in gr_membership:
+                en_tids.setdefault(_l, []).append(_i)
+        for en_l, gs in gr_membership.items():
+            for _tid in en_tids.get(en_l, ()):
+                snap.group_sets[_tid] = snap.group_sets[_tid] | gs
 
     # ---------- 档案编译 (tags_ext): 姿势挂载到武器身份词的池
     if prof_data is None:
@@ -439,6 +464,7 @@ _current_key: tuple | None = None
 def _snapshot_key(lib: dict) -> tuple:
     return (
         os.path.getmtime(library.DEFAULT_PATH) if os.path.exists(library.DEFAULT_PATH) else 0,
+        os.path.getmtime(library.EXT_PATH) if os.path.exists(library.EXT_PATH) else 0,
         os.path.getmtime(library.USER_PATH) if os.path.exists(library.USER_PATH) else 0,
         tagconflicts._mtime_c(),
         grouprules._mtime(),

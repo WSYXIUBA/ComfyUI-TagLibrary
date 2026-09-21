@@ -205,7 +205,7 @@ def main():
     chk("头部常驻按钮数", pv["headButtons"], 3)          # NSFW / ⋯ / ＋添加标签
     chk("Fast-Smart 死 UI 已删", pv["hasEngineSeg"], False)
     chk("⋯ 菜单默认隐藏", pv["menuHidden"], True)
-    chk("⋯ 菜单项数", pv["menuItems"], 5)                # 性别/防冲突/语言/预览/清空
+    chk("⋯ 菜单项数", pv["menuItems"], 7)                # 性别/防冲突/强度/语言/预览/批量探索/清空 (1.8.0+)
     chk("清空按钮已移入菜单", pv["hasClearBtn"], False)
     chk("🎲 填充常驻", pv["hasRoll"], True)
     for k, name in [("gender", "菜单·性别"), ("conflict", "菜单·防冲突"),
@@ -378,7 +378,7 @@ def main():
       groups: document.querySelectorAll('.tp-gitem2').length,
       cells: document.querySelectorAll('.tp-ecell').length,
       cfRules: document.querySelectorAll('.tp-cf-rule').length})"""))
-    if not (grp_v["groups"] == 50 and grp_v["cells"] >= 50 and grp_v["cfRules"] >= 1):
+    if not (grp_v["groups"] >= 50 and grp_v["cells"] >= 50 and grp_v["cfRules"] >= 1):  # 1.8.0: +nsfw 扩展域
         ui_errs.append(f"互斥域可编辑/规则并入不完整: {grp_v}")
 
     # 7) NL 句式 (可编辑)

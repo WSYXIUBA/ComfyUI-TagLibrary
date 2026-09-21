@@ -53,7 +53,8 @@ def _manual_index(merged: dict) -> tuple[dict, dict, dict]:
     与标签是否停用无关)。同名 en 多处出现时后写者覆盖 (与旧 dict 推导一致)。
     """
     global _index_cache
-    key = (library._mtime(library.DEFAULT_PATH), library._mtime(library.USER_PATH))
+    key = (library._mtime(library.DEFAULT_PATH), library._mtime(library.EXT_PATH),
+           library._mtime(library.USER_PATH))
     if _index_cache is not None and _index_cache[0] == key and _index_cache[1] is merged:
         return _index_cache[2], _index_cache[3], _index_cache[4]
     by_en: dict[str, dict] = {}
@@ -83,13 +84,21 @@ def _manual_index(merged: dict) -> tuple[dict, dict, dict]:
 class TagLibraryNode:
     CATEGORY = "纸心/prompt"
     FUNCTION = "build"
-    RETURN_TYPES = ("STRING", "STRING")
-    RETURN_NAMES = ("positive", "tags_preview")
+    RETURN_TYPES = ("STRING", "STRING", "STRING")
+    RETURN_NAMES = ("positive", "tags_preview", "negative")
     OUTPUT_NODE = False
+    # Anima 官方推荐负向块 (memory 口径) + 常用缺陷词 —— tag group:image composition
+    # 的 Flaws/Quality 词源。1.8.0 起作为第三输出直接可连 negative CLIPTextEncode。
+    NEGATIVE_PRESET = (
+        "worst quality, low quality, score_1, score_2, score_3, artist name, "
+        "blurry, jpeg artifacts, chromatic aberration, bad anatomy, bad hands, "
+        "extra digits, fewer digits, missing fingers, watermarks, signature, username"
+    )
     DESCRIPTION = (
         "🏷 标签库: 在节点面板上挑选/随机组合标签, 输出拼好的提示词。\n"
         "▸ 输出 positive → 连 CLIPTextEncode 的 text\n"
         "▸ 输出 tags_preview → 接 Preview Text 可查看实际输出\n"
+        "▸ 输出 negative → Anima 官方推荐负向块, 连负向 CLIPTextEncode\n"
         "▸ 输入 prefix/suffix (可选) → 上游文本拼接在标签前后\n"
         "▸ 面板 ➕ 添加标签 | 🎲 换随机种子 | NSFW 开关控制 🔞 标签\n"
         "▸ 出图元数据: PNG 信息自动写入 TagLibrary 键 (实际出词/模式/种子), 读取工具可见"
@@ -186,10 +195,11 @@ class TagLibraryNode:
                 text = (text + ". " + tail) if text and not text.endswith((".", "!", "?")) \
                     else ((text + " " + tail) if text else tail)
         dropped_en = [snap.tag_text[i] for i in res.dropped_ids]
+        neg = self.NEGATIVE_PRESET if state.get("negative_out", True) else ""
         return {
             "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False),
                    "taglib_echo_dropped": json.dumps(dropped_en, ensure_ascii=False)},
-            "result": (text, text),
+            "result": (text, text, neg),
         }
 
     # ---------------------------------------------- 库遍历 / 格式化 / 过滤
@@ -399,7 +409,8 @@ class TagLibraryNode:
         sep = ", " if separator == "comma" else " "
         parts = [p.strip() for p in (prefix or "", sep.join(tags), suffix or "") if p and p.strip()]
         text = sep.join(parts) if parts else ""
-        return (text, text)
+        neg = self.NEGATIVE_PRESET if state.get("negative_out", True) else ""
+        return (text, text, neg)
 
     @staticmethod
     def _safe_json(raw: str | None) -> dict:

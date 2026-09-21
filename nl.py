@@ -21,17 +21,25 @@ except ImportError:  # pragma: no cover
     import tagfiles
 
 FLAVORS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nl_flavors.json")
+# 1.8.0: NSFW flavor 扩展包 (ext 配套, 不入 git/发布)。
+# families/env/light/words 同名键 → 列表拼接 (素材池扩容), 其余键 → 覆盖。
+NSFW_FLAVORS_PATH = os.path.join(tagfiles.LIBRARY_DIR, "nsfw_nl.json")
 
-_lock = None
 _cache: dict | None = None
 _cache_mtime: float = -1.0
 
 
 def _mtime() -> float:
+    m1 = m2 = 0.0
     try:
-        return os.stat(FLAVORS_PATH).st_mtime
+        m1 = os.stat(FLAVORS_PATH).st_mtime
     except OSError:
-        return 0.0
+        pass
+    try:
+        m2 = os.stat(NSFW_FLAVORS_PATH).st_mtime
+    except OSError:
+        pass
+    return max(m1, m2)
 
 
 def load_flavors() -> dict:
@@ -41,11 +49,32 @@ def load_flavors() -> dict:
         return _cache
     try:
         with open(FLAVORS_PATH, "r", encoding="utf-8") as f:
-            _cache = json.load(f)
+            data = json.load(f)
     except (OSError, json.JSONDecodeError):
-        _cache = {}
-    _cache_mtime = m
-    return _cache or {}
+        data = {}
+    data = dict(data) if isinstance(data, dict) else {}
+    # NSFW 扩展包并入 (缺失 = 无扩展)
+    try:
+        with open(NSFW_FLAVORS_PATH, "r", encoding="utf-8") as f:
+            ext = json.load(f)
+        if isinstance(ext, dict):
+            _MERGE_LIST_KEYS = ("families", "env", "light", "words", "intro")
+            for k in _MERGE_LIST_KEYS:
+                if isinstance(data.get(k), dict) and isinstance(ext.get(k), dict):
+                    merged = dict(data[k])
+                    for fk, fv in ext[k].items():
+                        if isinstance(fv, list) and isinstance(merged.get(fk), list):
+                            merged[fk] = merged[fk] + fv
+                        else:
+                            merged[fk] = fv
+                    data[k] = merged
+            for k in ("pose_map", "sub_family", "obj_kind"):
+                if isinstance(ext.get(k), dict):
+                    data[k] = {**(data.get(k) or {}), **ext[k]}
+    except (OSError, json.JSONDecodeError):
+        pass
+    _cache, _cache_mtime = data, m
+    return data
 
 
 # count 词 → (主格, 所有格)
@@ -69,6 +98,7 @@ _PRONOUN = {
     "trio": ("They", "their"), "quartet": ("They", "their"),
     "ensemble": ("They", "their"), "pair": ("They", "their"),
     "large group": ("They", "their"), "small group": ("They", "their"),
+    "4boys": ("They", "their"), "5boys": ("They", "their"), "6+boys": ("They", "their"),
     "0others": ("She", "their"),
 }
 _INTRO_KEYS = ("1girl", "1boy", "1other", "0others",
@@ -78,7 +108,8 @@ _INTRO_KEYS = ("1girl", "1boy", "1other", "0others",
                "1girl and 1boy", "couple",
                "group", "crowd", "everyone", "ot3", "solo",
                "group of girls", "group of boys", "trio", "quartet",
-               "ensemble", "pair", "large group", "small group")
+               "ensemble", "pair", "large group", "small group",
+               "4boys", "5boys", "6+boys")
 # 环境词优先级 (越靠前越"有画面"), 取第一个命中的
 ENV_PRIORITY = ["rain", "snowing", "thunderstorm", "cherry blossoms",
                 "starry sky", "sunset", "night", "fog", "wind", "daytime",
@@ -168,7 +199,16 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
                 out.append(rng.choice(vs))
             break
 
-    # 2. 动作句: 第一个武器束 (sub_family 表 → family)
+    # 2. NSFW 场景句 (1.8.0): 任一 nsfw 词在场且句式包提供 nsfw_scene 族时插入 ——
+    #    没有该族时静默跳过 (回落到下方 describe/wear 兜底, 不硬凑)
+    has_nsfw = any(p.nsfw for p in picks)
+    last_start = out[-1].split(" ", 1)[0] if out else ""
+    if has_nsfw:
+        s = take("nsfw_scene", avoid_start=last_start)
+        if s:
+            out.append(s)
+
+    # 3. 动作句: 第一个武器束 (sub_family 表 → family)
     sub_fam = F.get("sub_family") or {}
     obj_kind = F.get("obj_kind") or {}
     words = F.get("words") or {}

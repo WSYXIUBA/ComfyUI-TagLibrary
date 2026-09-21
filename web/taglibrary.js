@@ -97,6 +97,15 @@ export function buildPanelWidget(node, container) {
         <button data-mode="auto">自动</button>
       </div>
     </div>
+    <div class="tl-preset-row" style="display:flex;gap:4px;align-items:center;margin:4px 0 0;">
+      <select class="tl-preset-sel" title="场景预设: 一键载入钉选词+排除域+随机配置 (约束不锁死, 🎲继续在预设框内随机)"
+              style="flex:1;min-width:0;background:var(--tl-input,#1c1f26);color:inherit;border:1px solid var(--tl-border,#333845);border-radius:6px;font-size:11px;padding:3px 4px;">
+        <option value="">📦 场景预设…</option>
+      </select>
+      <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设" style="padding:2px 7px;">🗑</button>
+      <button class="tl-btn icon" data-act="preset-save" title="把当前钉选词/排除域/随机配置存为预设" style="padding:2px 7px;">💾</button>
+      <button class="tl-btn icon" data-act="absorb" title="吸收器: 粘贴外部 prompt → 库内词直接进面板, 新词归位入库" style="padding:2px 7px;">📥</button>
+    </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
       <div class="tl-preview"></div>
@@ -107,6 +116,8 @@ export function buildPanelWidget(node, container) {
       <button class="tl-menu-item" data-act="conflict"><span class="tl-mi-k">防冲突</span><span class="tl-mi-v tl-conflict-val">已开启</span></button>
       <button class="tl-menu-item" data-act="lang"><span class="tl-mi-k">显示语言</span><span class="tl-mi-v tl-lang-val">双语</span></button>
       <button class="tl-menu-item" data-act="pv"><span class="tl-mi-k">预览模式</span><span class="tl-mi-v tl-pv-val">简洁</span></button>
+      <button class="tl-menu-item" data-act="ninten"><span class="tl-mi-k">NSFW 强度</span><span class="tl-mi-v tl-ninten-val">标准</span></button>
+      <button class="tl-menu-item" data-act="explorer"><span class="tl-mi-k">🎲 批量探索</span><span class="tl-mi-v">一次看 N 条</span></button>
       <button class="tl-menu-item danger" data-act="clear"><span class="tl-mi-k">清空标签</span><span class="tl-mi-v"></span></button>
     </div>
   `;
@@ -271,6 +282,14 @@ export function buildPanelWidget(node, container) {
           head.className = "tl-fill-group";
           const catIcon = PANEL_CATS.find((c) => c.name === grp)?.icon || "";
           head.textContent = `── ${catIcon ? catIcon + " " : ""}${grp} ──`;
+          // 1.8.0 分轴重摇: 只换这一轴的词, 其余轴全部保留
+          const rr = document.createElement("span");
+          rr.className = "tl-axreroll";
+          rr.textContent = " 🎲";
+          rr.style.cssText = "cursor:pointer;opacity:.7;font-size:10px;";
+          rr.title = `只重摇「${grp}」轴 (其余词全部保留)`;
+          rr.onclick = (e) => { e.stopPropagation(); rerollAxis(grp); };
+          head.appendChild(rr);
           chipzoneEl.appendChild(head);
         }
       } else {
@@ -492,6 +511,289 @@ export function buildPanelWidget(node, container) {
     previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
   }
 
+  /* ---------- 1.8.0 场景预设 / 分轴重摇 / 吸收器 ---------- */
+
+  async function apiJson(url, opts) {
+    try { return await fetch(url, opts).then((r) => r.json()); }
+    catch (e) { console.warn("[taglib] api 失败:", url, e); return null; }
+  }
+
+  let _presetsCache = { factory: [], user: [] };
+  async function loadPresets() {
+    const d = await apiJson("/taglib/api/presets");
+    if (!d?.ok) return;
+    _presetsCache = { factory: d.factory || [], user: d.user || [] };
+    const sel = container.querySelector(".tl-preset-sel");
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">📦 场景预设…</option>';
+    const opt = (p, val) => {
+      const o = document.createElement("option");
+      o.value = val;
+      o.textContent = `${p.name}${p.kind ? ` · ${p.kind}` : ""}`;
+      o.title = p.note || "";
+      sel.appendChild(o);
+    };
+    if (_presetsCache.factory.length) {
+      const g = document.createElement("optgroup");
+      g.label = "出厂";
+      _presetsCache.factory.forEach((p) => opt(p, "f." + p.id));
+      sel.appendChild(g);
+    }
+    if (_presetsCache.user.length) {
+      const g = document.createElement("optgroup");
+      g.label = "我的";
+      _presetsCache.user.forEach((p) => opt(p, "u." + p.id));
+      sel.appendChild(g);
+    }
+    sel.value = cur || "";
+    if (sel.value !== cur) sel.value = "";
+  }
+
+  function findPreset(val) {
+    if (!val) return null;
+    const [src, ...rest] = val.split(".");
+    const id = rest.join(".");
+    const pool = src === "f" ? _presetsCache.factory : _presetsCache.user;
+    return pool.find((p) => String(p.id) === id) || null;
+  }
+
+  async function applyPreset(p) {
+    const st = getState(node);
+    const wantPins = new Set((p.pinned || []).map((x) => String(x).toLowerCase()));
+    // 已选词命中预设钉选 → 补钉; 未选的 → 新增钉选词
+    const tags = st.tags.map((t) =>
+      wantPins.has(String(t.en).toLowerCase()) ? { ...t, pinned: true } : t);
+    const have = new Set(tags.map((t) => String(t.en).toLowerCase()));
+    for (const en of p.pinned || []) {
+      const lo = String(en).toLowerCase();
+      if (have.has(lo)) continue;
+      const t = { en, zh: "", pinned: true, enabled: true };
+      const path = LIB_PATH.get(lo);
+      if (path) t._cat = path[0];
+      tags.push(t);
+    }
+    const upd = {
+      tags: sortByCat(tags).map((t) => ({ ...t, enabled: t.enabled !== false })),
+      exclude_categories: (p.exclude || []).slice(),
+    };
+    const cfg = p.config || {};
+    for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity"]) {
+      upd[k] = cfg[k] !== undefined ? cfg[k] : null;   // null = 还原引擎默认
+    }
+    setState(node, upd);
+    ui.fillGroups = null;
+    renderAll();
+    previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
+  }
+
+  async function savePreset() {
+    const name = prompt("预设名称:", "");
+    if (!name || !name.trim()) return;
+    const kind = prompt("类型 (场景 / 角色 / 局面):", "场景") || "场景";
+    const st = getState(node);
+    const preset = {
+      id: "u" + Date.now().toString(36),
+      name: name.trim(), kind: kind.trim() || "场景",
+      pinned: st.tags.filter((t) => t.pinned).map((t) => t.en),
+      exclude: (st.exclude_categories || []).slice(),
+      config: {},
+      note: "",
+    };
+    for (const k of ["total_min", "total_max", "bundle_pose_prob", "extra_prob", "max_weapons", "nsfw_intensity"]) {
+      if (st[k] !== undefined && st[k] !== null) preset.config[k] = st[k];
+    }
+    if (!preset.pinned.length && !preset.exclude.length && !Object.keys(preset.config).length) {
+      alert("当前没有钉选词 / 排除域 / 自定义配置, 没什么可存的");
+      return;
+    }
+    const r = await apiJson("/taglib/api/settings");
+    const list = (r?.settings?.presets || []).slice();
+    list.push(preset);
+    await apiJson("/taglib/api/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: { presets: list } }),
+    });
+    await loadPresets();
+    const sel = container.querySelector(".tl-preset-sel");
+    if (sel) sel.value = "u." + preset.id;
+  }
+
+  async function deletePreset() {
+    const sel = container.querySelector(".tl-preset-sel");
+    const val = sel?.value || "";
+    if (!val.startsWith("u.")) { alert("请先在下拉里选中一个「我的」预设"); return; }
+    const id = val.slice(2);
+    const r = await apiJson("/taglib/api/settings");
+    const list = (r?.settings?.presets || []).filter((p) => String(p.id) !== id);
+    await apiJson("/taglib/api/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ settings: { presets: list } }),
+    });
+    await loadPresets();
+  }
+
+  // ---- 分轴重摇: 保留词转钉选 + 其余轴排除 → 只有该轴重新出生 ----
+  async function rerollAxis(grp) {
+    const st = getState(node);
+    const nsfwOn = getNsfwEffective(node);
+    const keepTags = st.tags.filter((t) => tagCatOf(t) !== grp);
+    const keepWords = keepTags.map((t) => t.en);
+    const res = await apiJson("/taglib/api/draw_reroll", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        state: { ...st, nsfw: nsfwOn },
+        seed: Math.floor(Math.random() * 0xffffffff),
+        axes: [grp], keep_words: keepWords,
+      }),
+    });
+    if (!res?.ok) { console.warn("[taglib] reroll 失败", res); return; }
+    const have = new Set(keepTags.map((t) => String(t.en).toLowerCase()));
+    const picked = [];
+    for (const pk of res.picks) {
+      const lo = String(pk.en).toLowerCase();
+      if (have.has(lo)) continue;
+      have.add(lo);
+      const item = { en: pk.en, zh: pk.zh || "", _cat: pk.cat || "", _auto: true, enabled: true };
+      picked.push(item);
+    }
+    ui.fillGroups = groupByCat([...keepTags, ...picked]);
+    setState(node, { tags: sortByCat([...keepTags, ...picked]) });
+    renderTags();
+    previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
+  }
+
+  // ---- 吸收器: 粘贴 prompt → 库内词进面板, 库外词归位入库 ----
+  let _absorbSlots = null;   // [{cat, sub}] 骨架槽位表 (打开时懒加载)
+  async function openAbsorb() {
+    if (!_absorbSlots) {
+      const sk = await apiJson("/taglib/api/library?mode=skeleton");
+      if (sk?.categories) {
+        _absorbSlots = [];
+        for (const c of sk.categories)
+          for (const s of c.subcategories || [])
+            _absorbSlots.push({ cat: c.name, sub: s.name });
+      }
+    }
+    const old = document.getElementById("taglib-absorb-dialog");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-absorb-dialog";
+    dlg.classList.add("p-inputtext");
+    dlg.setAttribute("translate", "no");
+    dlg.style.cssText = "background:#15171d;color:#e3e7ee;border:1px solid #333845;"
+      + "border-radius:12px;padding:14px;width:min(560px,92vw);max-height:80vh;overflow:auto;";
+    dlg.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px;">📥 吸收外部 Prompt</div>
+      <textarea id="tl-absorb-text" rows="4" placeholder="粘贴任意来源的提示词 (逗号/换行分隔, 支持 (tag:1.2) 权重与下划线命名)…"
+        style="width:100%;box-sizing:border-box;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:8px;padding:8px;font-size:12px;"></textarea>
+      <div style="display:flex;gap:8px;margin:8px 0;align-items:center;">
+        <button id="tl-absorb-parse" class="tl-btn primary" style="padding:4px 12px;">解析</button>
+        <label style="font-size:11px;display:flex;gap:4px;align-items:center;">
+          <input type="checkbox" id="tl-absorb-nsfw" /> 新词标为 NSFW</label>
+        <span style="flex:1"></span>
+        <button id="tl-absorb-close" class="tl-btn" style="padding:4px 10px;">关闭</button>
+      </div>
+      <div id="tl-absorb-result" style="font-size:12px;"></div>
+    `;
+    document.body.appendChild(dlg);
+    const resBox = dlg.querySelector("#tl-absorb-result");
+    let lastMatched = [], lastUnmatched = [];
+
+    dlg.querySelector("#tl-absorb-close").onclick = () => dlg.close();
+    dlg.querySelector("#tl-absorb-parse").onclick = async () => {
+      const d = await apiJson("/taglib/api/absorb", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: dlg.querySelector("#tl-absorb-text").value }),
+      });
+      if (!d?.ok) { resBox.textContent = "解析失败"; return; }
+      lastMatched = d.matched || [];
+      lastUnmatched = d.unmatched || [];
+      renderAbsorbResult(dlg, resBox, lastMatched, lastUnmatched, _absorbSlots || []);
+      // 绑定"添加选中到面板"
+      dlg.querySelector("#tl-absorb-addsel").onclick = () => {
+        const st = getState(node);
+        const have = new Set(st.tags.map((t) => String(t.en).toLowerCase()));
+        const add = [];
+        resBox.querySelectorAll('[data-mi]:checked').forEach((cb) => {
+          const m = lastMatched[parseInt(cb.dataset.mi)];
+          if (m && !have.has(String(m.en).toLowerCase())) {
+            const t = { en: m.en, zh: m.zh || "", enabled: true };
+            const path = LIB_PATH.get(String(m.en).toLowerCase());
+            if (path) t._cat = path[0];
+            add.push(t);
+          }
+        });
+        if (add.length) {
+          setState(node, { tags: sortByCat([...st.tags, ...add]) });
+          renderTags();
+          previewEl.textContent = outputPreview(getState(node).tags, ui.previewMode);
+        }
+        dlg.querySelector("#tl-absorb-addsel").disabled = true;
+      };
+      // 绑定"新词入库"
+      dlg.querySelector("#tl-absorb-addlib").onclick = async () => {
+        const nsfw = dlg.querySelector("#tl-absorb-nsfw").checked;
+        const tags = [];
+        resBox.querySelectorAll('[data-ui]:checked').forEach((cb) => {
+          const u = lastUnmatched[parseInt(cb.dataset.ui)];
+          if (!u) return;
+          const sel = resBox.querySelector(`select[data-slot="${cb.dataset.ui}"]`);
+          if (!sel?.value) return;
+          const [cat, sub] = sel.value.split("||");
+          tags.push({ en: u.raw.replace(/_/g, " ").trim(), zh: "", cat, sub, nsfw });
+        });
+        if (!tags.length) return;
+        const d2 = await apiJson("/taglib/api/absorb_add", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ tags }),
+        });
+        if (d2?.ok) {
+          resBox.querySelectorAll('[data-ui]').forEach((cb) => { cb.disabled = true; });
+          resBox.querySelector("#tl-absorb-addlib").disabled = true;
+          const note = document.createElement("div");
+          note.style.cssText = "color:#7fd18a;margin-top:6px;";
+          note.textContent = `已入库 ${d2.added.length} 词` +
+            (d2.skipped.length ? `, 跳过 ${d2.skipped.length} (已存在/槽位无效)` : "");
+          resBox.appendChild(note);
+        }
+      };
+    };
+    dlg.showModal();
+  }
+
+  function renderAbsorbResult(dlg, resBox, matched, unmatched, slots) {
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+    const slotOpts = (slots || [])
+      .map((s) => `<option value="${esc(s.cat)}||${esc(s.sub)}">${esc(s.cat)} / ${esc(s.sub)}</option>`)
+      .join("");
+    let html = "";
+    if (matched.length) {
+      html += `<div style="margin:6px 0 4px;opacity:.8;">库内命中 ${matched.length} 词:</div>`;
+      matched.forEach((m, i) => {
+        html += `<label style="display:flex;gap:6px;align-items:center;padding:2px 0;">
+          <input type="checkbox" data-mi="${i}" checked />
+          <span>${esc(m.en)}</span><span style="opacity:.6;font-size:11px;">${esc(m.zh || "")}</span>
+          <span style="opacity:.5;font-size:11px;margin-left:auto;">${esc(m.cat)}</span></label>`;
+      });
+      html += `<button id="tl-absorb-addsel" class="tl-btn primary" style="padding:3px 10px;margin-top:6px;">添加选中到面板</button>`;
+    }
+    if (unmatched.length) {
+      html += `<div style="margin:8px 0 4px;opacity:.8;">库外新词 ${unmatched.length} 个 (勾选并选槽位归位):</div>`;
+      unmatched.forEach((u, i) => {
+        html += `<div style="display:flex;gap:6px;align-items:center;padding:2px 0;">
+          <input type="checkbox" data-ui="${i}" checked />
+          <span style="min-width:90px;">${esc(u.raw)}</span>
+          <select data-slot="${i}" style="flex:1;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;font-size:11px;">
+            <option value="">选择槽位…</option>${slotOpts}</select></div>`;
+      });
+      html += `<button id="tl-absorb-addlib" class="tl-btn primary" style="padding:3px 10px;margin-top:6px;">新词入库</button>`;
+    }
+    if (!matched.length && !unmatched.length) html = `<div style="opacity:.6;">没有解析出任何词条</div>`;
+    resBox.innerHTML = html;
+  }
+
   function groupByCat(tags) {
     // 按大类分组 (填充区显示分组标题)
     const groups = new Map();
@@ -538,6 +840,22 @@ export function buildPanelWidget(node, container) {
                             : "防冲突已关闭 — 点击开启";
   }
 
+  /* NSFW 强度三档 (1.8.0): 标准=原池占比 / 强调=×2.5 / 纯欲=×6.0 (涩词抽样权重乘数) */
+  const NINTEN_SEQ = [0, 1, 2];
+  const NINTEN_LABEL = { 0: "标准", 1: "强调", 2: "纯欲" };
+  function cycleNsfwIntensity() {
+    const st = getState(node);
+    const cur = Number(st.nsfw_intensity || 0);
+    const next = NINTEN_SEQ[(NINTEN_SEQ.indexOf(cur) + 1) % NINTEN_SEQ.length];
+    setState(node, { nsfw_intensity: next === 0 ? null : next });
+    container.querySelector(".tl-ninten-val").textContent = NINTEN_LABEL[next];
+  }
+  function renderNsfwIntensity() {
+    const v = NINTEN_LABEL[Number(getState(node).nsfw_intensity || 0)];
+    const el = container.querySelector(".tl-ninten-val");
+    if (el) el.textContent = v;
+  }
+
   function toggleConflict() {
     const cur = getState(node).avoid_conflicts !== false;
     setState(node, { avoid_conflicts: !cur });
@@ -545,7 +863,7 @@ export function buildPanelWidget(node, container) {
   }
 
   function renderAll() {
-    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderMenuState();
+    renderTags(); renderNsfw(); renderGender(); renderConflictBtn(); renderNsfwIntensity(); renderMenuState();
   }
 
   /* ---------- ⋯ 更多菜单 ----------
@@ -593,8 +911,10 @@ export function buildPanelWidget(node, container) {
       const act = b.dataset.act;
       if (act === "gender") cycleGender();
       else if (act === "conflict") toggleConflict();
+      else if (act === "ninten") cycleNsfwIntensity();
       else if (act === "lang") cycleLang();
       else if (act === "pv") cyclePvMode();
+      else if (act === "explorer") openDrawExplorer();
       else if (act === "clear") doClearTags();
       // 语言/预览模式改完留在菜单里, 方便看到值的变化
       if (act !== "lang" && act !== "pv") closeMoreMenu();
@@ -610,6 +930,71 @@ export function buildPanelWidget(node, container) {
     if (!container.isConnected) { unregisterSync(); return; }
     applyScale(); renderAll();
   });
+
+  // ---- 批量探索 (1.8.0): 一次生成 N 条完整 prompt, 点选即把节点 seed 对齐 ----
+  async function openDrawExplorer() {
+    const old = document.getElementById("taglib-explorer-dialog");
+    if (old) old.remove();
+    const dlg = document.createElement("dialog");
+    dlg.id = "taglib-explorer-dialog";
+    dlg.classList.add("p-inputtext");
+    dlg.setAttribute("translate", "no");
+    dlg.style.cssText = "background:#15171d;color:#e3e7ee;border:1px solid #333845;"
+      + "border-radius:12px;padding:14px;width:min(720px,94vw);max-height:84vh;overflow:auto;";
+    dlg.innerHTML = `
+      <div style="font-weight:600;margin-bottom:8px;">🎲 批量探索 <span style="opacity:.6;font-size:11px;">(同一引擎同一确定性 — 点卡片把节点 seed 对齐, queue 即复现)</span></div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;font-size:12px;">
+        <label>起始 seed <input id="tl-ex-seed" type="number" value="${Math.floor(Math.random() * 0xffffff)}" style="width:110px;background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;padding:2px 6px;" /></label>
+        <label>条数 <select id="tl-ex-n" style="background:#1c1f26;color:inherit;border:1px solid #333845;border-radius:6px;padding:2px 4px;">
+          <option>8</option><option selected>12</option><option>20</option><option>30</option></select></label>
+        <button id="tl-ex-go" class="tl-btn primary" style="padding:4px 12px;">生成</button>
+        <span style="flex:1"></span>
+        <button id="tl-ex-close" class="tl-btn" style="padding:4px 10px;">关闭</button>
+      </div>
+      <div id="tl-ex-grid" style="display:grid;grid-template-columns:1fr;gap:6px;font-size:11px;"></div>
+    `;
+    document.body.appendChild(dlg);
+    const grid = dlg.querySelector("#tl-ex-grid");
+    dlg.querySelector("#tl-ex-close").onclick = () => dlg.close();
+    dlg.querySelector("#tl-ex-go").onclick = async () => {
+      grid.textContent = "生成中…";
+      const d = await apiJson("/taglib/api/draw_batch", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          state: { ...getState(node), nsfw: getNsfwEffective(node) },
+          seed_base: parseInt(dlg.querySelector("#tl-ex-seed").value) || 0,
+          n: parseInt(dlg.querySelector("#tl-ex-n").value) || 12,
+        }),
+      });
+      grid.innerHTML = "";
+      if (!d?.ok) { grid.textContent = "生成失败"; return; }
+      for (const it of d.items) {
+        const card = document.createElement("div");
+        card.style.cssText = "border:1px solid #2a2e39;border-radius:8px;padding:8px;cursor:pointer;";
+        card.title = "点击: 把节点 seed 设为 " + it.seed + " (自动模式 queue 即出这条)";
+        const head = document.createElement("div");
+        head.style.cssText = "opacity:.6;margin-bottom:3px;display:flex;justify-content:space-between;";
+        head.innerHTML = `<span>seed ${it.seed}</span><span class="tl-ex-copy" style="cursor:pointer;" title="复制 prompt">📋</span>`;
+        const body = document.createElement("div");
+        body.textContent = it.text;
+        card.appendChild(head);
+        card.appendChild(body);
+        card.onclick = (e) => {
+          if (e.target.classList.contains("tl-ex-copy")) {
+            navigator.clipboard?.writeText(it.text);
+            e.target.textContent = "✅";
+            setTimeout(() => { e.target.textContent = "📋"; }, 1200);
+            return;
+          }
+          const w = node.widgets?.find((x) => x.name === "seed");
+          if (w) { w.value = it.seed; if (w.callback) w.callback(it.seed); }
+          card.style.borderColor = "#5a8fd0";
+        };
+        grid.appendChild(card);
+      }
+    };
+    dlg.showModal();
+  }
 
   /* ---------- ➕ 添加标签窗口 (全库挑选器) ---------- */
   async function openTagPicker() {
@@ -673,6 +1058,16 @@ export function buildPanelWidget(node, container) {
   /* ---------- events ---------- */
   container.querySelector('[data-act="addtags"]').onclick = openTagPicker;
   container.querySelector('[data-act="roll"]').onclick = rollFill;
+  // 1.8.0: 预设 / 吸收器
+  container.querySelector('[data-act="preset-save"]').onclick = savePreset;
+  container.querySelector('[data-act="preset-del"]').onclick = deletePreset;
+  container.querySelector('[data-act="absorb"]').onclick = openAbsorb;
+  container.querySelector(".tl-preset-sel").onchange = (e) => {
+    const p = findPreset(e.target.value);
+    if (p) applyPreset(p);
+    e.target.value = "";   // 应用后回位, 再选同一预设也能再触发
+  };
+  loadPresets();
   searchEl.oninput = () => { ui.filter = searchEl.value; renderTags(); };
   modeSeg.querySelectorAll("button").forEach((b) => (b.onclick = () => setMode(b.dataset.mode)));
 

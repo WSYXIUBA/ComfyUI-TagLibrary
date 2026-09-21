@@ -314,9 +314,16 @@ def sanitize_fsname(name: str, fallback: str = "未命名") -> str:
     return clean[:60] or fallback
 
 
-def _desired_files(lib: dict, folder: str) -> dict[str, str]:
-    """库 -> {相对路径: 文件内容}。路径形如 <大类>/<子分类>/<子分类>.md。"""
+def _desired_files(lib: dict, folder: str, skip_ens=None,
+                   skip_sub_ids=None) -> dict[str, str]:
+    """库 -> {相对路径: 文件内容}。路径形如 <大类>/<子分类>/<子分类>.md。
+
+    1.8.0: skip_ens / skip_sub_ids —— 扩展包 (ext) 词与扩展槽位不进镜像,
+    文件夹镜像只反映出厂库视图, 露骨词不落被 git 跟踪的 .md。
+    """
     out: dict[str, str] = {}
+    skip_ens = skip_ens or set()
+    skip_sub_ids = skip_sub_ids or set()
 
     def _uniq(taken: set[str], base: str) -> str:
         cand, n = base, 2
@@ -352,7 +359,10 @@ def _desired_files(lib: dict, folder: str) -> dict[str, str]:
         used_subs: set[str] = set()
         for sub in cat.get("subcategories", []):
             sub_name = sub.get("name") or "未命名"
-            tags = list(sub.get("tags") or [])
+            if str(sub.get("id") or "") in skip_sub_ids:
+                continue
+            tags = [t for t in (sub.get("tags") or [])
+                    if str(t.get("en") or "").strip().lower() not in skip_ens]
             for g in sub.get("groups") or []:
                 tags.extend(g.get("tags") or [])
             sdir_name = _uniq(used_subs, sanitize_fsname(sub_name))
@@ -383,7 +393,8 @@ _GUIDE_TEXT = (
 )
 
 
-def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR) -> dict:
+def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR, *,
+                   skip_ens=None, skip_sub_ids=None) -> dict:
     """把库严格镜像到两级文件夹 (库 -> 文件夹方向的实时同步)。
 
     - 写出/更新 <大类>/<子分类>/<子分类>.md (内容未变则跳过, 避免无效 mtime 抖动)
@@ -394,7 +405,8 @@ def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR) -> dict:
     返回统计。
     """
     os.makedirs(folder, exist_ok=True)
-    desired = _desired_files(lib, folder)
+    desired = _desired_files(lib, folder, skip_ens=skip_ens,
+                             skip_sub_ids=skip_sub_ids)
     stats = {"categories": 0, "subcategories": len(desired), "files_written": 0,
              "files_removed": 0, "tags": 0, "folder": folder}
     stats["categories"] = len({rel.split(os.sep)[0] for rel in desired})
@@ -463,7 +475,7 @@ def sync_to_folder(lib: dict, folder: str = LIBRARY_DIR) -> dict:
     # ⑤ 编辑层字段 sidecar: .md 只承载输出层字段 (en/zh/weight/nsfw/gender),
     #    aliases/priority/rarity/enabled 走 _tagmeta.json 按 en 查表 ——
     #    "文件夹重建库" (pull/清空重导) 不再静默丢字段 (1.7.0)
-    _write_tag_meta(lib, folder)
+    _write_tag_meta(lib, folder, skip_ens=skip_ens)
 
     _save_sync_state(folder)
     return stats
@@ -482,14 +494,18 @@ SYNC_STATE_NAME = "_sync_state.json"
 TAG_META_NAME = "_tagmeta.json"
 
 
-def _tag_meta_of(lib: dict) -> dict[str, dict]:
-    """合并库 → {en_lower: 仅非默认的编辑层字段}。默认值不进 sidecar, 控制体积。"""
+def _tag_meta_of(lib: dict, skip_ens=None) -> dict[str, dict]:
+    """合并库 → {en_lower: 仅非默认的编辑层字段}。默认值不进 sidecar, 控制体积。
+
+    1.8.0: skip_ens —— 扩展包词不进 sidecar (与镜像过滤同口径)。
+    """
     out: dict[str, dict] = {}
+    skip_ens = skip_ens or set()
     for cat in lib.get("categories", []):
         for sub in cat.get("subcategories", []):
             for t in sub.get("tags", []):
                 en_l = str(t.get("en") or "").strip().lower()
-                if not en_l:
+                if not en_l or en_l in skip_ens:
                     continue
                 entry: dict = {}
                 if t.get("aliases"):
@@ -508,9 +524,9 @@ def _tag_meta_of(lib: dict) -> dict[str, dict]:
     return out
 
 
-def _write_tag_meta(lib: dict, folder: str) -> None:
+def _write_tag_meta(lib: dict, folder: str, skip_ens=None) -> None:
     os.makedirs(folder, exist_ok=True)
-    payload = {"version": 1, "tags": _tag_meta_of(lib)}
+    payload = {"version": 1, "tags": _tag_meta_of(lib, skip_ens=skip_ens)}
     tmp = os.path.join(folder, TAG_META_NAME + ".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=1)

@@ -33,3 +33,10 @@ data/**/*.bak-*
 
 # comfy node publish 的临时 changelog 片段
 .release_changelog.tmp
+
+# ---- 1.8.0 扩展包 (NSFW 体系, 合规隔离: 不入 git / 不入发布包) ----
+data/default/tag_library.ext.json
+data/default/taglib/nsfw_grouprules.json
+data/default/taglib/nsfw_conflicts.json
+data/packs/
+data/default/taglib/nsfw_nl.json

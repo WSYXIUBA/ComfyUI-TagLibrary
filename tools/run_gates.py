@@ -47,6 +47,7 @@ OFFLINE = [
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
     ("api_security_test", "API 安全门禁 (CSRF 中间件/导出目录确认/双向删除精确匹配)"),
     ("tagmeta_roundtrip_test", "编辑层字段 sidecar 往返 (aliases/priority/rarity/enabled)"),
+    ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
 ]
 
 # 需要 ComfyUI 在跑的在线门禁 (--with-online 才跑)

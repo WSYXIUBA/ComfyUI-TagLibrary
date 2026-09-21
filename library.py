@@ -34,6 +34,10 @@ DATA_DIR = os.path.join(_PKG_DIR, "data")
 DEFAULT_DATA_DIR = os.path.join(DATA_DIR, "default")   # v1.1.1: 默认数据分级 data/default/
 DEFAULT_PATH = os.path.join(DEFAULT_DATA_DIR, "tag_library.json")
 USER_PATH = os.path.join(DEFAULT_DATA_DIR, "tag_library.user.json")
+# 1.8.0 扩展包第三源 (NSFW 词表体系 + SFW 高频词补齐):
+#   合并优先级 default ← ext ← user; 文件不入 git / 不随插件发布 (合规隔离),
+#   缺失时静默跳过 —— 发布版等价于无扩展包。
+EXT_PATH = os.path.join(DEFAULT_DATA_DIR, "tag_library.ext.json")
 
 
 def _migrate_legacy_layout() -> None:
@@ -128,6 +132,22 @@ def load_user_raw() -> dict[str, Any]:
         except OSError:
             pass
         return {}
+
+
+def load_ext_raw() -> dict[str, Any]:
+    """扩展包 (第三源)。缺失/损坏 = 空库, 不炸不挡出图。"""
+    if not os.path.exists(EXT_PATH):
+        return {"version": 1, "categories": []}
+    try:
+        data = _read_json(EXT_PATH)
+        return data if isinstance(data, dict) else {"version": 1, "categories": []}
+    except (json.JSONDecodeError, OSError):
+        return {"version": 1, "categories": []}
+
+
+def merged_base() -> dict[str, Any]:
+    """default + ext (不含用户库) —— 用户库合并底座 / 墓碑记账口径。"""
+    return deep_merge(load_default(), load_ext_raw())
 
 
 # ---------------------------------------------------------------- merge
@@ -376,7 +396,7 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
                 "服务器上的用户库比你看到的更新 (可能在别处已修改), 请刷新页面后重试"
             )
         if merge_base is None:
-            base_for_tombstones = load_default()
+            base_for_tombstones = merged_base()
         else:
             base_for_tombstones = merge_base
         keep_ids = _collect_ids(payload)
@@ -517,7 +537,7 @@ def _folder_hot_sync() -> None:
             if user_now.get("_cleared") and not missing:
                 # 空库状态: 新增文件照常吸入 (用户在文件夹里建新分类准备导入场景)
                 pass
-            merged = deep_merge(load_default(), user_now) if not user_now.get("_cleared") \
+            merged = deep_merge(merged_base(), user_now) if not user_now.get("_cleared") \
                 else {"version": 1, "categories": []}
             base = json.loads(json.dumps(merged))
             base.pop("_meta", None)
@@ -550,7 +570,22 @@ def sync_to_folder_snapshot(lib_key: tuple = ()) -> None:
     """
     try:
         merged = get_merged()
-        tagfiles.sync_to_folder(merged)
+        # 1.8.0: 扩展包词不进镜像 (露骨词不落被 git 跟踪的 .md, 发布合规)
+        skip_ens: set[str] = set()
+        skip_subs: set[str] = set()
+        try:
+            ext = load_ext_raw()
+            for c in ext.get("categories", []) or []:
+                for s in c.get("subcategories", []) or []:
+                    if str(s.get("id") or "").startswith("ext."):
+                        skip_subs.add(str(s.get("id")))
+                    for t in s.get("tags", []) or []:
+                        en = str(t.get("en") or "").strip().lower()
+                        if en:
+                            skip_ens.add(en)
+        except Exception:  # noqa: BLE001
+            pass
+        tagfiles.sync_to_folder(merged, skip_ens=skip_ens, skip_sub_ids=skip_subs)
         tagfiles.mark_synced(lib_key=lib_key or (_mtime(DEFAULT_PATH), _mtime(USER_PATH)))
     except Exception:  # noqa: BLE001
         pass
@@ -563,7 +598,7 @@ def get_merged() -> dict[str, Any]:
     if _ms > 300:  # 正常 <5ms; 超标 = GIL 被其他插件后台线程占住 (Manager/bsk_UI 轮询), 留痕便于排查
         print(f"[TagLibrary] ⏱ 热同步窗口 {_ms:.0f}ms (非本插件计算, 为后台线程 GIL 竞争)")
     global _cache, _cache_key
-    key = (_mtime(DEFAULT_PATH), _mtime(USER_PATH))
+    key = (_mtime(DEFAULT_PATH), _mtime(EXT_PATH), _mtime(USER_PATH))
     with _lock:
         if _cache is not None and _cache_key == key:
             return _cache
@@ -574,7 +609,8 @@ def get_merged() -> dict[str, Any]:
                       "categories": [], "settings": user_raw.get("settings", {}),
                       "_meta": {"cleared": True}}
         else:
-            merged = deep_merge(load_default(), user_raw)
+            # default ← ext ← user 三级归并 (1.8.0: ext 扩展包作二级底座)
+            merged = deep_merge(merged_base(), user_raw)
             # v2 只读迁移: 内存中升级编辑层字段 (type/rarity/priority/...), 不写盘
             try:
                 schema.migrate_library(merged)
