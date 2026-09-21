@@ -106,6 +106,7 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 | `data/default/taglib/profiles.json` | 武器·物品档案（姿势束/手视资源/状态槽/NL 声明真源） |
 | `data/default/taglib/grouprules.json` | 全局互斥域（50 组） |
 | `data/default/taglib/nl_flavors.json` | NL 句式素材（36 族 + pose_map + 宾语词池） |
+| `data/default/taglib/_tagmeta.json` | 编辑层字段镜像（aliases/priority/rarity/enabled），文件夹重建库不丢字段 |
 | `data/default/taglib/conflicts.json` | 跨池反冲突规则（兼容保留） |
 | `data/default/backups/` | 备份位置 |
 
@@ -127,13 +128,13 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 一键跑全部门禁（**推荐**，会自动快照并还原 `data/default/taglib/`，不会污染工作区）：
 
 ```bash
-python tools/run_gates.py               # 13 项离线门禁
+python tools/run_gates.py               # 14 项离线门禁
 python tools/run_gates.py --with-online # 加上需要 ComfyUI 实例的在线门禁
 python tools/run_gates.py --list        # 列出所有门禁
 python tools/run_gates.py m1 m3         # 只跑名字匹配的
 ```
 
-离线门禁（13 项）：
+离线门禁（14 项）：
 
 | 脚本 | 覆盖 |
 |---|---|
@@ -150,6 +151,7 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/quality_gate_test.py` | 输出质量门禁（词数/配额/互斥/人数/畸形词/段位/NSFW 往返） |
 | `tests/prompt_quality_test.py` | 完整提示词重度测试（文本层语义/段位/性别/负向词） |
 | `tests/api_security_test.py` | API 安全门禁（CSRF 中间件/导出目录确认/双向删除精确匹配） |
+| `tests/tagmeta_roundtrip_test.py` | 编辑层字段 sidecar 往返（aliases/priority/rarity/enabled） |
 
 需先启动 ComfyUI（在线组 4 项，`ui_*` 还需 Edge 远程调试 9222）：
 
@@ -165,7 +167,7 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 
 ## 更新记录
 
-完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.6.5**。
+完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.7.0**。
 
 ## License
 
