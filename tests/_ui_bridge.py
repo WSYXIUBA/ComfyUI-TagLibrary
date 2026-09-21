@@ -190,6 +190,7 @@ class UiBridge:
         两轮在线门禁各命中一次, 分别挂在 ui_theme_dark.png / ui_prof.png)。
         """
         last = None
+        data = None
         for attempt in range(5):
             try:
                 data = self.cmd("screenshot", {"full": True}, tab_id)
@@ -203,8 +204,20 @@ class UiBridge:
                     self.cmd("tabs", {"action": "list"})
                 except UiError:
                     pass
-        else:
-            raise last
+        if data is None:
+            # 5 次都没救回来 → **重建会话**再试一次 (L2 调试会话卡死时只有重连能治)
+            try:
+                self.close()
+                self.connect()
+                time.sleep(2)
+                data = self.cmd("screenshot", {"full": True}, tab_id)
+            except Exception as e:  # noqa: BLE001 — 重连本身也可能失败
+                last = e
+        if data is None:
+            # 截图只作留证, 门禁断言不靠它 —— 桥真掉线时给显眼告警后继续,
+            # 别让一次截图失败把整轮门禁判红 (2026-09-21: 两次假红都出在这一步)。
+            print(f"⚠ 截图失败 (桥 L2 掉线, 重连后仍不行): {name} — {last}")
+            return ""
         url = data.get("dataUrl") or ""
         if "," not in url:
             raise UiError("INTERNAL", f"截图没拿到 dataUrl: {str(data)[:120]}")

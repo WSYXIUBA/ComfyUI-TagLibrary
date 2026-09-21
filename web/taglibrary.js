@@ -133,14 +133,15 @@ export function buildPanelWidget(node, container) {
     </div>
     <div class="tl-mode-hint"></div>
     <!-- 预设 (1.11.0): 从 ⋯ 菜单搬到主区 —— 用户原话「只可用, 不可选, 也不可显」。
-         选一行 = 召唤: 该预设记下的词全部进面板并**打钉**, 自动模式不再覆盖它们。 -->
+         选一行 = 召唤: 该预设记下的词全部进面板并**打钉**, 自动模式不再覆盖它们。
+         ⚡ = 重新召唤当前显示的这条 (选完下拉**不回位**, 一直显示"现在用的是哪个")。 -->
     <div class="tl-preset-bar">
-      <span class="tl-preset-k">📦 预设</span>
       <select class="tl-preset-sel" title="召唤预设: 出厂「场景预设」= 载入钉选词+排除域+配置 (约束不锁死, 🎲 继续在预设框内随机); 我的预设 = 把存下的词标签全部打钉, 自动模式不再覆盖它们">
-        <option value="">选择一个预设…</option>
+        <option value="">📦 预设</option>
       </select>
+      <button class="tl-btn icon" data-act="preset-apply" title="重新召唤当前显示的预设 (把它的词重新写回并全部打钉)" disabled>⚡</button>
       <button class="tl-btn icon" data-act="preset-save" title="把当前面板的词标签 + 排除域 + 配置存为预设 (召唤时会全部打钉)">💾</button>
-      <button class="tl-btn icon" data-act="preset-del" title="删除选中的「我的」预设">🗑</button>
+      <button class="tl-btn icon" data-act="preset-del" title="删除当前显示的「我的」预设">🗑</button>
     </div>
     <div class="tl-chipzone"></div>
     <div class="tl-preview-row">
@@ -806,7 +807,7 @@ export function buildPanelWidget(node, container) {
     const sel = container.querySelector(".tl-preset-sel");
     if (!sel) return;
     const cur = sel.value;
-    sel.innerHTML = '<option value="">选择一个预设…</option>';
+    sel.innerHTML = '<option value="">📦 预设</option>';
     const opt = (p, val) => {
       const o = document.createElement("option");
       o.value = val;
@@ -829,6 +830,7 @@ export function buildPanelWidget(node, container) {
     }
     sel.value = cur || "";
     if (sel.value !== cur) sel.value = "";
+    markPresetUI();     // 保留"当前用的是哪个"的高亮状态
   }
 
   function findPreset(val) {
@@ -837,6 +839,16 @@ export function buildPanelWidget(node, container) {
     const id = rest.join(".");
     const pool = src === "f" ? _presetsCache.factory : _presetsCache.user;
     return pool.find((p) => String(p.id) === id) || null;
+  }
+
+  /* 让"现在用的是哪个预设"看得见: 下拉不回位, 当前这条高亮, ⚡ 只在真有选中时可用。 */
+  function markPresetUI() {
+    const sel = container.querySelector(".tl-preset-sel");
+    const bar = container.querySelector(".tl-preset-bar");
+    const apply = container.querySelector('[data-act="preset-apply"]');
+    const p = sel ? findPreset(sel.value) : null;
+    if (bar) bar.classList.toggle("on", !!p);
+    if (apply) apply.disabled = !p;
   }
 
   async function applyPreset(p) {
@@ -1665,8 +1677,19 @@ export function buildPanelWidget(node, container) {
   container.querySelector('[data-act="absorb"]').onclick = openAbsorb;
   container.querySelector(".tl-preset-sel").onchange = (e) => {
     const p = findPreset(e.target.value);
-    if (p) applyPreset(p);
-    e.target.value = "";   // 应用后回位, 再选同一预设也能再触发
+    if (!p) { markPresetUI(); return; }
+    applyPreset(p);
+    // ⚠ 不回位 (1.11.1): 选完就把下拉留在这一条上 —— 用户要的是"看得见现在用的是哪个"
+    // (原来 `e.target.value = ""` 回位到占位符, 于是永远显示"场景预设…")。
+    // 想再召唤一次同一预设 → 点旁边的 ⚡。
+    markPresetUI();
+  };
+  container.querySelector('[data-act="preset-apply"]').onclick = () => {
+    const sel = container.querySelector(".tl-preset-sel");
+    const p = findPreset(sel.value);
+    if (!p) { toast("先在上面选一条预设"); return; }
+    applyPreset(p);
+    toast(`已召唤预设「${p.name}」`);
   };
   loadPresets();
   searchEl.oninput = () => { ui.filter = searchEl.value; renderTags(); };

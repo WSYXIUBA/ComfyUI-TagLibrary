@@ -478,16 +478,25 @@ html:not(.dark-theme) .tl-scope,
   background: var(--tl-input-bg); color: var(--tl-text);
   border: 1px solid var(--tl-border-2); border-radius: 7px;
 }
-/* 预设行 (1.11.0): 从 ⋯ 菜单搬到主区, 让预设「可见 + 可选」 */
+/* 预设行 (1.11.0): 从 ⋯ 菜单搬到主区, 让预设「可见 + 可选」
+   1.11.1: 压扁成细线 —— 用户反馈「太占位置」: 去掉"📦 预设"文字标签
+   (改由下拉的空态文字承担), 图标按钮与下拉一起缩到 19px 高。 */
 .tl-preset-bar {
-  display: flex; align-items: center; gap: 5px;
-  padding: 4px 10px 5px;
+  display: flex; align-items: center; gap: 3px;
+  padding: 0 8px 3px;
+  line-height: 1;
 }
-.tl-preset-bar .tl-preset-k {
-  font-size: 11px; color: var(--tl-muted); white-space: nowrap;
+.tl-preset-bar .tl-preset-sel {
+  flex: 1; min-width: 0; height: 19px;
+  font-size: 10.5px; padding: 0 4px; border-radius: 6px;
 }
-.tl-preset-bar .tl-preset-sel { flex: 1; min-width: 0; }
-.tl-preset-bar .tl-btn.icon { padding: 2px 6px; }
+.tl-preset-bar .tl-btn.icon { padding: 0 4px; font-size: 11px; line-height: 17px; }
+/* 有预设生效 → 下拉高亮 + ⚡ 亮起, 一眼看出"现在用的是哪个" */
+.tl-preset-bar.on .tl-preset-sel {
+  border-color: color-mix(in srgb, var(--tl-accent) 55%, transparent);
+  color: var(--tl-accent-text);
+}
+.tl-preset-bar [data-act="preset-apply"]:disabled { opacity: .3; }
 .tl-preset-tip { font-size: 10.5px; color: var(--tl-muted); }
 .tl-ninten-btn { padding: 3px 8px; font-size: 10px; }
 .tl-ninten-btn.on {
