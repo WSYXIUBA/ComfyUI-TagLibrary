@@ -151,7 +151,7 @@ positive STRING (标签 + NL 尾段)    PNG extra_pnginfo["TagLibrary"]   ui.tag
 |---|---|---|---|
 | 管理页保存 | `POST /taglib/api/library` | `tag_library.user.json` | 载荷骤减护栏（<50% 拒绝）+ `X-TagLib-Mtime` 乐观锁 |
 | 清空标签库 | `DELETE /taglib/api/library` | user.json `_cleared:true` | 不动默认库/备份，同时清空镜像文件夹 |
-| 存为默认库 | `POST .../backup` | `backups/user_backup.json` | 出厂备份永不被覆盖 |
+| 存为默认库 | `POST .../backup` | `backups/user_backup.json` | 出厂备份不参与覆盖 |
 | 恢复默认库 | `POST .../restore-backup` | user.json | 用户备份优先，回落出厂 |
 | 导入模板 | `POST .../tagfiles/import` | user.json | 解析 → 跨库 en 去重 → **按名称**归位合并 |
 | 档案 / 互斥域 / NL | `POST .../profiles|grouprules|nl` | `taglib/*.json` | 保存前自动 `.bak`；保存后 `invalidate_snapshot()` |
@@ -203,7 +203,7 @@ positive STRING (标签 + NL 尾段)    PNG extra_pnginfo["TagLibrary"]   ui.tag
 2. **回显只替换引擎部分**：`_auto` 标记是区分"引擎抽取"与"用户手挑"的唯一依据。
 3. **墓碑 `_tombstones`**：用户删过的 id 记入墓碑，默认库日后重新带出也被过滤；重新添加自动除名。
 4. **载荷护栏 + 乐观锁**：防止"懒加载未完成就保存"把库清空，以及双开互相覆盖。
-5. **双备份语义**：factory（随包，永不被用户操作覆盖） vs user（用户基准，升级存活）。
+5. **双备份语义**：factory（随包，用户操作不会覆盖它） vs user（用户基准，升级存活）。
 6. **热同步指纹双向核对**：`_sync_state.json` 同时记「文件夹指纹」与「库 mtime」，用于区分 baseline / pull / mirror / none 四种动作，并防止刚写出的文件被回吸。
 
 ---

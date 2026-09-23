@@ -11,7 +11,7 @@ Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input
 ## Core Architecture (four pillars)
 
 - **Assembly axes**: the real skeleton of the library is not a 2-level tree — all 4458 tags are re-aggregated onto 13 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …), then grouped into six output sections following the official Anima tag order. The picker is a **single view**: section → axis → slot, each row with an enable toggle (off = written to exclusions, the whole row is skipped when rolling).
-- **Weapon & object profiles (⚔ bundles)**: 21 profiles (katana/sword/greatsword/gun/bow/staff/polearm/shield/shuriken/dual-knives + phone/book/umbrella/guitar/cup/camera/mic/flower/optics/snack/pen) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
+- **Weapon & object profiles (⚔ bundles)**: 21 profiles (katana/sword/greatsword/gun/bow/staff/polearm/shield/shuriken/dual-knives + phone/book/umbrella/guitar/cup/camera/mic/flower/optics/snack/pen) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon usually comes with a grip pose, and a pose comes with its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are unlikely to appear (10k-seed stress: bundle birth rate near full).
 - **Resource-budget conflict model**: same-axis/same-group mutex + hands/gaze ledgers + state slots + 50 global mutex domains (🧬 inspectable & editable) derive conflicts structurally; cross-pool rules live on in `conflicts.json`. Gender lock and mouth-domain double-occupation are enforced at pool level AND exit level.
 - **Natural-language tail (✍ NL)**: after the tag body, 1-4 English sentences compiled from 37 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
 
@@ -20,7 +20,7 @@ Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input
 - **In-node panel**: drag-to-reorder, 📌 pinning, bilingual EN/中文, NSFW toggle, gender filter (⚥/♀/♂); 🎲 fill calls the server-side `/taglib/api/draw` — the exact engine the node executes, so preview ≡ output
 - **Two modes**
   - `Manual` — pick by hand, or 🎲 fill with a fresh roll
-  - `Auto` — every generation rolls a fresh combination; the echo only replaces engine-rolled tags, manual picks are never wiped
+  - `Auto` — every generation rolls a fresh combination; the echo only replaces engine-rolled tags, manual picks are kept
 - **➕ Add Tags picker (5 tabs)**: Pick / ⚔ Profiles / 🧬 Mutex domains (incl. cross-pool rules) / ✍ NL families / ⚙ Settings; exclusions live in a sidebar drawer with axis/slot/subgroup granularity
 - **Artist axis (🎨)**: empty + off by default — artists are *chosen*, not rolled; fill in a name or flip the sidebar toggle when wanted. Names are stored bare and the Anima-required `@` prefix is added on output
 - **Profile visualization**: per-card identity tags, full pose table (tags / hands / state slot / exclusions), mount diagnostics badge (unmounted weapon words flagged), all fields editable inline, JSON editor with instant save
@@ -28,9 +28,9 @@ Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input
 - **NSFW tiers**: explicit tags shown in red, gated for display and output
 - **Plain JSON data**: the whole library is just `tag_library.json` + `tag_library.user.json` (plus the `taglib/*.json` rule files) — no mirror folder, no .md layer. The manager exports/imports those exact files (📤 Full / 📤 Mine / 📥 Import .json); each export carries a `_说明` key documenting the format and rules (JSON has no comments, so a reserved key is used)
 - **Backup**: 💾 Save as Default / ↺ Restore Backup / 🗑 Clear Library (optionally exporting the full .json first)
-- **Pin semantics**: 📌 pinned tags always survive rolls and echoes; pinned weapons birth with bundles too
+- **Pin semantics**: 📌 pinned tags survive rolls and echoes; pinned weapons birth with bundles too
 - **Generation metadata**: PNG info carries a `TagLibrary` chunk (node / mode / seed / actual prompt), reproducible per seed
-- **Translator immunity**: tag English is never rewritten by ComfyUI-DD-Translation or similar
+- **Translator immunity**: tag English is left untouched by ComfyUI-DD-Translation or similar
 - **Performance**: 1-4ms per execution; p50 <3ms for a 10k-tag snapshot build; manual-mode en/id lookups cached per library revision
 - **Seed determinism**: same seed → same output; weight syntax `(tag:1.2)`, order-preserving dedupe, prefix/suffix concat
 
@@ -107,7 +107,7 @@ Restart ComfyUI. No pip dependencies.
 |---|---|---|
 | Same-axis / same-group mutex | `smile` blocks `grin` | `axis` / `groups` in library |
 | Global mutex domains | mouth: `cigarette in mouth` ⊄ `food in mouth` | `grouprules.json` |
-| Resource budget | hands ≤ 2, gaze ≤ 1 — umbrella + two-handed cup is structurally impossible | `profiles.json` |
+| Resource budget | hands ≤ 2, gaze ≤ 1 — umbrella + two-handed cup is unlikely to appear | `profiles.json` |
 | State slots | one weapon can't be `drawn` and `sheathed` at once | `profiles.json` |
 | Cross-pool rules | photorealism ⊄ anime-style | `conflicts.json` |
 | Gender lock | with `1boy`, `1girl/milf/witch` blocked at pool + exit | gender flags |
