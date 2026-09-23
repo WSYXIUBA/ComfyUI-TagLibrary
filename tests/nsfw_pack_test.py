@@ -23,6 +23,14 @@ import slotpolicy
 import nl as nl_mod
 from nodes import TagLibraryNode
 
+# 扩展包（tag_library.ext.json / nsfw_*.json）按合规要求不入 git —— 干净 clone 与 CI 里没有，
+# 此时明确跳过（打印 SKIP，退出码 0），不要伪装成失败。
+_EXT_PACK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                         "data", "default", "tag_library.ext.json")
+if not os.path.exists(_EXT_PACK):
+    print("SKIP  nsfw_pack_test: 扩展包不在 (tag_library.ext.json 未随仓库分发)")
+    sys.exit(0)
+
 SNAP = runtime_snapshot.get_snapshot(library.get_merged())
 STATE = {"exclude_categories": ["画师"], "gender": "female", "nsfw": True}
 ERRORS: list[str] = []

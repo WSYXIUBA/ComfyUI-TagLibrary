@@ -27,8 +27,9 @@ jobs:
 
       # 插件本身无 pip 依赖; aiohttp 由 ComfyUI 运行时提供, 这里显式装上以便
       # 导入 api 包 (smoke_test 会走到路由层)。
+      # ruff 供 lint_check 门禁用; nsfw_pack_test 在缺扩展包时会自行 SKIP (扩展包不入 git)。
       - name: Install runtime deps
-        run: python -m pip install --upgrade pip aiohttp
+        run: python -m pip install --upgrade pip aiohttp ruff
 
       - name: Show available gates
         run: python tools/run_gates.py --list
