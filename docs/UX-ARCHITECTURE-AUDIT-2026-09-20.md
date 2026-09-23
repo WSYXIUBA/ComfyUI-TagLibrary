@@ -302,7 +302,7 @@ library.py:639 mirror_folder_now()         ← tagfiles.sync_to_folder(get_merge
 
 ### 4.5 门禁裸区
 
-24 项门禁（离线 18 + 在线 6）覆盖引擎/抽取/NL/质量/数据/规则/HTTP/安全/性能/lint，但以下**无任何门禁**：
+24 项门禁（离线 18 + 在线 6）覆盖引擎/抽取/NL/画质/数据/规则/HTTP/安全/性能/lint，但以下**无任何门禁**：
 
 1. **镜像合规**：无断言"`.md`/`_tagmeta.json` 不含 ext 词" → §4.2 因此长期潜伏
 2. **`mirror_folder_now` 路径**：`sync_idempotent_test` 只覆盖 snapshot 路径；`tag_edit_test` 主动屏蔽它

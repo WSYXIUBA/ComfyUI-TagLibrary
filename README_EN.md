@@ -38,7 +38,7 @@ Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input
 
 | Picker single view (section → axis → slot, ⚔ bundle chips) | Weapon & object profiles (pose tables / mount diagnostics / inline editing) |
 |---|---|
-| ![Axis view](docs/screenshot_axis_view.png) | ![Profiles](docs/screenshot_profiles.png) |
+| ![Picker panel](docs/screenshot_axis_view.png) | ![Profiles](docs/screenshot_profiles.png) |
 
 | Node panel (pick / 🎲 fill / NSFW toggle) | Library manager (CRUD / import-export / backups) |
 |---|---|

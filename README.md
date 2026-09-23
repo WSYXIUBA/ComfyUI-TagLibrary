@@ -63,7 +63,7 @@ NSFW 词表体系以扩展包形式分发（`tag_library.ext.json` / `nsfw_group
 
 | 挑选器单一视图（段位序 → 轴 → 槽位，⚔ 束词标记） | 武器·物品档案（姿势表 / 挂载诊断 / 行内编辑） |
 |---|---|
-| ![轴视图](docs/screenshot_axis_view.png) | ![档案](docs/screenshot_profiles.png) |
+| ![挑选器面板](docs/screenshot_axis_view.png) | ![档案](docs/screenshot_profiles.png) |
 
 | 节点面板（点选 / 🎲 填充 / NSFW 开关） | 标签库管理页（分类 CRUD / 导入导出 / 备份） |
 |---|---|
@@ -168,7 +168,7 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 | `tests/smoke_test.py` | 后端全链路（沙箱） |
 | `tests/conflicts_test.py` | 反冲突引擎 |
 | `tests/perf_build_test.py` | 性能门禁 |
-| `tests/quality_gate_test.py` | 输出质量门禁（词数/配额/互斥/人数/畸形词/段位/NSFW 往返） |
+| `tests/quality_gate_test.py` | 输出检查门禁（词数/配额/互斥/人数/畸形词/段位/NSFW 往返） |
 | `tests/prompt_quality_test.py` | 完整提示词重度测试（文本层语义/段位/性别/负向词） |
 | `tests/api_security_test.py` | API 安全门禁（CSRF 中间件 / 导入 .json 载荷防呆） |
 | `tests/lint_check.py` | 死代码门禁（ruff F401/F811/F841） |
