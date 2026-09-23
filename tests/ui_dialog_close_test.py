@@ -96,23 +96,29 @@ def _run(cdp, tab) -> int:
 
     # ---------------------------------------------------------------- 1. 面板 ⋯ 菜单
     print("\n[1] 面板 ⋯ 更多菜单")
-    force_open_menu(); time.sleep(0.6)
+    force_open_menu()
+    time.sleep(0.6)
     check("⋯ 已打开", cdp.ev(js_vis("window.__tlp().querySelector('.tl-menu')")), True)
-    cdp.ev(js_open(".tl-more-btn")); time.sleep(0.5)
+    cdp.ev(js_open(".tl-more-btn"))
+    time.sleep(0.5)
     check("再点 ⋯ 可关闭", cdp.ev(js_vis("window.__tlp().querySelector('.tl-menu')")), False)
 
-    force_open_menu(); time.sleep(0.5)
-    esc_on_panel(); time.sleep(0.5)
+    force_open_menu()
+    time.sleep(0.5)
+    esc_on_panel()
+    time.sleep(0.5)
     check("Esc 可关闭 ⋯ 菜单", cdp.ev(js_vis("window.__tlp().querySelector('.tl-menu')")), False)
 
-    force_open_menu(); time.sleep(0.5)
+    force_open_menu()
+    time.sleep(0.5)
     cdp.ev("""(() => { const m = window.__tlp().querySelector('.tl-menu');
                  (m.querySelector('.tl-menu-sec') || m.firstElementChild)
                    ?.dispatchEvent(new PointerEvent('pointerdown', {bubbles:true})); return 1; })()""")
     time.sleep(0.5)
     check("点菜单内分区标题不误关", cdp.ev(js_vis("window.__tlp().querySelector('.tl-menu')")), True)
 
-    force_open_menu(); time.sleep(0.4)
+    force_open_menu()
+    time.sleep(0.4)
     cdp.ev("""(() => { const p = window.__tlp();
                  p.querySelector('.tl-toolbar')?.dispatchEvent(
                    new PointerEvent('pointerdown', {bubbles:true})); return 1; })()""")
@@ -134,7 +140,8 @@ def _run(cdp, tab) -> int:
     check("「取消」可关闭挑选器", cdp.ev(PICK_OPEN), False)
     check("挑选器 DOM 已回收 (不靠 close 事件)", cdp.ev(PICK_LEFT), False)
 
-    cdp.ev(js_open(".tl-btn.primary")); time.sleep(2.5)
+    cdp.ev(js_open(".tl-btn.primary"))
+    time.sleep(2.5)
     cdp.ev("document.querySelector('.tp-close2')?.click(); 1")
     time.sleep(1.2)
     check("「✕ 关闭」可关闭挑选器", cdp.ev(PICK_OPEN), False)
@@ -189,7 +196,8 @@ def _run(cdp, tab) -> int:
     ):
         esc_on_panel()
         before = cdp.ev(COUNT)
-        force_open_menu(); time.sleep(0.4)
+        force_open_menu()
+        time.sleep(0.4)
         r = cdp.ev(f"""(() => {{ const b = window.__tlp().querySelector("{opener}");
                        if (!b) return 'NO-BTN'; b.click(); return 'ok'; }})()""")
         time.sleep(1.6)
