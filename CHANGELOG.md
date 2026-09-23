@@ -2,6 +2,101 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.13.2 — 人数词库对齐 danbooru: 12 个模型读不懂的词换成真标签（2026-09-23）
+
+`tools/danbooru_audit.py` 全库审计: 56% 的词不是 danbooru 标签。人数轴最要紧 ——
+`0others` / `trio` / `pair` / `group of girls` 这类自造词模型完全读不懂，单人锁挡住的
+那批在**关掉单人锁的群像场景**直接表现为人数失控。全部换成有贴数的真标签：
+
+| 旧词 | 中文 | 新词 | 贴数 |
+|---|---|---|---|
+| `0others` | 无他人 | `solo` | 7,063,540 |
+| `1girl and 1boy` | 一女一男 | `couple` | 100,449 |
+| `group of girls` | 女团 | `multiple girls` | 2,113,478 |
+| `group of boys` | 男团 | `multiple boys` | 697,940 |
+| `trio` | 三人组 | `3girls` | 327,978 |
+| `quartet` | 四人组 | `4girls` | 145,632 |
+| `ensemble` | 合奏人群 | `crowd` | 8,785 |
+| `pair` | 成对 | `2girls` | 1,438,354 |
+| `large group` | 大群体 | `crowd` | 8,785 |
+| `small group` | 小群体 | `multiple girls` | 2,113,478 |
+| `group` | 群像 | `multiple girls` | 2,113,478 |
+| `ot3` | 三人组(2女1男) | `3girls` | 327,978 |
+
+- **改 en 不改 id**: id 是稳定身份 (用户的覆盖/删除记录按 id 走), 换 slug 会让它们失联;
+  旧词写进 `aliases` —— 面板里搜旧名仍搜得到, 中文标签一个没动。
+- **全量库文件同步**（不同步等于没改: 用户库会被用户自己再存一次覆盖回旧词）:
+  出厂库 `tag_library.json` + 用户库 `tag_library.user.json` + `backups/` 三份
+  (`factory_backup` / `user_auto` / `user_backup`); 引用它们的
+  `taglib/conflicts.json`(31 处) / `grouprules.json`(11 处) / `nl_flavors.json`(引入句
+  按目标词**合并**而非丢弃, 写作多样性保住) 一并更新。
+- **顺手修一个死键**: `nl_flavors.json` 的引入句键写成 `solo_default`, 而 `nl.py` 按
+  `solo` 查 —— 这个键从来没被读过, `solo` 场景因此拿不到引入句。已改名 `solo`。
+- **代码侧同步**: `slotpolicy.SINGLE/MULTI_COUNT_WORDS`、`nl._PRONOUN`/`_INTRO_KEYS`、
+  `engine.MIXED_COUNT_WORDS`(`1girl and 1boy` → `couple`, 混合宣言仍锁 mixed)、
+  `tools/add_base_vocab.GENDER_FIXES`、`tests/feature_e2e_test` 多人词表;
+  `COUNT_NO_ANCHOR_WORDS` 随 `0others` 改名清空(保留空表 + 引擎闸门, 兜用户自造词)。
+- **踩过的坑(门禁拦住)**: "一女一男" 一开始映射到 danbooru 的 `hetero` —— 它虽是真标签,
+  但库内是 **NSFW 词**(`nsfw_flag=1` / ext 包 `异性性行为` 同词), 落进
+  `snap.minor_block_words`。引擎先抽到它、后抽到 `child` 时, 未成年锁**按词**终检把它
+  剃掉, 人数轴直接变 0 个词(提示词里没有任何"几个人", 模型自己编人数)。
+  Q4/E4 抓到 (seed 53/138/186/262)。改判据: 映射目标词不能落进 NSFW/未成年锁域 ->
+  改用 `couple`(同为真标签 + 同进 `MIXED_COUNT_WORDS`, 但不在锁域)。
+- **新增 4.6 人数轴兜底**: 词级剔除把人数轴剃到 0 时补锚点(单人锁下补 `1girl`+`solo`
+  黄金组合), 只在该情况下触发, 不覆盖正常抽取 —— 防的是"库内任何人数词被标
+  minor_block"这一类回归。
+- 闸门 15/15 (Q10「人数轴每个词都必须分类」是这轮的守门判据)。
+
+## v1.13.1 — 出图质量审查: 单人锁漏人 / 简背景漏词 / 人数锚点 / 未成年锁顺序漏 / NL 破句（2026-09-23）
+
+用真实工作流（Anima 双采，720x960）跑 **117 张真机出图** + 全量 WD14 打标 + 全库扫描，
+按"提示词 → 出图"逐环找根因。八个都是**会直接坏图**的：
+
+- **单人锁下会抽出"需要搭档"的词**（本轮最大的坑）：单人锁原来只封
+  `动作姿态/互动与双人` 整槽，但双人行为散落在别的槽里 —— 实测真机提示词里出现
+  `solo, reverse cowgirl position, grabbing another's ass`（出图 1boy+1girl）、
+  `solo, doggystyle`、`solo, oral, handjob`（WD14 判 2girls）。117 张里 **47%** 带这类词。
+  新增 `SOLO_PARTNER_WORDS`（体位/性行为/体液/调教四类逐词判定）+
+  `SOLO_PARTNER_SUBSTR`（词面含 `another's` 自动命中）。**按词不按槽**：同槽里还有
+  单人能做的 `on back` / `m legs` / `masturbation` / `bound` / `gagged`，整槽封会误杀。
+  清单与坑见 `tools/dump_slots.py`。
+- **单人锁人数锚点太弱**：真机统计（单人锁全开）—— 提示词是 `solo` 的 37 张只有 **3%**
+  出多人，是 `1girl` 的 39 张 **21%**；出图被判女性的比例 `solo` 组 **97%** / `1girl` 组 74%。
+  也就是 `solo` 才是真正的人数和性别双重锚点。冲突表里早就写着
+  "1girl+solo 黄金组合保留"，引擎却每次只抽一个人数词 —— 单人锁下补上 `solo`。
+- **简背景会漏出精细背景**：闸门原来按**槽**判（`场景环境/背景处理` 白名单），但库里
+  同名 en 可以挂在多个槽下 —— `detailed background` 同时在 `画质规格/细节强化`，
+  从那一份被抽到就绕过闸门。实测简背景+特写同开时 **7.2%** 的提示词同时含
+  `simple background` 和 `detailed background`（自相矛盾，背景当然乱）。
+  改成按**词**判（`snap.bg_slot_words`，编译期把背景处理槽的词全收进来，跨槽副本一视同仁）。
+- **简背景漏出环境**：别的类目里还有一批"会摆出一个具体环境"的词不在任何被禁槽里
+  （`candlelit room` / `looking out window` / `interior photography` / `street lamp at night`
+  ... 全库扫出来的），简背景开着仍有 **45.2%** 的提示词带环境词（关掉简背景也是 44.7%，
+  等于开关没起作用）。新增 `SIMPLE_BG_ENV_BAN_WORDS` 按词封禁；复测 45.2% → **0.2%**，
+  关简背景那侧仍是 44.7%（开关终于有区分度了）。配套工具 `tools/scan_envwords.py`。
+- **单人锁下人数轴会被"0others"顶掉**：`0others` 是库里自造词（zh 无他人），图像模型
+  读不懂，NL 里还写着 "No one is in the frame"（语义还反了）。单人锁下它独占人数轴的
+  概率 **33%**，那 33% 的提示词里既没有 `1girl` 也没有 `solo`。真机 43 张统计：
+  出 `0others` 的 11 张里 5 张被判 2girls/multiple girls，出 `solo` 的 15 张 **0 张**。
+  现在 `COUNT_NO_ANCHOR_WORDS` 把这类词从人数轴摘掉（`solo`/`1girl` 接手），
+  `0others` 的 NL 也改成"画面里没有别人"的正确说法。
+- **NL 自己把第二个人写进提示词**：`nsfw_scene` 族里有 "A soft gasp escapes as she pulls
+  her partner closer" 这类句子，单人锁下照样输出 —— 与单人锁直接打架。现在单人场景
+  （人数轴上没有多人词）自动剔掉含 `partner` / `another` / `bodies` / `shared` 的句式，
+  8 条里剩 4 条可用的。
+- **未成年锁顺序漏**：闸门是"年龄词落位后才封成人词"，先落成人词的顺序就漏。改成
+  最终结果兜底（`run_auto` 末尾终检）：只要年龄词在，成人向子集一律剔掉。复测
+  1500 seed 与成人词同框 **0.80% → 0%**。
+- **NL 句式破英文**：`{S}` 后面第一个词会被当动词做三单，模板里已写成三单的
+  （`holds`/`grips`/`lines`/`features`/`wears`）就渲染成 `She holdses / She featureses`；
+  `{S}` 当成限定词用的（`{S} gaze turns`）渲染成 `She gazes turns`；`{S} {POS}` 连写
+  渲染成 `She her breath comes ragged`。清掉 8 条，并把三条契约都写进 `m3_nl_test`
+  门禁（**每一个** `{S}` 都查，不只看句首 —— 旧判据只 `re.match` 句首，句中漏网）。
+
+门禁同步加固（旧判据和被测代码用同一份"按槽"口径，所以 7.2% 的漏词它一直没报）：
+`heavy_prompt_test` G 块改成按词判 + 单人锁"必须留真实人数锚点"断言，
+`quality_gate_test`/`heavy_prompt_test` 的人数唯一判据放行 `1girl+solo` 黄金组合。
+
 ## v1.13.0 — 预设下拉去分组 + 高亮改成有信息的那种（2026-09-21）
 
 - 下拉、预设管理弹窗、挑选器预设页都不再分「内置 / 我的」两组 —— 就是一串预设

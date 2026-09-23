@@ -3,15 +3,15 @@
 **中文** | [English](README_EN.md)
 
 结构化标签库节点：拼装轴 + 武器·物品档案束 + 资源预算冲突引擎 + 自然语言尾段。
-13 条轴 / 73 个槽位 / 出厂 4458 词 + NSFW 扩展包 ~300 词 / 18 份武器·物品档案 / 55+ 组互斥域 / 36+4 族 NL 句式。
+13 条轴 / 66 个槽位 / 出厂 4458 词 + NSFW 扩展包 298 词 / 21 份武器·物品档案 / 57 组互斥域 / 37 族 NL 句式。
 输出 `STRING`（标签主体 + 可选英文自然语言尾段 + Anima 推荐负向块），连上任何工作流的 `CLIPTextEncode.text` 就能用。单次生成 1-4ms。
 
 ![license](https://img.shields.io/badge/license-MIT-green) ![comfyui](https://img.shields.io/badge/ComfyUI-custom--node-blue) ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
 
 ## 核心架构（四板斧）
 
-- **拼装轴**：标签的真正骨架不是二级树——4458 词按 12 条轴（画质/人数/角色/外貌/服装/道具武器/动作/场景…）聚合，再按 Anima 官方 tag order 分成六个输出段位。挑选器是**单一视图**：段位 → 轴 → 槽位逐级展开，每行自带启用开关（关 = 写入排除类目，抽取时整条跳过）。
-- **武器·物品档案（⚔ bundle）**：18 份档案（武士刀/剑/大剑/枪械/弓/法杖/长柄 + 手机/书/伞/吉他/杯子/相机等）自带姿势束：每条姿势=标签组+手数+视线+状态槽+排斥声明。**抽中武器必带持握姿势，姿势必随武器出生**——裸武器、双持单手刀、弓蹭枪姿势这类肢解在结构上不可能发生（万 seed 压测束出生率 100%）。
+- **拼装轴**：标签的真正骨架不是二级树——4458 词按 13 条轴（画质/人数/角色/外貌/服装/道具武器/动作/场景…）聚合，再按 Anima 官方 tag order 分成六个输出段位。挑选器是**单一视图**：段位 → 轴 → 槽位逐级展开，每行自带启用开关（关 = 写入排除类目，抽取时整条跳过）。
+- **武器·物品档案（⚔ bundle）**：21 份档案（武士刀/剑/大剑/枪械/弓/法杖/长柄/盾/手里剑/双刀 + 手机/书/伞/吉他/杯子/相机/麦克风/花束/望远镜/零食/笔）自带姿势束：每条姿势=标签组+手数+视线+状态槽+排斥声明。**抽中武器必带持握姿势，姿势必随武器出生**——裸武器、双持单手刀、弓蹭枪姿势这类肢解在结构上不可能发生（万 seed 压测束出生率 100%）。
 - **资源预算冲突模型**：同轴/同组互斥 + hands/gaze 资源账本 + 状态槽 + 50 个全局互斥域（🧬 可查可编辑）从结构上自动推导冲突；跨池规则保留在 `conflicts.json`。性别锁（1boy 不出女词）、嘴部域（一口不能两衔）全链路出口复核。
 - **自然语言尾段（✍ NL）**：标签主体之后追加 1-4 句英文描写，由句式族查表编译（人称回指、句式轮换、叙事顺序三律防拼接感），热路径零 LLM、seed 决定论可复现，面板 ⚙ 可关；NSFW 场景可加载独立句式包（`nsfw_nl.json`，用户自填内容）
 
@@ -37,7 +37,7 @@ NSFW 词表体系以扩展包形式分发（`tag_library.ext.json` / `nsfw_group
 - 词源经 danbooru post_count 校验（≥1500 posts 才收录），高频词自动加权
 - 约束全链路：体位与站/坐/躺同组互斥、口部域一把锁、词级双手账本（乳交=2手）、动物伙伴与性行为槽结构性隔离、未成年年龄词在场时全池屏蔽成人向词
 - 生成工具：`tools/build_ext_pack.py`（策展词表 + post_count 校验 → 幂等重建）
-- 低频词审计：`tools/danbooru_audit.py`（--verify 25 抽样线上校准，报告出「自造词/低频词/高频覆盖率」，实测出厂词表 ~55% 不在 danbooru 高频 35k 词表内）
+- 低频词审计：`tools/danbooru_audit.py`（--verify 25 抽样线上校准，报告出「自造词/低频词/高频覆盖率」，实测出厂词表 ~55% 不在 danbooru 高频 35k 词表内）。审计结论与逐轴处理见 [docs/OUTPUT-QUALITY-AUDIT-2026-09-23.md](docs/OUTPUT-QUALITY-AUDIT-2026-09-23.md)
 
 ## 特性
 
@@ -128,7 +128,7 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 | `data/default/taglib/` | 规则文件目录（**只有 .json**：互斥域 / 分组域 / NL 风味 / 档案 / 出厂预设） |
 | `data/default/taglib/profiles.json` | 武器·物品档案（姿势束/手视资源/状态槽/NL 声明真源） |
 | `data/default/taglib/grouprules.json` | 全局互斥域（50 组） |
-| `data/default/taglib/nl_flavors.json` | NL 句式素材（36 族 + pose_map + 宾语词池） |
+| `data/default/taglib/nl_flavors.json` | NL 句式素材（37 族 + pose_map + 宾语词池） |
 | `data/default/taglib/conflicts.json` | 跨池反冲突规则（兼容保留） |
 | `data/default/backups/` | 备份位置（`user_backup.json` 手动「存为默认库」；`user_auto.json` 每次保存自动滚动；`factory_backup.json` 出厂） |
 
@@ -150,7 +150,7 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 一键跑全部门禁（**推荐**，会自动快照并还原 `data/default/taglib/`，不会污染工作区）：
 
 ```bash
-python tools/run_gates.py               # 14 项离线门禁
+python tools/run_gates.py               # 15 项离线门禁
 python tools/run_gates.py --with-online # 加上需要 ComfyUI 实例的在线门禁
 python tools/run_gates.py --list        # 列出所有门禁
 python tools/run_gates.py m1 m3         # 只跑名字匹配的
@@ -190,7 +190,7 @@ python tools/run_gates.py m1 m3         # 只跑名字匹配的
 
 ## 更新记录
 
-完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.13.0**。
+完整版本变更史见 [CHANGELOG.md](CHANGELOG.md)。当前版本 **v1.13.2**。
 
 ## License
 

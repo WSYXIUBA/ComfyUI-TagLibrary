@@ -221,23 +221,17 @@
     "value": [
      "solo",
      "solo focus",
-     "group of girls",
-     "group of boys",
-     "trio",
-     "quartet",
-     "ensemble",
-     "couple",
-     "pair",
-     "large group",
-     "small group",
-     "group",
-     "ot3",
-     "everyone",
+     "multiple girls",
+     "multiple boys",
+     "3girls",
      "4girls",
+     "crowd",
+     "couple",
+     "2girls",
+     "everyone",
      "5girls",
      "6+girls",
      "3boys",
-     "1girl and 1boy",
      "no humans"
     ]
    },
@@ -268,23 +262,7 @@
     },
     {
      "kind": "tag",
-     "value": "group of girls"
-    },
-    {
-     "kind": "tag",
-     "value": "group of boys"
-    },
-    {
-     "kind": "tag",
-     "value": "trio"
-    },
-    {
-     "kind": "tag",
-     "value": "quartet"
-    },
-    {
-     "kind": "tag",
-     "value": "ensemble"
+     "value": "4girls"
     },
     {
      "kind": "tag",
@@ -292,31 +270,7 @@
     },
     {
      "kind": "tag",
-     "value": "pair"
-    },
-    {
-     "kind": "tag",
-     "value": "large group"
-    },
-    {
-     "kind": "tag",
-     "value": "small group"
-    },
-    {
-     "kind": "tag",
-     "value": "group"
-    },
-    {
-     "kind": "tag",
-     "value": "ot3"
-    },
-    {
-     "kind": "tag",
      "value": "everyone"
-    },
-    {
-     "kind": "tag",
-     "value": "4girls"
     },
     {
      "kind": "tag",
@@ -332,22 +286,18 @@
     },
     {
      "kind": "tag",
-     "value": "1girl and 1boy"
-    },
-    {
-     "kind": "tag",
      "value": "no humans"
     }
    ]
   },
   {
    "id": "zero-others-vs-multi",
-   "note": "无他人 ↔ 多人卡 (0others 表示画面只有主体)",
+   "note": "无他人 ↔ 多人卡 (solo 表示画面只有主体; 原词 0others 已按 booru 对齐改名)",
    "strict": true,
    "left": {
     "kind": "tags",
     "value": [
-     "0others"
+     "solo"
     ]
    },
    "right": [
@@ -1269,9 +1219,8 @@
    "left": {
     "kind": "tags",
     "value": [
-     "0others",
-     "solo focus",
-     "solo"
+     "solo",
+     "solo focus"
     ]
    },
    "right": [
@@ -1285,15 +1234,7 @@
     },
     {
      "kind": "tag",
-     "value": "group"
-    },
-    {
-     "kind": "tag",
-     "value": "large group"
-    },
-    {
-     "kind": "tag",
-     "value": "small group"
+     "value": "multiple girls"
     },
     {
      "kind": "tag",
@@ -1302,18 +1243,6 @@
     {
      "kind": "tag",
      "value": "couple"
-    },
-    {
-     "kind": "tag",
-     "value": "pair"
-    },
-    {
-     "kind": "tag",
-     "value": "trio"
-    },
-    {
-     "kind": "tag",
-     "value": "quartet"
     },
     {
      "kind": "tag",
@@ -1345,15 +1274,7 @@
     },
     {
      "kind": "tag",
-     "value": "multiple girls"
-    },
-    {
-     "kind": "tag",
      "value": "multiple boys"
-    },
-    {
-     "kind": "tag",
-     "value": "1girl and 1boy"
     }
    ],
    "type": "mutex",

@@ -134,6 +134,60 @@ for _w, _f in _pm.items():
             leak.append(f"{_w} -> {_f} {sorted(_bad)}")
 check("pose_map 目标族只含 {S}/{POS}/{O}", not leak, str(leak[:4]))
 
+# ---- 句式语法契约 (2026-09-23 真机出图审查补): {S} 后面那个词必须是**动词基础形**。
+#      _render_subject 把 {S} 后第一个词当动词做三单 —— 模板写成 "holds"/"grips"/
+#      "features" 这种已三单的形, 渲染出来就是 "She holdses / She featureses" 直接进
+#      正面提示词 (真机出图 43 张里抓到 7 条)。同时禁止 {S} {POS} 连写 (渲染成 "She her")。
+_BASE_S_VERBS = {"pass", "focus", "kiss", "cross", "miss", "press", "dress",
+                 "guess", "discuss", "bless", "address", "express", "possess",
+                 "assess", "confess", "stress", "process", "witness", "gas"}
+# {S} 后面跟着这些名词时, 那个名词才是句子主语 (模板应写 {POS})
+_SUBJ_NOUNS = {"gaze", "stare", "expression", "voice", "breath", "smile", "eyes",
+               "hand", "hands", "body", "face", "hair", "skin", "lips", "fingers",
+               "shoulder", "shoulders", "posture", "silhouette", "presence", "heart"}
+_tpl_bad, _n_tpl = [], 0
+_groups = [(f"families/{k}", v) for k, v in (F.get("families") or {}).items()]
+_groups += [(f"{k}/{kk}", v) for k in ("intro", "env", "light")
+            for kk, v in (F.get(k) or {}).items()]
+for _fam, _verses in _groups:
+    for _t in _verses:
+        if not isinstance(_t, str):
+            continue
+        _n_tpl += 1
+        # ⚠ 每一个 {S} 都要查, 不能只查句首 —— 句中 {S} 同样会被做三单。实测
+        #   "A soft gasp escapes as {S} pulls ..." 句首正则漏掉, 渲染成 "she pullses"。
+        for _m in re.finditer(r"\{S\}\s+(\w+)", _t):
+            _v = _m.group(1)
+            if _v.endswith("s") and _v not in _BASE_S_VERBS and nl._v3s(_v) == _v + "es":
+                _tpl_bad.append(f"{_fam}: {_v} -> {nl._v3s(_v)}")
+        # {S} 后面跟"名词+已三单动词" = 模板把主格当限定词用了, 该写 {POS}。
+        # 实测 "{S} gaze turns heavy-lidded" -> "She gazes turns heavy-lidded"。
+        for _m in re.finditer(r"\{S\}\s+([a-z]{3,})\s+([a-z]+(?:s|es))\b", _t):
+            if _m.group(1) in _SUBJ_NOUNS:
+                _tpl_bad.append(f"{_fam}: {{S}} {_m.group(1)} {_m.group(2)} (应为 {{POS}})")
+        if "{S} {POS}" in _t:
+            _tpl_bad.append(f"{_fam}: 重复主语 S+POS")
+        _r = nl._render_subject(_t, "She", True).replace("{POS}", "her")
+        if re.search(r"\bShe\s+her\b", _r):
+            _tpl_bad.append(f"{_fam}: 渲染重复主语 -> {_r[:44]}")
+check(f"NL 句式语法契约 ({_n_tpl} 条)", not _tpl_bad, str(_tpl_bad[:4]))
+
+# ---- G8 单人场景契约 (2026-09-23): 单人锁下 NL 不许把"第二个人"写进正面提示词 ——
+#      实测 solo 与 "as she pulls her partner closer" 同框, 真机直接出 2girls。
+print("G8 单人场景不写第二人")
+_solo_state = json.loads(PIN_KATANA_RAIN)
+_solo_state.update({"solo_lock": True, "nsfw": "on"})
+_pt = _pn = 0
+for seed in range(200):
+    _res = engine.run_auto(snap, _solo_state, seed, nsfw_on=True,
+                          avoid_conflicts=True, search_text="", cat_weights=None,
+                          config=None)
+    _tail = nl.compile_tail(snap, _res.picks, seed).lower()
+    _pn += 1 if _tail else 0
+    if any(h in _tail for h in ("partner", "another", "shared", "bodies")):
+        _pt += 1
+check(f"单人场景零第二人句 ({_pn} 条尾段)", _pt == 0, str(_pt))
+
 # ---- 展示
 if "--show" in sys.argv:
     print("\n---- 样本 (人工眼评) ----")

@@ -71,8 +71,8 @@ def f2_solo():
     for seed in range(30):
         d = draw(st, seed)
         for w in WORDS(d):
-            if w in ("2girls", "3girls", "multiple girls", "couple", "group", "crowd",
-                     "1girl and 1boy", "group sex", "gangbang", "orgy", "threesome"):
+            if w in ("2girls", "3girls", "4girls", "multiple girls", "couple", "crowd",
+                     "group sex", "gangbang", "orgy", "threesome"):
                 multi_hits += 1
     check(multi_hits == 0, f"30 seed 无多人词 (违规 {multi_hits})")
 

@@ -32,7 +32,7 @@ DEFAULT_CONFIG = {"total_min": 40, "total_max": 60, "bundle_pose_prob": 0.85,
 
 # count 轴"混合宣言词": 出现即锁 mixed (=3), 两性都放行且不再被单词重锁。
 # 这是词义 (danbooru 复合人数词固定那几个), 不是冲突规则。
-MIXED_COUNT_WORDS = frozenset({"1girl and 1boy", "1boy and 1girl", "couple",
+MIXED_COUNT_WORDS = frozenset({"couple", "1boy and 1girl",
                                "mismatched couple", "interspecies couple",
                                "female and male", "girl and boy"})
 
@@ -314,14 +314,33 @@ class _Extraction:
                 return False
             if _sk == "动作姿态/互动与双人":
                 return False
+            _lo = self.snap.tag_lower[tid]
             # 隐含多人的行为词一并封禁 (1other + gangbang 实测漏网)
-            if self.snap.tag_lower[tid] in slotpolicy.SOLO_BAN_WORDS:
+            if _lo in slotpolicy.SOLO_BAN_WORDS:
+                return False
+            # 需要搭档的词 —— 原来只封了 互动与双人 槽, 体位/性行为/体液槽里的双人词
+            # 全漏: solo + reverse cowgirl position + grabbing another's ass 真机出 1boy+1girl。
+            if _lo in slotpolicy.SOLO_PARTNER_WORDS:
+                return False
+            if any(h in _lo for h in slotpolicy.SOLO_PARTNER_SUBSTR):
                 return False
         if self.bg_simple:
             if _sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
                 return False
-            if _sk == "场景环境/背景处理"                     and self.snap.tag_lower[tid] not in slotpolicy.SIMPLE_BG_WORDS:
+            lo_bg = self.snap.tag_lower[tid]
+            # 背景处理槽按**词**白名单判, 不按槽判 —— 同名 en 可能挂在别的槽下
+            # (库里 4700+ 重复; "detailed background" 同时属于 画质规格/细节强化),
+            # 按槽判时那一份副本能绕过闸门, 于是同框出现 simple + detailed background。
+            if lo_bg in self.snap.bg_slot_words and lo_bg not in slotpolicy.SIMPLE_BG_WORDS:
                 return False
+            # 别的槽里会摆出一个具体环境的词 (candlelit room / looking out window ...)
+            if lo_bg in slotpolicy.SIMPLE_BG_ENV_BAN_WORDS:
+                return False
+        # 人数轴锚点: 非 booru 自造词模型读不懂, 单人锁下它会顶掉 1girl/solo
+        # (原成员 "0others" 已在 1.13.2 词库对齐中改名为 solo; 表留空兜底)
+        if (self.snap.axis_arr[tid] == "count"
+                and self.snap.tag_lower[tid] in slotpolicy.COUNT_NO_ANCHOR_WORDS):
+            return False
         if self.focus_portrait:
             if _sk in slotpolicy.PORTRAIT_BAN_SLOTS:
                 return False
@@ -836,5 +855,53 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
             picks = _trim_to_budget(picks, tmax, snap,
                                     protect_nsfw=(nsfw_intensity >= 2))
             picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
+
+    # ---------- 4.5 单人锁 · 人数锚点补强 ----------
+    # 87 张真机出图 (全部单人锁开) 实测: 提示词里是 solo 的 37 张 **3%** 出多人,
+    # 是 1girl 的 39 张 **21%** —— 1girl 只声明"一个女孩", 不排除画面里还有别人;
+    # 只有 solo 才是"画面里只有一人"。冲突表里本来就写着 "1girl+solo 黄金组合保留",
+    # 但引擎每次只抽一个人数词, 从来没同时出过。单人锁下补这一发。
+    if solo_lock:
+        _words = {p.en.lower() for p in picks}
+        if "solo" not in _words and (_words & {"1girl", "1boy"}):
+            _solo_tid = snap.en_to_id.get("solo")
+            if _solo_tid is not None:
+                picks.append(ex.make_pick(_solo_tid, "solo_anchor"))
+                picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
+
+    # ---------- 4. 未成年锁终检 (词级, 与抽取顺序无关) ----------
+    # 闸门本身是"年龄词落位后才封成人词", 顺序反了就漏 —— 实测 nsfw=on / 档位 1
+    # 1500 seed 里 12 条年龄词与成人词同框 (child/loli/preteen + bra)。这里按**最终
+    # 结果**兜底: 只要年龄词在, 成人向子集一律剔掉, 不看谁先落位。
+    if any(p.id is not None and snap.tag_lower[p.id] in slotpolicy.MINOR_AGE_WORDS
+           for p in picks):
+        picks = [p for p in picks
+                 if p.id is None or snap.tag_lower[p.id] not in minor_block_words]
+
+    # ---------- 4.6 人数轴兜底 ----------
+    # 上面那道终检是按**词**剔的, 人数词本身也可能被剔掉 —— 只要库里有被标
+    # minor_block 的 NSFW 人数词就中招 (实测: "一女一男" 映射成 danbooru 的 hetero 后,
+    # 抽到 child 的人数轴被剃光, 提示词里一个"几个人"都没有, 模型就自己编人数)。
+    # 只在归零时补一个锚点 (单人锁下补 1girl+solo 黄金组合), 不覆盖正常抽取。
+    if picks and not any(p.id is not None and snap.axis_arr[p.id] == "count" for p in picks):
+        _fb = ("1girl", "solo") if solo_lock else (
+            ("1boy",) if led.gender_lock == 2 else ("1girl",))
+        for _w in _fb:
+            _tid = snap.en_to_id.get(_w)
+            if _tid is not None and _w not in ex.led.used_lower and ex.tag_ok(_tid):
+                picks.append(ex.make_pick(_tid, "count_fallback"))
+        picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
+
+    # ---------- 4.7 "no humans" 终检 ----------
+    # 画面里没有人 -> 不该有身份/外貌/服装词。引擎在抽槽阶段就按槽轴挡, 但**束成员**
+    # 的轴走 pose.axis (profiles.py: extras -> "appearance"、姿势 -> "action"),
+    # 挡不住: 武器束挂在武器道具上出生 (钉选的 katana 也挂), 与人数词无关, 于是
+    # "no humans + sniper scope" 真机出得来。按**最终结果**判, 与抽取顺序无关。
+    #
+    # 只剔轴落在 NO_HUMAN_SKIP_AXES 的 (即束里的"配件" extras), 保留 "action" 姿势 ——
+    # 武器必带姿势束是既有契约 (m1/m2/m4 门禁钉着), 不能为了这条把束整体删掉。
+    if any(p.id is not None and snap.tag_lower[p.id] in slotpolicy.NO_HUMAN_COUNT_WORDS
+           for p in picks):
+        picks = [p for p in picks if p.axis not in slotpolicy.NO_HUMAN_SKIP_AXES]
 
     return AutoResult(picks, dropped, stats)

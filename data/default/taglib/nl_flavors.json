@@ -94,17 +94,17 @@
  },
  "families": {
   "hold_one": [
-   "{S} holds {O} in one hand, {POS} arm loose at {POS} side.",
+   "{S} hold {O} in one hand, {POS} arm loose at {POS} side.",
    "{O} rests easily in {POS} grip, held low with one hand.",
    "One hand carries {O} like an afterthought."
   ],
   "hold_two": [
-   "{S} grips {O} with both hands, knuckles steady.",
+   "{S} grip {O} with both hands, knuckles steady.",
    "Both of {POS} hands close around {O}, ready and unhurried.",
    "{O} sits level in a two-handed hold."
   ],
   "aim": [
-   "{S} lines up {O} toward the target, one eye narrowed.",
+   "{S} line up {O} toward the target, one eye narrowed.",
    "{O} rises to the aiming line; everything else blurs away.",
    "Steady, {S} take aim, the {O} squared to {POS} shoulder."
   ],
@@ -250,14 +250,14 @@
   ],
   "describe": [
    "{S} has {A}.",
-   "{S} features {A}.",
+   "{S} feature {A}.",
    "{S} has {A}, which defines the whole look.",
    "{S} has {A} and a very distinctive silhouette."
   ],
   "wear": [
    "{S} is wearing {C}.",
    "{S} is dressed in {C}.",
-   "{S} wears {C}.",
+   "{S} wear {C}.",
    "{S} is outfitted in {C}."
   ],
   "carry": [
@@ -586,18 +586,19 @@
    "It is only him.",
    "One boy, nothing else to look at."
   ],
-  "solo_default": [
-   "A single figure holds the frame.",
-   "The subject stands alone.",
-   "Only one person occupies the scene."
-  ],
   "2girls": [
    "Two girls share the frame, at ease with each other.",
-   "The pair of girls fills the scene with quiet energy."
+   "The pair of girls fills the scene with quiet energy.",
+   "The pair shares the frame, never far apart.",
+   "Two figures together hold the scene."
   ],
   "3girls": [
    "Three girls make up the scene together.",
-   "Three girls, one shared moment."
+   "Three girls, one shared moment.",
+   "The trio shares the frame, three points of one composition.",
+   "Three figures together, the trio holds the scene.",
+   "The three of them share the frame as one.",
+   "Three together, the scene gathers around them."
   ],
   "2boys": [
    "Two boys share the frame, easy in each other's company.",
@@ -609,79 +610,56 @@
   ],
   "multiple girls": [
    "A handful of girls share the frame.",
-   "Several girls gather in the scene."
+   "Several girls gather in the scene.",
+   "The group of girls fills the scene.",
+   "A group of girls gathers together.",
+   "A small group shares the quiet corner of the frame.",
+   "A few figures together, the scene stays intimate.",
+   "The group fills the scene with life.",
+   "A loose group gathers at the center of the frame."
   ],
   "multiple boys": [
    "A handful of boys share the frame.",
-   "Several boys gather in the scene."
+   "Several boys gather in the scene.",
+   "The group of boys fills the scene.",
+   "A group of boys gathers together."
   ],
   "multiple others": [
    "A small cast of figures shares the frame.",
    "Several figures gather in the scene."
   ],
-  "1girl and 1boy": [
+  "couple": [
+   "The couple holds the frame together.",
+   "Two people, close enough to be one subject.",
    "A girl and a boy share the frame.",
    "One girl and one boy, side by side."
   ],
-  "couple": [
-   "The couple holds the frame together.",
-   "Two people, close enough to be one subject."
-  ],
-  "group": [
-   "The group fills the scene with life.",
-   "A loose group gathers at the center of the frame."
-  ],
-  "group of girls": [
-   "The group of girls fills the scene.",
-   "A group of girls gathers together."
-  ],
-  "group of boys": [
-   "The group of boys fills the scene.",
-   "A group of boys gathers together."
-  ],
-  "trio": [
-   "The trio shares the frame, three points of one composition.",
-   "Three figures together, the trio holds the scene."
-  ],
-  "quartet": [
-   "The quartet fills the frame, four figures in step.",
-   "Four figures share the scene as one."
-  ],
-  "ensemble": [
-   "The ensemble fills the frame, every figure in place.",
-   "A full cast of figures holds the scene."
-  ],
-  "pair": [
-   "The pair shares the frame, never far apart.",
-   "Two figures together hold the scene."
-  ],
-  "large group": [
-   "A large group fills the frame to its edges.",
-   "The crowd of figures makes the scene feel full."
-  ],
-  "small group": [
-   "A small group shares the quiet corner of the frame.",
-   "A few figures together, the scene stays intimate."
-  ],
   "crowd": [
    "The crowd hums with motion around the center.",
-   "A crowd fills the frame, every face in motion."
+   "A crowd fills the frame, every face in motion.",
+   "The ensemble fills the frame, every figure in place.",
+   "A full cast of figures holds the scene.",
+   "A large group fills the frame to its edges.",
+   "The crowd of figures makes the scene feel full."
   ],
   "everyone": [
    "Everyone is in the frame, and everyone matters.",
    "The whole cast shares the scene."
   ],
-  "ot3": [
-   "The three of them share the frame as one.",
-   "Three together, the scene gathers around them."
-  ],
   "1other": [
    "A lone figure holds the frame.",
    "One figure, and everything else falls away."
   ],
-  "0others": [
-   "The scene is empty of people.",
-   "No one is in the frame; the setting speaks alone."
+  "solo": [
+   "A single figure holds the frame.",
+   "The subject stands alone.",
+   "Only one person occupies the scene.",
+   "There is no one else in the frame.",
+   "Only the subject holds the frame; no one else is present."
+  ],
+  "4girls": [
+   "The quartet fills the frame, four figures in step.",
+   "Four figures share the scene as one."
   ]
  }
 }

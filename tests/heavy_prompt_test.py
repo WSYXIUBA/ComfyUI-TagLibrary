@@ -147,6 +147,7 @@ def check_engine_semantics(snap, state, seed, picks, rep: Report, tag_prefix="E"
     slot_n, excl_hit, n_count = Counter(), Counter(), 0
     slot_nsfw = Counter()
     ens_seen = Counter()
+    count_words: list[str] = []
     for p in picks:
         ens_seen[nz(p.en)] += 1
         if p.id is None:
@@ -160,8 +161,13 @@ def check_engine_semantics(snap, state, seed, picks, rep: Report, tag_prefix="E"
             excl_hit[g] += 1
         if snap.axis_arr[p.id] == "count":
             n_count += 1
+            count_words.append(nz(p.en))
+    # 1girl+solo 黄金组合 (冲突表里保留) —— 单人锁下引擎会补 solo, 人数槽允许这一对
+    solo_combo = slotpolicy.is_solo_anchor_combo(count_words)
     for k, v in slot_n.items():
         cap = slotpolicy.caps_for(k)[1]
+        if solo_combo and k == "人数/人数" and v == 2:
+            continue
         # ⚠ 纯欲档 (intensity>=2) 对 NSFW 槽位有**有意的**配额 boost
         # (README v1.8.0: "纯欲档 NSFW 槽位配额加成与削减豁免")。
         # 定向复测证实: 档0/档1 全部 0 超限, 只有档2 超 (身体细节2→4 / 裸露与暴露1→2 /
@@ -177,7 +183,9 @@ def check_engine_semantics(snap, state, seed, picks, rep: Report, tag_prefix="E"
         if v > 1:
             rep.fail(f"{pre}3 互斥槽位组", f"seed{seed}: 组 {g} 有 {v} 个槽位同时出词")
             break
-    if n_count != 1:
+    if n_count != 1 and not slotpolicy.is_solo_anchor_combo(count_words):
+        # 例外: 冲突表里保留的 "1girl+solo 黄金组合" (单人锁下引擎补 solo 锚点,
+        # 实测 1girl 单独出时 21% 出多人, solo 在场时 3%)
         rep.fail(f"{pre}4 人数唯一", f"seed{seed}: count 轴 {n_count} 个词")
     for p in picks:
         if MALFORMED.search(str(p.en)):
@@ -487,6 +495,13 @@ def main() -> int:
     print("=" * 74)
     print(f"G 场景开关组合              : 各 {args.matrix} 条")
     print("=" * 74)
+    # 测试侧独立从库算出"背景处理槽里出现过的所有词"(含跨槽同名副本)。
+    # ⚠ 判据不能照抄代码的按槽口径: 同名 en 可以挂在别的槽下 (库里重复 4700+ 条),
+    #   按槽判会漏掉从副本抽进来的词 —— 实测 detailed background 双副本,
+    #   简背景开着仍有 7.2% 漏出 (与 simple background 同框)。
+    _bg_si = snap.sub_key_to_index.get(("场景环境", "背景处理"))
+    _bg_words = (frozenset(snap.tag_lower[i] for i in snap.sub_tag_ids[_bg_si])
+                 if _bg_si is not None else frozenset())
     for key in ("solo_lock", "bg_mode", "focus_mode"):
         val = True if key == "solo_lock" else ("simple" if key == "bg_mode" else "portrait")
         st = {**base, key: val, "nsfw": True}
@@ -494,6 +509,8 @@ def main() -> int:
         hits = 0
         banned = 0          # 场景开关的**功能**断言 (此前只跑通用检查 -> 开关坏掉也全绿)
         banned_eg: list[str] = []
+        no_anchor = 0       # 单人锁: 提示词里没有真实人数锚点的条数
+        anchor_eg: list[str] = []
         for seed in range(1, args.matrix + 1):
             res = engine.run_auto(snap, st, seed, nsfw_on=True, config=c)
             rep.prompts += 1
@@ -509,11 +526,27 @@ def main() -> int:
                     # 会与被测共用同一口径, 1other 这类词永远测不出来 (2026-09-21 实测
                     # 60 seed 里 18 条照出)。
                     hits += 1
-                # 简洁背景: 具象场景槽全封 + 背景处理槽只许白名单词
+                if key == "solo_lock":
+                    # 需要搭档的词一律不许出 (原来只封 互动与双人 槽, 体位/性行为槽漏网:
+                    # solo + reverse cowgirl position 真机出 1boy+1girl)
+                    if en in slotpolicy.SOLO_PARTNER_WORDS \
+                            or any(h in en for h in slotpolicy.SOLO_PARTNER_SUBSTR):
+                        banned += 1
+                        if len(banned_eg) < 4:
+                            banned_eg.append(f"{sk}:{en}")
+                    # 单向行为词 (anal/vaginal/handjob...) 散在别的槽里, 这里一并断言
+                    elif en in {"anal", "vaginal", "handjob", "oral", "fellatio",
+                                "paizuri", "gangbang", "group sex", "threesome"}:
+                        banned += 1
+                        if len(banned_eg) < 4:
+                            banned_eg.append(f"{sk}:{en}")
+                # 简洁背景: 具象场景槽全封 + 背景处理词表(按词, 跨槽副本一视同仁)只许白名单
                 if key == "bg_mode":
                     if sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
                         banned += 1
-                    elif sk == "场景环境/背景处理" and en not in slotpolicy.SIMPLE_BG_WORDS:
+                    elif en in _bg_words and en not in slotpolicy.SIMPLE_BG_WORDS:
+                        banned += 1
+                    elif en in slotpolicy.SIMPLE_BG_ENV_BAN_WORDS:
                         banned += 1
                     if banned and len(banned_eg) < 4:
                         banned_eg.append(f"{sk}:{en}")
@@ -525,9 +558,21 @@ def main() -> int:
                         banned += 1
                     if banned and len(banned_eg) < 4:
                         banned_eg.append(f"{sk}:{en}")
+            # 单人锁还必须留下真实的人数锚点: 非 booru 自造人数词 (原 "0others", 1.13.2 起
+            # 已改名 solo) 模型读不懂, 它独占人数轴时提示词里既没有 1girl 也没有 solo ——
+            # (solo 组 0/15)。判据按"最终文本里有没有真锚点", 与代码的禁词表不同源。
+            if key == "solo_lock":
+                wordset = {nz(w.en) for w in res.picks}
+                if not ({"1girl", "1boy", "solo", "no humans"} & wordset):
+                    no_anchor += 1
+                    if len(anchor_eg) < 3:
+                        anchor_eg.append(str(sorted(wordset)[:6]))
         rep.ok(f"G 场景开关[{key}]")
         if key == "solo_lock" and hits:
             rep.fail("G 场景开关[solo_lock]", f"{hits} 个非单人人数词")
+        if key == "solo_lock" and no_anchor:
+            rep.fail("G 场景开关[solo_lock]",
+                     f"{no_anchor} 条没有人数锚点 (例: {anchor_eg})")
         if banned:
             rep.fail(f"G 场景开关[{key}]",
                      f"{banned} 个被该开关封禁的词仍输出 (例: {banned_eg})")

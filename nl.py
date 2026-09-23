@@ -16,9 +16,10 @@ import os
 import random as _random
 
 try:
-    from . import datapaths
+    from . import datapaths, slotpolicy
 except ImportError:  # pragma: no cover
     import datapaths
+    import slotpolicy
 
 FLAVORS_PATH = os.path.join(datapaths.LIBRARY_DIR, "nl_flavors.json")
 # 1.8.0: NSFW flavor 扩展包 (ext 配套, 不入 git/发布)。
@@ -91,24 +92,17 @@ _PRONOUN = {
     "2boys": ("They", "their"), "3boys": ("They", "their"),
     "multiple girls": ("They", "their"), "multiple boys": ("They", "their"),
     "multiple others": ("They", "their"),
-    "1girl and 1boy": ("They", "their"), "couple": ("They", "their"),
-    "group": ("They", "their"), "crowd": ("They", "their"),
-    "everyone": ("They", "their"), "ot3": ("They", "their"),
-    "group of girls": ("They", "their"), "group of boys": ("They", "their"),
-    "trio": ("They", "their"), "quartet": ("They", "their"),
-    "ensemble": ("They", "their"), "pair": ("They", "their"),
-    "large group": ("They", "their"), "small group": ("They", "their"),
+    "couple": ("They", "their"),
+    "crowd": ("They", "their"), "everyone": ("They", "their"),
     "4boys": ("They", "their"), "5boys": ("They", "their"), "6+boys": ("They", "their"),
-    "0others": ("She", "their"),
 }
-_INTRO_KEYS = ("1girl", "1boy", "1other", "0others",
+# 判定顺序 = 引入句与人称的优先级 (取第一个命中的词)
+_INTRO_KEYS = ("1girl", "1boy", "1other", "solo",
                "2girls", "3girls", "4girls", "5girls",
                "6+girls", "2boys", "3boys",
                "multiple girls", "multiple boys", "multiple others",
-               "1girl and 1boy", "couple",
-               "group", "crowd", "everyone", "ot3", "solo",
-               "group of girls", "group of boys", "trio", "quartet",
-               "ensemble", "pair", "large group", "small group",
+               "couple",
+               "crowd", "everyone",
                "4boys", "5boys", "6+boys")
 # 环境词优先级 (越靠前越"有画面"), 取第一个命中的
 ENV_PRIORITY = ["rain", "snowing", "thunderstorm", "cherry blossoms",
@@ -117,6 +111,9 @@ ENV_PRIORITY = ["rain", "snowing", "thunderstorm", "cherry blossoms",
                 "forest", "city street"]
 LIGHT_PRIORITY = ["neon", "candle", "moonlight", "window light",
                   "backlighting", "rim lighting"]
+# 单人场景里禁用的句式关键词 —— 这些句子会把"第二个人"写进正面提示词。
+# bodies/shared: "Bodies tangle together ... shared warmth" 这类复数身体句同理。
+_PARTNER_HINTS = ("partner", "another", "bodies", "shared")
 GAZE_MAP = {
     "looking at viewer": "gaze_front", "looking back": "gaze_back",
     "sideways glance": "gaze_side", "looking away": "gaze_side",
@@ -173,22 +170,35 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
     ens = {p.en.lower() for p in picks}
     S, POS = _pronouns(ens)
     plural = S == "They"
+    # 人数轴上没有多人词 = 单人场景 (判据直接来自快照的人数轴分类, 不另立词表)
+    single_scene = not any(
+        p.id is not None and snap.axis_arr[p.id] == "count"
+        and p.en.lower() not in slotpolicy.SINGLE_COUNT_WORDS
+        for p in picks)
     out: list[str] = []
 
     def fill(t: str) -> str:
-        t = _render_subject(t, S, not plural)
-        return t.replace("{POS}", POS)
+        t = _render_subject(t, S, not plural).replace("{POS}", POS)
+        # {POS}/{O} 开头的句式没有大写来源 (句首大写原来只认 {S}) → 补上, 否则
+        # 渲染出 "her breath comes ragged" 这种小写开头的句子进正面提示词。
+        return t[:1].upper() + t[1:] if t[:1].islower() else t
 
     def take(family: str, avoid_start: str = "") -> str | None:
         vs = fam.get(family)
         if not vs:
             return None
         cands = [fill(v) for v in vs]
+        # 单人场景里剔掉"提第二个人"的句式 —— 实测 solo 与
+        # "as she pulls her partner closer" 同框, NL 自己把第二个人写进正面提示词,
+        # 和单人锁直接打架 (真机出 2girls)。判据用最终词表: 人数轴上没有多人词才算单人。
+        if single_scene:
+            cands = [c for c in cands
+                     if not any(h in c.lower() for h in _PARTNER_HINTS)]
         if avoid_start:
             alt = [c for c in cands if not c.startswith(avoid_start)]
             if alt:
                 cands = alt
-        return rng.choice(cands)
+        return rng.choice(cands) if cands else None
 
     # 1. 引入句 (人数词命中且有句式)
     intro = F.get("intro") or {}

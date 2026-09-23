@@ -1,6 +1,6 @@
 """反冲突规则引擎测试 (沙箱临时目录, 不碰真实数据)。
 
-用法: "D:/aiv4/python_embeded/python.exe" tests/conflicts_test.py
+用法: "D:/aiv5/python_embeded/python.exe" tests/conflicts_test.py
 """
 
 import json

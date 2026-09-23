@@ -102,6 +102,7 @@ class RuntimeSnapshot:
         "minor_block_words",  # 未成年在场时全池屏蔽词 (出厂表 ∪ 扩展包 minor_block 词)
         "hands_cost",        # per-tag 双手资源占用 (lib 词级, 如乳交=2; 0 = 无)
         "explicit_flag",     # 显式档标记 (NSFW 强度旋钮的分层加权输入)
+        "bg_slot_words",     # 背景处理槽里出现的全部词 (跨槽副本也认) —— 简背景闸门用
         # ---- 旧编译规则 (conflicts 页语义保留; 1.3.0 起仅作兜底黑名单)
         "conflict_map", "require_closure", "boost_map", "cond_effects",
         "mutex_rules", "invalid_rules",
@@ -150,6 +151,7 @@ class RuntimeSnapshot:
         self.bundled_only: frozenset = frozenset()
         self.en_groups: dict[str, frozenset] = {}
         self.minor_block_words: frozenset = frozenset(slotpolicy.MINOR_BLOCK_WORDS)
+        self.bg_slot_words: frozenset = frozenset()
         self.hands_cost: list[int] = []
         self.explicit_flag = bytearray()
         self.tags_ext: list[dict] = []
@@ -303,6 +305,14 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
     snap.sub_tag_ids = sub_tag_ids
     snap.sub_key_to_index = sub_key_to_index
     snap.sub_owner_cat = sub_owner_cat
+    # 简背景闸门要按**词**判, 不能只按槽: 同一个 en 可能挂在多个槽下 (见下方 1.8.0
+    # 跨槽副本并组), 按槽判会被别的槽的副本绕过去 —— 实测 "detailed background"
+    # 同时在 画质规格/细节强化, 简背景开着仍有 7.2% 抽出, 与 simple background 同框。
+    # ⚠ sub_key_to_index 的键是 (类目, 子类) **元组**, 不是 "类目/子类" 字符串 ——
+    #   写成字符串取到 None, 集合为空, 闸门静默失效 (踩过)。
+    _bg_si = sub_key_to_index.get(("场景环境", "背景处理"))
+    snap.bg_slot_words = (frozenset(tag_lower[i] for i in sub_tag_ids[_bg_si])
+                          if _bg_si is not None else frozenset())
     snap.type_names = type_names
     snap.pools = pools
     snap.pools_nonsfw = pools_nonsfw

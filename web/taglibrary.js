@@ -24,7 +24,7 @@ const NODE_NAME = "TagLibraryNode";
 // 面板构建号 —— 必须与 pyproject.toml 的 version 一致 (lint_check 会校验)。
 // 服务端 /taglib/api/panel-index 会回它自己的版本: 两者不一致 = 页面跑的是旧 JS,
 // 面板顶部就显示「插件已更新 → 点这里刷新」, 用户不用自己猜要不要 F5。
-const TL_BUILD = "1.13.0";
+const TL_BUILD = "1.13.2";
 
 /* chip 右键菜单 —— 单例复用。
    旧实现每次右键都 createElement + appendChild + 挂 document 监听,

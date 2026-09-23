@@ -83,8 +83,14 @@ class UiBridge:
                                        f"先跑: node {HUASHU_DIR}\\src\\cli.js bridge")
         token, port = info
         # ⚠ 必须 suppress_origin: 桥按 Origin 区分角色, 带 Origin 的 Node 客户端会被拒
-        self.ws = create_connection(f"ws://127.0.0.1:{port}", timeout=CMD_TIMEOUT,
-                                    suppress_origin=True)
+        # ⚠ 桥进程不在时 create_connection 抛的是原生 ConnectionRefusedError —— 不包成
+        #   UiError 的话, ensure_bridge 的"没起就拉起来"分支根本走不到 (实测)。
+        try:
+            self.ws = create_connection(f"ws://127.0.0.1:{port}", timeout=CMD_TIMEOUT,
+                                        suppress_origin=True)
+        except OSError as e:
+            self.ws = None
+            raise UiError("NO_BRIDGE", f"连不上 ws://127.0.0.1:{port} ({e})") from e
         self.ws.send(json.dumps({"type": "hello", "role": "agent", "token": token,
                                  "client": self.client, "label": self.label,
                                  "sessionId": self.session_id, "v": 1}))

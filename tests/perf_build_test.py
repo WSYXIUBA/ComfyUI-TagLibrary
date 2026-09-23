@@ -5,7 +5,7 @@
 - 断言故障红线 (禁止合并): 800→100ms, 5k→200ms, 10k→1000ms。
 - 可选 GIL 抢占测试: PERF_GIL_HOG=1 时后台线程间歇烧 CPU, 信息性输出。
 
-用法: "D:/aiv4/python_embeded/python.exe" tests/perf_build_test.py
+用法: "D:/aiv5/python_embeded/python.exe" tests/perf_build_test.py
 """
 
 import gc

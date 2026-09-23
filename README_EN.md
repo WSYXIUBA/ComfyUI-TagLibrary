@@ -3,17 +3,17 @@
 [中文文档](README.md) | **English**
 
 Structured tag-library node: assembly axes + weapon & object profile bundles + resource-budget conflict engine + natural-language tail.
-12 axes / 66 slots / 4458 tags / 18 weapon & object profiles / 50 mutex domains / 36 NL sentence families.
+13 axes / 66 slots / 4458 tags / 21 weapon & object profiles / 57 mutex domains / 37 NL sentence families.
 Outputs `STRING` (tag body + optional English NL tail) — just Convert to Input on any workflow's `CLIPTextEncode.text`. 1-4ms per generation.
 
 ![license](https://img.shields.io/badge/license-MIT-green) ![comfyui](https://img.shields.io/badge/ComfyUI-custom--node-blue) ![tests](https://img.shields.io/badge/tests-passing-brightgreen)
 
 ## Core Architecture (four pillars)
 
-- **Assembly axes**: the real skeleton of the library is not a 2-level tree — all 4458 tags are re-aggregated onto 12 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …), then grouped into six output sections following the official Anima tag order. The picker is a **single view**: section → axis → slot, each row with an enable toggle (off = written to exclusions, the whole row is skipped when rolling).
-- **Weapon & object profiles (⚔ bundles)**: 18 profiles (katana/sword/greatsword/gun/bow/staff/polearm + phone/book/umbrella/guitar/cup/camera/…) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
+- **Assembly axes**: the real skeleton of the library is not a 2-level tree — all 4458 tags are re-aggregated onto 13 axes (quality / headcount / identity / appearance / outfit / props & weapons / action / scene …), then grouped into six output sections following the official Anima tag order. The picker is a **single view**: section → axis → slot, each row with an enable toggle (off = written to exclusions, the whole row is skipped when rolling).
+- **Weapon & object profiles (⚔ bundles)**: 21 profiles (katana/sword/greatsword/gun/bow/staff/polearm/shield/shuriken/dual-knives + phone/book/umbrella/guitar/cup/camera/mic/flower/optics/snack/pen) carry pose bundles: each pose = tag group + hands + gaze + state slot + exclusions. **A rolled weapon always births with a grip pose; a pose never appears without its weapon** — naked weapons, two-handed katanas and bow-pose-carrying-guns are structurally impossible (10k-seed stress: 100% bundle birth rate).
 - **Resource-budget conflict model**: same-axis/same-group mutex + hands/gaze ledgers + state slots + 50 global mutex domains (🧬 inspectable & editable) derive conflicts structurally; cross-pool rules live on in `conflicts.json`. Gender lock and mouth-domain double-occupation are enforced at pool level AND exit level.
-- **Natural-language tail (✍ NL)**: after the tag body, 1-4 English sentences compiled from 36 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
+- **Natural-language tail (✍ NL)**: after the tag body, 1-4 English sentences compiled from 37 table-driven families (pronoun anaphora / sentence rotation / narrative order — three anti-stitch laws). Zero LLM on the hot path, seed-deterministic, toggleable in ⚙ Settings.
 
 ## Features
 
@@ -97,7 +97,7 @@ Restart ComfyUI. No pip dependencies.
 | `data/default/taglib/` | rule files only (**all .json**: conflicts / group rules / NL flavours / profiles / factory presets) |
 | `data/default/taglib/profiles.json` | weapon & object profiles (bundles / resources / state slots / NL) |
 | `data/default/taglib/grouprules.json` | global mutex domains (50 groups) |
-| `data/default/taglib/nl_flavors.json` | NL families (36 families + pose_map + object pools) |
+| `data/default/taglib/nl_flavors.json` | NL families (37 families + pose_map + object pools) |
 | `data/default/taglib/conflicts.json` | cross-pool rules (kept for compatibility) |
 | `data/default/backups/` | backups |
 
@@ -115,7 +115,7 @@ Restart ComfyUI. No pip dependencies.
 ## Tests
 
 ```bash
-python tools/run_gates.py               # 14 offline gates
+python tools/run_gates.py               # 15 offline gates
 python tools/run_gates.py --with-online # + 4 gates that need a running ComfyUI
 python tools/run_gates.py --list
 python tools/run_gates.py m1 m3         # run a subset
@@ -136,7 +136,7 @@ browser UI walkthrough (screenshots + asserts incl. default-mode setting), theme
 
 ## Changelog
 
-Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.13.0**.
+Full version history in [CHANGELOG.md](CHANGELOG.md) (Chinese). Current: **v1.13.2**.
 
 ## License
 

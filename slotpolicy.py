@@ -219,20 +219,17 @@ def total_min_sum() -> int:
 # ------------------------------------------------------------------ 人数语义
 # 单人词: 出现即表示画面只有一个人 -> 互动类槽位不成立
 SINGLE_COUNT_WORDS = frozenset({
-    "solo", "1girl", "1boy", "1other", "single", "0others",
+    "solo", "1girl", "1boy", "1other", "single",
 })
 
 # 多人词: 表示画面有多人 -> 互动类槽位成立
 # ⚠ 人数轴**每加一个词都要同步这张表和 nl._PRONOUN**, 否则: NL 尾段人称回落
-#   "She" (large group 配 She has 的实测出处)、互动槽位该开不开。
+#   "She" (群像词配 She has 的实测出处)、互动槽位该开不开。
 # quality_gate_test Q10 固化了"人数轴词必须全部被分类"这道防线。
 MULTI_COUNT_WORDS = frozenset({
     "2girls", "3girls", "4girls", "5girls", "6+girls", "2boys", "3boys",
-    "multiple girls", "multiple boys", "multiple others", "group", "crowd",
-    "1girl and 1boy", "1boy and 1girl", "couple", "everyone", "ot3",
-    # 1.7.0 补齐 (此前漏分类: "large group + She has..." 人称错位实测)
-    "group of girls", "group of boys", "trio", "quartet", "ensemble",
-    "pair", "large group", "small group",
+    "multiple girls", "multiple boys", "multiple others", "crowd",
+    "hetero", "1boy and 1girl", "couple", "everyone",
     # 1.8.0 ext 扩展包新增人数词 (新增人数词必须同步本表与 nl._PRONOUN)
     "4boys", "5boys", "6+boys",
 })
@@ -347,6 +344,48 @@ PORTRAIT_FRAMING_WORDS = frozenset({
     "from the chest up", "knee-up shot",
 })
 
+# bg_mode=simple: 别的槽里"会摆出一个具体环境"的词, 按词封禁。
+# 为什么需要: 简背景闸门按**槽**封 (场景环境/*)，但库里 en 重复 4700+ 条 ——
+# 同一个词挂在别的槽下时就能绕过去 (实测 "detailed background" 同时在
+# 画质规格/细节强化, 简背景开着仍有 7.2% 被抽出, 与 simple background 同框自相矛盾)。
+# 清单来源: tools/scan_envwords.py 全库扫描 + 人工筛 (只留真会摆出地点/天气/时段的,
+# 纯照明词如 backlighting / god rays 保留)。
+SIMPLE_BG_ENV_BAN_WORDS = frozenset({
+    # 光影氛围 —— 点名场所或天象
+    "candlelit room", "street lamp at night", "bioluminescent shore",
+    "dappled forest light", "moonlight through window", "window light",
+    "barred window shadows", "god rays through window", "volumetric fog light",
+    "fog volumetrics", "moon glow",
+    # 光影氛围 —— 时段/天气 (与已封的 场景环境/时间时段 对齐)
+    "morning light", "sun through clouds", "sunrise backlight",
+    "sunset backlight", "sunset glow", "broken cloud light",
+    # 光影氛围/氛围情绪 —— 天气与季节
+    "after-rain freshness", "cozy rainy night", "nostalgic summer", "hope in ruins",
+    # 风格媒介 —— 直接点名拍摄场所
+    "interior photography", "street photography", "anime screencap night",
+    "makoto shinkai sky", "kanou school", "street mural",
+    # 材质特效 —— 天气粒子
+    "fog", "night sky effect", "sonic boom cloud", "packed snow",
+    "snow on skin", "snow dusted",
+    # 动作姿态 —— 需要有墙/窗/地板才成立
+    "looking out window", "looking through window", "looking at sky",
+    "head against wall", "leaning on wall", "sitting on floor",
+    "sitting cross-legged on floor",
+    # 道具 —— 建筑构件
+    "window", "door", "wind chime",
+    # 构图镜头 / 外貌
+    "rain on lens", "rain drops on skin", "silhouette against sky",
+    "window framing",
+})
+
+# 人数轴: 只有能给画面一个真实"单人锚点"的 booru 词才算数。
+# 1.13.2 词库对齐后此表已清空 —— 原先非空的唯一成员 "0others" (zh 无他人) 是库里
+# 自造词, 图像模型读不懂它; 单人锁下它独占人数轴时 (实测 1500 seed 里 33%) 提示词里
+# 就没有 1girl/solo。真机 43 张: 出 0others 的 11 张里 5 张被判 2girls/multiple girls,
+# 而出 solo 的 15 张 0 张。该词已改名为 solo 并进了 aliases。
+# 保留空表 + 引擎侧闸门: 用户自造人数词时仍有兜底 (Q10 只保证分类, 不保证是 booru 词)。
+COUNT_NO_ANCHOR_WORDS: frozenset = frozenset()
+
 
 # ---------------------------------------------------------------- 单人锁补充 (1.8.1)
 # 👤单人锁除人数轴/互动槽外, 还要封"隐含多人的行为词" —— 否则 1other + gangbang 这类
@@ -361,3 +400,53 @@ SOLO_BAN_WORDS = frozenset({
     # 每个词都被分类), 这里是"单人锁下的禁令", 两件事, 不冲突。
     "1other",
 })
+
+# 👤单人锁 · 需要搭档的词 (2026-09-23 真机出图审查补)
+# 单人锁原来只封 动作姿态/互动与双人 整槽, 但"第二个人"散落在别的槽里 —— 实测:
+#   solo + reverse cowgirl position + grabbing another's ass -> 出图 1boy+1girl
+#   solo + doggystyle / oral + handjob                        -> WD14 判 2girls
+# 这些词本身就预设了第二个人在场, 单人锁下必须一起封。**按词不按槽**: 同一个槽里还有
+# 单人也能做的 (on back / m legs / masturbation / bound / gagged), 整槽封会误杀。
+# 清单来源: 逐槽 dump (tools/dump_slots.py) + 逐个判定"是否隐含第二人"。
+SOLO_PARTNER_WORDS = frozenset({
+    # 体位 (全部预设另一个身体; 保留 on back / on side / on stomach / folded / m legs)
+    "boy on top", "girl on top", "cowgirl position", "reverse cowgirl position",
+    "squatting cowgirl position", "upright straddle", "missionary", "doggystyle",
+    "prone bone", "sex from behind", "standing sex", "sitting on person",
+    "straddling paizuri",
+    # 性行为 (需要另一人参与; 保留 *masturbation / nipple stim / object insertion)
+    "after sex", "after vaginal", "anal", "vaginal", "sex", "clothed sex", "happy sex",
+    "kiss", "kissing neck", "oral", "handjob", "footjob", "footjob with legwear",
+    "two-footed footjob", "fellatio", "cooperative fellatio", "irrumatio",
+    "licking penis", "paizuri", "paizuri under clothes", "cunnilingus", "deepthroat",
+    "femdom", "breast sucking", "grabbing another's ass", "grabbing another's breast",
+    "grabbing from behind", "groping", "condom on penis",
+    # 取向标记 —— 本身就意味着两个人 (hetero = 1boy+1girl)
+    "hetero", "yuri", "yaoi", "interracial",
+    # 体液/高潮 —— 需要另一人"给"
+    "bukkake", "facial", "cum in mouth", "cum in pussy", "cum in ass",
+    "internal cumshot", "projectile cum", "ejaculating while penetrated",
+    # 束缚/调教 —— 另一个人施加
+    "forced orgasm", "holding leash", "pet play", "slave", "bdsm",
+    # 词面带第二人指代, 但子串规则不好覆盖的
+    "looking at another", "leaning on person",
+})
+# 词面自带"另一个人"的一律封 (自动命中将来新增的词, 不用手工维护)。
+# ⚠ 不能直接用 "person"/"another": 误伤 another world(异世界题材)、first-person view /
+#   third-person view(机位)、dragon person / tiny person(种族体型) —— 实测 13 个命中里 8 个
+#   是误伤。故只认"another's" + 上面显式列的两个。
+SOLO_PARTNER_SUBSTR = ("another's",)
+
+# 👤单人锁 · 人数锚点补强 (2026-09-23 真机出图审查补)
+# 87 张真机出图 (全部单人锁开) 实测: 提示词里是 solo 的 37 张只有 **3%** 出多人;
+# 是 1girl 的 39 张有 **21%**; 出图被判女性的比例 solo 组 97% / 1girl 组 74%。
+# 也就是 solo 才是真正的人数和性别双重锚点。冲突表里早就写着
+# "1girl+solo 黄金组合保留", 但引擎每次只抽一个人数词 —— 单人锁下补上 solo。
+# 判据: 人数轴出现这一对时, "人数轴有且只有 1 个词" 的不变量按例外放行。
+SOLO_ANCHOR_COMBO = frozenset({"1girl", "1boy", "solo"})
+
+
+def is_solo_anchor_combo(axis_words) -> bool:
+    """人数轴上的词是否只是 '单人性别词 + solo' 这一对 (冲突表保留的黄金组合)。"""
+    ws = {str(w).strip().lower() for w in axis_words}
+    return "solo" in ws and ws <= SOLO_ANCHOR_COMBO

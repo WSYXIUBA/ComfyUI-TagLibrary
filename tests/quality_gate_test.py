@@ -83,6 +83,7 @@ def main() -> int:
                 fails.append(f"Q1 seed{seed}: {len(picks)} 词不在 {MIN_WORDS}~{MAX_WORDS}")
 
         slot_n, excl_hit, n_count = Counter(), Counter(), 0
+        count_words = []
         for p in picks:
             if p.id is None:
                 continue
@@ -93,10 +94,13 @@ def main() -> int:
                 excl_hit[g] += 1
             if snap.axis_arr[p.id] == "count":
                 n_count += 1
+                count_words.append(str(p.en).strip().lower())
+        # 1girl+solo 黄金组合 (冲突表保留, 单人锁下引擎补 solo 锚点) -> 人数槽放行这一对
+        solo_combo = slotpolicy.is_solo_anchor_combo(count_words)
 
         for k, v in slot_n.items():
             cap = slotpolicy.caps_for(k)[1]  # max_n
-            if v > cap:
+            if v > cap and not (solo_combo and k == "人数/人数" and v == 2):
                 stat["Q2"] += 1
                 if len(fails) < 12:
                     fails.append(f"Q2 seed{seed}: 槽位 {k} 出了 {v} 个 (上限 {cap})")

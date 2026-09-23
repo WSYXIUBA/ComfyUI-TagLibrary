@@ -180,14 +180,14 @@ _NSFW_WORDS = {"implied masturbation"}
 # 实测只有 33% 的轮次能锁上 —— 因为 2girls / multiple girls / 2boys 这些
 # **本身已声明性别**的人数词全都没有 gender 标记, 于是外貌与服装槽照样混抽,
 # 重新出现 "1boy + faceless female" 那类矛盾。
-# （`1girl and 1boy` / `couple` 等属混合宣言, 由 engine.MIXED_COUNT_WORDS 处理, 不在此列。）
+# （`couple` 等属混合宣言, 由 engine.MIXED_COUNT_WORDS 处理, 不在此列。）
 GENDER_FIXES: dict[str, str] = {
     "1girl": "female", "1other": "female",
     "2girls": "female", "3girls": "female", "4girls": "female",
     "5girls": "female", "6+girls": "female",
-    "multiple girls": "female", "group of girls": "female",
+    "multiple girls": "female",
     "1boy": "male", "2boys": "male", "3boys": "male",
-    "multiple boys": "male", "group of boys": "male",
+    "multiple boys": "male",
 }
 
 # ---------------------------------------------------------------- 归位 (move)

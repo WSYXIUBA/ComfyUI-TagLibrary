@@ -1785,8 +1785,10 @@
        "axis": "count"
       },
       {
-       "en": "0others",
-       "aliases": [],
+       "en": "solo",
+       "aliases": [
+        "0others"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "无他人",
@@ -1803,8 +1805,11 @@
        "axis": "count"
       },
       {
-       "en": "1girl and 1boy",
-       "aliases": [],
+       "en": "couple",
+       "aliases": [
+        "1girl and 1boy",
+        "hetero"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "一女一男",
@@ -1823,8 +1828,10 @@
        "axis": "count"
       },
       {
-       "en": "group of girls",
-       "aliases": [],
+       "en": "multiple girls",
+       "aliases": [
+        "group of girls"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "女团",
@@ -1839,12 +1846,14 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
-       "en": "group of boys",
-       "aliases": [],
+       "en": "multiple boys",
+       "aliases": [
+        "group of boys"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "男团",
@@ -1863,8 +1872,10 @@
        "axis": "count"
       },
       {
-       "en": "trio",
-       "aliases": [],
+       "en": "3girls",
+       "aliases": [
+        "trio"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "三人组",
@@ -1879,12 +1890,14 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
-       "en": "quartet",
-       "aliases": [],
+       "en": "4girls",
+       "aliases": [
+        "quartet"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "四人组",
@@ -1899,12 +1912,14 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
-       "en": "ensemble",
-       "aliases": [],
+       "en": "crowd",
+       "aliases": [
+        "ensemble"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "合奏人群",
@@ -1943,8 +1958,10 @@
        "axis": "count"
       },
       {
-       "en": "pair",
-       "aliases": [],
+       "en": "2girls",
+       "aliases": [
+        "pair"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "成对",
@@ -1959,12 +1976,14 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
-       "en": "large group",
-       "aliases": [],
+       "en": "crowd",
+       "aliases": [
+        "large group"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "大群体",
@@ -1983,8 +2002,10 @@
        "axis": "count"
       },
       {
-       "en": "small group",
-       "aliases": [],
+       "en": "multiple girls",
+       "aliases": [
+        "small group"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "小群体",
@@ -1999,7 +2020,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
@@ -2101,8 +2122,10 @@
        "zh": "多人（其他）"
       },
       {
-       "en": "group",
-       "aliases": [],
+       "en": "multiple girls",
+       "aliases": [
+        "group"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "群像",
@@ -2117,12 +2140,14 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
-       "en": "ot3",
-       "aliases": [],
+       "en": "3girls",
+       "aliases": [
+        "ot3"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "三人组",
@@ -2137,7 +2162,7 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "gender": "",
+       "gender": "female",
        "axis": "count"
       },
       {
