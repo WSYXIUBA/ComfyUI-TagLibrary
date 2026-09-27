@@ -516,8 +516,8 @@ TOPUP = [
     ("butt_crack", "外貌特征/身体细节", "臀缝"),
 ]
 
-# ---------------------------------------------------------------- 互斥域 (nsfw_grouprules.json)
-# 与出厂 grouprules.json 同名 id 的域会按并集合并 (加载器扩展)。
+# ---------------------------------------------------------------- 互斥域 (ext 库文件 rules.groups 段)
+# 与出厂 rules.groups 同名 id 的域会按并集合并 (library 层归并)。
 
 def _domain_members():
     pos = ["missionary", "doggystyle", "cowgirl position", "reverse cowgirl position",
@@ -547,7 +547,7 @@ def _domain_members():
         "orientation": ["hetero", "yuri", "yaoi"],
     }
 
-# ---------------------------------------------------------------- 跨池规则 (nsfw_conflicts.json)
+# ---------------------------------------------------------------- 跨池规则 (ext 库文件 rules.conflicts 段)
 # word↔slot 批量互斥; 槽位名用现行 "轴/槽位" 路径。
 
 CROSS_RULES = [

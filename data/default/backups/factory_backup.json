@@ -51155,7 +51155,9 @@
        "type": "composition",
        "priority": 50,
        "rarity": "common",
-       "groups": [],
+       "groups": [
+        "camera.face_visible"
+       ],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -51737,7 +51739,9 @@
        "type": "composition",
        "priority": 50,
        "rarity": "common",
-       "groups": [],
+       "groups": [
+        "camera.face_visible"
+       ],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -51856,6 +51860,7 @@
        "priority": 50,
        "rarity": "common",
        "groups": [
+        "camera.face_visible",
         "m:legacy.facing",
         "m:orientation"
        ],
@@ -51877,6 +51882,7 @@
        "priority": 50,
        "rarity": "common",
        "groups": [
+        "camera.face_visible",
         "m:legacy.facing",
         "m:orientation"
        ],
@@ -51898,6 +51904,7 @@
        "priority": 50,
        "rarity": "common",
        "groups": [
+        "camera.face_visible",
         "m:legacy.facing",
         "m:orientation"
        ],
@@ -52039,7 +52046,9 @@
        "type": "composition",
        "priority": 50,
        "rarity": "common",
-       "groups": [],
+       "groups": [
+        "camera.face_visible"
+       ],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -52414,7 +52423,9 @@
        "type": "composition",
        "priority": 50,
        "rarity": "common",
-       "groups": [],
+       "groups": [
+        "camera.face_visible"
+       ],
        "requires": [],
        "mutex_with": [],
        "desc": "",

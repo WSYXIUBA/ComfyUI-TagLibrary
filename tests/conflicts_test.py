@@ -1,5 +1,6 @@
 """反冲突规则引擎测试 (沙箱临时目录, 不碰真实数据)。
 
+1.14.0 起规则内嵌词库文件: 沙箱改为劫持 library 的三个路径。
 用法: "D:/aiv5/python_embeded/python.exe" tests/conflicts_test.py
 """
 
@@ -11,8 +12,8 @@ import tempfile
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import library
 import tagconflicts
-import datapaths
 
 PASS, FAIL = [], []
 
@@ -43,41 +44,69 @@ def make_lib():
     ]}
 
 
+def _write_json(path, data):
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=1)
+
+
+def _set_rules(rules=None, groups=None):
+    """直接改写沙箱默认库的 rules 段 (模拟外部编辑), 再清缓存。"""
+    lib = json.load(open(library.DEFAULT_PATH, encoding="utf-8"))
+    rd = dict(lib.get("rules") or {})
+    if rules is not None:
+        rd["conflicts"] = rules
+    if groups is not None:
+        rd["groups"] = groups
+    if rd.get("conflicts") or rd.get("groups"):
+        lib["rules"] = rd
+    else:
+        lib.pop("rules", None)
+    _write_json(library.DEFAULT_PATH, lib)
+    library.invalidate_cache()
+    tagconflicts.invalidate()
+
+
 def main():
     tmp = tempfile.mkdtemp(prefix="taglib_conf_")
-    # 沙箱: 指到临时目录
-    datapaths.LIBRARY_DIR = tmp
-    tagconflicts.CONFLICTS_PATH = os.path.join(tmp, "conflicts.json")
-    tagconflicts.LEGACY_GROUPS_PATH = os.path.join(tmp, "legacy_groups.json")  # 沙箱, 不碰真实旧文件
+    # 沙箱: 库文件指到临时目录 (规则真源 = 库文件)
+    orig = (library.DEFAULT_PATH, library.EXT_PATH, library.USER_PATH)
+    library.DEFAULT_PATH = os.path.join(tmp, "tag_library.json")
+    library.EXT_PATH = os.path.join(tmp, "tag_library.ext.json")
+    library.USER_PATH = os.path.join(tmp, "tag_library.user.json")
+    _write_json(library.DEFAULT_PATH, {"version": 1, "categories": []})
+    library.invalidate_cache()
     tagconflicts.invalidate()
 
     try:
-        print("== 1. 缺文件 → 默认规则自动生成 ==")
+        print("== 1. 库中无 rules 段 → 默认规则 (内存回退, 不落盘) ==")
         rules = tagconflicts.load_rules()
         ids = [r["id"] for r in rules]
         check("默认规则 6 条", len(rules) == 6, str(ids))
         check("默认含套装/画风互斥", {"suit-vs-tops", "realism-vs-anime"} <= set(ids))
-        check("无真实旧文件泄漏进沙箱", not any(i.startswith("legacy.") for i in ids))
         check("nude-vs-clothes 存在", "nude-vs-clothes" in ids)
-        check("conflicts.json 落盘", os.path.isfile(tagconflicts.CONFLICTS_PATH))
-        raw = json.load(open(tagconflicts.CONFLICTS_PATH, encoding="utf-8"))
-        check("文件带 _说明 (AI 可读)", "_说明" in raw and "kind" in raw["_说明"])
+        raw = json.load(open(library.DEFAULT_PATH, encoding="utf-8"))
+        check("回退不写盘 (库文件无 rules 键)", "rules" not in raw)
 
-        print("== 2. 旧互斥组自动迁移 ==")
-        with open(os.path.join(os.path.dirname(tmp), "x"), "w") as f:
-            pass  # noop
-        old_path = tagconflicts.LEGACY_GROUPS_PATH
-        with open(old_path, "w", encoding="utf-8") as f:
-            json.dump({"version": 1, "groups": [
-                {"id": "mouth", "name": "嘴部", "tags": ["open mouth", "closed mouth", "smirk"]}]},
-                f, ensure_ascii=False)
-        tagconflicts.load_rules()
+        print("== 2. 旧独立文件并入库文件 (conflicts.json + grouprules.json) ==")
+        tldir = os.path.join(tmp, "taglib")
+        os.makedirs(tldir, exist_ok=True)
+        _write_json(os.path.join(tldir, "conflicts.json"), {"version": 1, "rules": [
+            {"id": "old1", "left": {"kind": "tags", "value": ["a b", "c d"]},
+             "right": [{"kind": "tag", "value": "a b"}, {"kind": "tag", "value": "c d"}]}]})
+        _write_json(os.path.join(tldir, "grouprules.json"), {"version": 1, "groups": [
+            {"id": "legacy.mouth", "members": ["open mouth", "closed mouth", "smirk"]}]})
+        library._migrate_rules_files()
+        lib = json.load(open(library.DEFAULT_PATH, encoding="utf-8"))
+        rr = lib.get("rules") or {}
+        check("conflicts 并入库文件", [x["id"] for x in rr.get("conflicts", [])] == ["old1"],
+              str(rr)[:120])
+        check("groups 并入库文件", (rr.get("groups") or [{}])[0].get("id") == "legacy.mouth")
+        check("旧文件已归档", not os.path.isfile(os.path.join(tldir, "conflicts.json"))
+              and os.path.isfile(os.path.join(tmp, "backups", "legacy-rules", "conflicts.json")))
+        library.invalidate_cache()
         tagconflicts.invalidate()
-        tagconflicts.load_rules()
-        # 迁移只在 _fresh_payload (文件不存在) 时发生 → 这里手动触发
-        merged = tagconflicts._migrate_legacy_groups()
-        check("旧组转规则", len(merged) == 1 and merged[0]["left"]["kind"] == "tags"
-              and len(merged[0]["right"]) == 3, str(merged)[:120])
+        ids2 = [r["id"] for r in tagconflicts.load_rules()]
+        check("并入后 load_rules 读到旧规则", ids2 == ["old1"], str(ids2))
 
         print("== 3. 解析 + 失效校验 ==")
         lib = make_lib()
@@ -90,6 +119,11 @@ def main():
         check("失效引用识别", ok is False and s == set())
 
         print("== 4. 互斥索引: 裸体 ↔ 上装, 配饰不冲突 ==")
+        _set_rules(rules=[
+            {"id": "nude-vs-clothes",
+             "left": {"kind": "tags", "value": ["nude", "topless"]},
+             "right": [{"kind": "sub", "value": "服装系统/上装"}]},
+        ])
         ex = tagconflicts.ExclusionIndex(lib)
         banned = ex.banned_for({"nude"})
         check("nude → corset/jacket 被禁", {"corset", "jacket"} <= banned, str(banned))
@@ -98,38 +132,49 @@ def main():
         check("反向: corset → nude 被禁 (对称)", "nude" in ex.banned_for({"corset"}))
         check("无关标签不受影响", not (ex.banned_for({"collarbone"}) & {"corset", "necklace"}))
 
-        print("== 5. 保存规则: id 去重 + 形状校验 ==")
+        print("== 5. 保存规则: id 去重 + 形状校验 (写回库文件) ==")
+        _set_rules(rules=[])
         res = tagconflicts.save_rules([
             {"id": "a", "left": {"kind": "tag", "value": "x"}, "right": [{"kind": "tag", "value": "y"}]},
             {"id": "a", "left": {"kind": "tag", "value": "p"}, "right": [{"kind": "tag", "value": "q"}]},
             {"id": "bad", "left": {"kind": "nope", "value": "x"}, "right": [{"kind": "tag", "value": "y"}]},
         ])
         check("保存成功且 id 去重", res["ok"] and res["count"] == 2, str(res))
+        saved = json.load(open(library.DEFAULT_PATH, encoding="utf-8"))
+        saved_ids = [x["id"] for x in (saved.get("rules") or {}).get("conflicts", [])]
+        check("落盘于库文件 rules 段", saved_ids == ["a", "a-2"], str(saved_ids))
         rules3 = tagconflicts.load_rules()
-        check("非法形状被剔除", {r["id"] for r in rules3} == {"a", "a-2"}, str([r['id'] for r in rules3]))
+        check("读回为已保存规则", {r["id"] for r in rules3} == {"a", "a-2"}, str([r["id"] for r in rules3]))
 
-        print("== 6. 旧接口兼容 ==")
-        # 第5节覆盖过规则文件, 放回裸露↔上装规则供本节使用
-        tagconflicts.save_rules([
-            {"id": "nude-vs-clothes",
-             "left": {"kind": "tags", "value": ["nude", "topless"]},
-             "right": [{"kind": "sub", "value": "服装系统/上装"}]},
-            {"id": "g1", "note": "旧互斥组形态",
-             "left": {"kind": "tags", "value": ["open mouth", "closed mouth"]},
-             "right": [{"kind": "tag", "value": "open mouth"},
-                       {"kind": "tag", "value": "closed mouth"}]},
-        ])
-        groups = tagconflicts.get_groups()
-        check("get_groups 只还原组形态规则", len(groups) == 1 and groups[0]["id"] == "g1"
-              and groups[0]["tags"] == ["open mouth", "closed mouth"], str(groups))
+        print("== 6. ext 层规则: 合并且不写回默认库 (影子防护) ==")
+        _write_json(library.EXT_PATH, {"version": 1, "categories": [], "rules": {"conflicts": [
+            {"id": "ext.shadow", "left": {"kind": "tag", "value": "x"},
+             "right": [{"kind": "tag", "value": "y"}]}]}})
+        library.invalidate_cache()
+        tagconflicts.invalidate()
+        merged = tagconflicts.load_rules()
+        check("ext 规则出现在合并视图", "ext.shadow" in {r["id"] for r in merged},
+              str([r["id"] for r in merged]))
+        tagconflicts.save_rules(merged)   # 整表回写 (模拟管理页整表保存)
+        saved2 = json.load(open(library.DEFAULT_PATH, encoding="utf-8"))
+        ids_saved = {x["id"] for x in (saved2.get("rules") or {}).get("conflicts", [])}
+        check("ext 规则不落回默认库", "ext.shadow" not in ids_saved, str(sorted(ids_saved)))
+        merged2 = tagconflicts.load_rules()
+        check("保存后合并视图仍含 ext (45→35 回归)", "ext.shadow" in {r["id"] for r in merged2},
+              str([r["id"] for r in merged2]))
+        check("保存后默认库规则仍在", {"a", "a-2"} <= {r["id"] for r in merged2})
+
+        print("== 7. check_selection 体检 ==")
+        _set_rules(rules=[{"id": "nude-vs-clothes",
+                           "left": {"kind": "tags", "value": ["nude", "topless"]},
+                           "right": [{"kind": "sub", "value": "服装系统/上装"}]}])
         sel = tagconflicts.check_selection(["nude", "corset"], lib)
         check("check_selection 体检", "nude" in sel and "corset" in sel["nude"], str(sel))
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
-        try:
-            os.remove(tagconflicts.LEGACY_GROUPS_PATH)
-        except OSError:
-            pass
+        library.DEFAULT_PATH, library.EXT_PATH, library.USER_PATH = orig
+        library.invalidate_cache()
+        tagconflicts.invalidate()
 
     print(f"\n===== 结果: {len(PASS)} 过, {len(FAIL)} 挂 =====")
     if FAIL:

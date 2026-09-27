@@ -2,6 +2,32 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
+## v1.14.0（开发中）— 反冲突规则单文件化 · 配额功能退役 · 节点分类与元数据修复（2026-09-27）
+
+**架构 · 规则并入库文件（单文件化）**
+- 反冲突规则表与全局互斥域从独立文件（`conflicts.json` / `grouprules.json` / `nsfw_conflicts.json` / `nsfw_grouprules.json`）
+  并入所在层库文件的 `rules` 段（`rules.conflicts` / `rules.groups`），层序归并 default ← ext ← user。
+- 启动时自动迁移（幂等）：旧文件并回后归档到 `data/default/backups/legacy-rules/`。
+- 管理页保存写回默认库文件；ext.* 规则仍归扩展包管，不双写（原 45→35 影子防护保留）。
+- 少四个独立文件的路径分支/缓存/加载代码；备份、分发、合并都走同一套库文件。
+
+**功能 · 逐槽位自定义配额退役**
+- 挑选器「自动配额」总开关与逐槽位自定义范围删除（子分类几乎不动它，各功能内置配额即最优）。
+  槽位数量全部走引擎内置配额，面板保留只读展示；旧状态键 `fill_master` / `fill_sub_ranges` 被引擎忽略（旧图/旧状态兼容）。
+
+**修复 · 节点分类与 PNG 元数据**
+- 节点分类 `纸心/prompt` → `TagLibrary`（节点库不再出现「项目名 › 纸心 › 节点」层级）。
+- PNG 元数据改为执行期记录完整节点状态（实际出词 + `selection_state` + seed），拖回导入回填正确；
+  修复此前「慢一拍」（workflow 在 queue 时序列化、状态执行后才回写）导致的显示不对。
+
+**NL 输出语义**
+- 尾部句按段位并入对应段（主体 / 动作 / 场景），不再全部堆到结尾；`no humans` 场景不生成人物句。
+- 护栏补词：未成年锁加 `aged down` / `newborn`，单人锁加 `crowd shot` / `group portrait` / `two-shot` 等群像构图词。
+
+**清理**
+- 归档：`node.zip` 旧发布包、`_tagmeta.json`（1.12.0 已删功能残留）、上古根级 `conflicts.json`（已被 legacy.* 互斥域覆盖）、失效测试 `tagmeta_roundtrip_test.py`。
+- 写路径统一：`save_rules` / `save_grouprules` 走 `library.save_rules_into_default`；删除 `get_groups` / `save_groups` 旧接口。
+
 ## v1.13.2 — 人数词库对齐 danbooru: 12 个模型读不懂的词换成真标签（2026-09-23）
 
 `tools/danbooru_audit.py` 全库审计: 56% 的词不是 danbooru 标签。人数轴最要紧 ——

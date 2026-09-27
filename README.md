@@ -12,7 +12,7 @@
 
 - **拼装轴**：标签的真正骨架不是二级树——4458 词按 13 条轴（画质/人数/角色/外貌/服装/道具武器/动作/场景…）聚合，再按 Anima 官方 tag order 分成六个输出段位。挑选器是**单一视图**：段位 → 轴 → 槽位逐级展开，每行自带启用开关（关 = 写入排除类目，抽取时整条跳过）。
 - **武器·物品档案（⚔ bundle）**：21 份档案（武士刀/剑/大剑/枪械/弓/法杖/长柄/盾/手里剑/双刀 + 手机/书/伞/吉他/杯子/相机/麦克风/花束/望远镜/零食/笔）自带姿势束：每条姿势=标签组+手数+视线+状态槽+排斥声明。**抽中武器必带持握姿势，姿势必随武器出生**——裸武器、双持单手刀、弓蹭枪姿势这类肢解结构上很难出现（万 seed 压测里束出生率接近满值）。
-- **资源预算冲突模型**：同轴/同组互斥 + hands/gaze 资源账本 + 状态槽 + 50 个全局互斥域（🧬 可查可编辑）从结构上自动推导冲突；跨池规则保留在 `conflicts.json`。性别锁（1boy 不出女词）、嘴部域（一口不能两衔）全链路出口复核。
+- **资源预算冲突模型**：同轴/同组互斥 + hands/gaze 资源账本 + 状态槽 + 50 个全局互斥域（🧬 可查可编辑）从结构上自动推导冲突；跨池规则与互斥域都内嵌在词库文件的 `rules` 段（单文件，随库备份/分发）。性别锁（1boy 不出女词）、嘴部域（一口不能两衔）全链路出口复核。
 - **自然语言尾段（✍ NL）**：标签主体之后追加 1-4 句英文描写，由句式族查表编译（人称回指、句式轮换、叙事顺序三律防拼接感），热路径零 LLM、seed 决定论可复现，面板 ⚙ 可关；NSFW 场景可加载独立句式包（`nsfw_nl.json`，用户自填内容）
 
 ## 出词效率套件（v1.8.0 / 1.8.1）
@@ -31,7 +31,7 @@
 
 ## NSFW 扩展包（不入发布包）
 
-NSFW 词表体系以扩展包形式分发（`tag_library.ext.json` / `nsfw_grouprules.json` / `nsfw_conflicts.json` / `nsfw_nl.json`，均 gitignore）——**发布包内不含任何露骨词**，Registry 合规：
+NSFW 词表体系以扩展包形式分发（`tag_library.ext.json`（含互斥域/跨池规则 `rules` 段）/ `nsfw_nl.json`，均 gitignore）——**发布包内不含任何露骨词**，Registry 合规：
 
 - 新增 5 个 NSFW 槽位：`服装/服装状态`（半脱机制）/ `动作姿态/体位` / `动作姿态/性行为` / `动作姿态/束缚与调教` / `动作姿态/高潮与体液` + `道具武器/束缚道具`、`外貌特征/身体细节`
 - 词源经 danbooru post_count 校验（≥1500 posts 才收录），高频词自动加权
@@ -50,7 +50,7 @@ NSFW 词表体系以扩展包形式分发（`tag_library.ext.json` / `nsfw_group
 - **档案可视化**：每份档案卡片=身份词、各姿势（标签/吃几只手/状态槽/排斥词）表格、挂载诊断徽章（哪些武器词没挂上直接标红），各字段行内可编辑，JSON 编辑保存即生效
 - **独立管理页**：浏览器直达 `http://127.0.0.1:8188/taglib` 或顶栏 🏷 按钮；分类/子分类/标签全级 CRUD、图标自定义、chip 流、批量粘贴导入、全文搜索
 - **NSFW 分级**：裸露/露骨类标签红色显示、开关控制隐藏与输出
-- **库文件即数据（.json）**：整库就 `tag_library.json` + `tag_library.user.json` 两个文件（外加 `taglib/*.json` 规则文件），没有镜像目录、没有 .md 中间层；管理页「📤 导出整库 / 📤 导出我的 / 📥 导入 .json」直接进出原文件，文件里带 `_说明` 写清格式与规则（JSON 无注释，用保留键）
+- **库文件即数据（.json）**：整库就 `tag_library.json` + `tag_library.user.json` 两个文件（外加 `taglib/*.json` 素材文件：NL 风味/档案/预设），没有镜像目录、没有 .md 中间层；反冲突规则与互斥域内嵌库文件 `rules` 段；管理页「📤 导出整库 / 📤 导出我的 / 📥 导入 .json」直接进出原文件，文件里带 `_说明` 写清格式与规则（JSON 无注释，用保留键）
 - **备份机制**：💾 存为默认库 / ↺ 恢复备份库 / 🗑 清空标签库（清空前可顺手导出整库 .json）
 - **钉选语义**：📌 钉选标签随机/填充/生成回显必含且不被覆盖；钉选武器同样带束出生
 - **出图元数据**：PNG 信息自动写入 `TagLibrary` 键（节点/模式/种子/实际出词），同 seed 可复现
@@ -123,13 +123,11 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 
 | 文件/目录 | 说明 |
 |---|---|
-| `data/default/tag_library.json` | 出厂默认库（随插件更新） |
+| `data/default/tag_library.json` | 出厂默认库（随插件更新；含 `rules` 段：反冲突 + 互斥域） |
 | `data/default/tag_library.user.json` | 用户库快照（管理页保存；升级时不动它） |
-| `data/default/taglib/` | 规则文件目录（**只有 .json**：互斥域 / 分组域 / NL 风味 / 档案 / 出厂预设） |
+| `data/default/taglib/` | 素材文件目录（**只有 .json**：NL 风味 / 档案 / 出厂预设；规则已内嵌库文件 `rules` 段） |
 | `data/default/taglib/profiles.json` | 武器·物品档案（姿势束/手视资源/状态槽/NL 声明真源） |
-| `data/default/taglib/grouprules.json` | 全局互斥域（50 组） |
 | `data/default/taglib/nl_flavors.json` | NL 句式素材（37 族 + pose_map + 宾语词池） |
-| `data/default/taglib/conflicts.json` | 跨池反冲突规则（兼容保留） |
 | `data/default/backups/` | 备份位置（`user_backup.json` 手动「存为默认库」；`user_auto.json` 每次保存自动滚动；`factory_backup.json` 出厂） |
 
 ## 反冲突模型
@@ -139,10 +137,10 @@ git clone https://github.com/WSYXIUBA/ComfyUI-TagLibrary
 | 机制 | 例子 | 真源 |
 |---|---|---|
 | 同轴/同组单选 | 抽了 `smile` 不再抽 `grin` | 库内 `axis`/`groups` |
-| 全局互斥域 | 嘴部域：`cigarette in mouth` ↔ `food in mouth` 一口不能两衔 | `grouprules.json` |
+| 全局互斥域 | 嘴部域：`cigarette in mouth` ↔ `food in mouth` 一口不能两衔 | `tag_library*.json` 的 `rules.groups` |
 | 资源预算 | `hands` 总数 ≤2、`gaze` ≤1 —— 双手捧杯 + 撑伞结构上很难出现 | `profiles.json` |
 | 状态槽 | 同一武器不能既 `drawn` 又 `sheathed` | `profiles.json` |
-| 跨池规则 | 写实摄影 ↔ 二次元向 | `conflicts.json` |
+| 跨池规则 | 写实摄影 ↔ 二次元向 | `tag_library*.json` 的 `rules.conflicts` |
 | 性别锁 | `1boy` 在场，`1girl/milf/witch` 等女词池级+出口级双拦 | 库内性别标记 |
 
 ## 测试

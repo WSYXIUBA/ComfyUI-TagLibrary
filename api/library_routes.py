@@ -52,7 +52,7 @@ _EXPORT_DOC = {
     "scope": "merged = 三级归并后的整库 (含出厂内容); user = 只有「我的」层的增删改, 可叠加到别人的库上",
     "导入": "只覆盖「我的」层, 出厂库与扩展包不动。导入整库文件时它整体成为「我的」层 (等于换一套库); "
             "导入前建议先在管理页点「💾 存为默认库」留个备份",
-    "规则不在本文件": "互斥域见 data/default/taglib/conflicts.json, 分组域见 grouprules.json, "
+    "规则内嵌": "反冲突 (rules.conflicts) 与互斥域 (rules.groups) 已内嵌在本文件 rules 段; "
                 "NL 风味见 nl_flavors.json, 道具档案见 profiles.json, 出厂预设见 presets.json",
     "保留键": "_说明 = 本说明 (导入时自动剥掉); _cleared = 空库标记; _tombstones = 删除墓碑 (防旧文件回魂)",
 }

@@ -84,7 +84,7 @@ def _gender_negative(neg: str, state) -> str:
 
 
 class TagLibraryNode:
-    CATEGORY = "纸心/prompt"
+    CATEGORY = "TagLibrary"
     FUNCTION = "build"
     RETURN_TYPES = ("STRING", "STRING", "STRING")
     RETURN_NAMES = ("positive", "tags_preview", "negative")
@@ -179,8 +179,43 @@ class TagLibraryNode:
 
         text = self._join_output(tags, dedupe=dedupe, separator=separator,
                                  prefix=prefix, suffix=suffix)
-        # ---- NL 尾段 (1.3.0: 自然语言是一等输出层; state.nl_tail 默认开) ----
-        if state.get("nl_tail", True):
+        # ---- NL 自然语言 (1.3.0 起是输出的一等层) ----
+        # state.nl_mode: off=纯标签 / tail=末尾整段(旧行为) / auto=自动(默认, 有料就按段散句)
+        # 兼容旧工作流: 没有 nl_mode 时按旧的 nl_tail 布尔值推。
+        nl_mode = str(state.get("nl_mode") or "").strip().lower()
+        if not nl_mode:
+            nl_mode = "tail" if state.get("nl_tail", True) else "off"
+        sep = separator if separator else ", "
+        if nl_mode in ("auto", "inline"):
+            # 1A: 散句只跟随「主体 / 动作 / 场景光影」三段, 其余保持纯标签。
+            # 好处: 高质量提示词本来就不是纯标签, 也不可能全堆末尾; 且语序自然 (主语只出现一次)。
+            clauses = nl.compile_clauses(snap, res.picks, seed)
+            if any(clauses.values()):
+                anchors = (("subject", ("count", "character")),
+                           ("action", ("action",)), ("scene", ("environment", "lighting")))
+                ins = {}
+                for i, p in enumerate(res.picks):
+                    for name, axs in anchors:
+                        if not clauses.get(name) or p.axis not in axs:
+                            continue
+                        nxt = res.picks[i + 1].axis if i + 1 < len(res.picks) else None
+                        if nxt not in axs:          # 该轴最后一个词之后插 (轴按输出次序, 不回头)
+                            ins.setdefault(name, i)
+                for name, i in sorted(ins.items(), key=lambda kv: -kv[1]):
+                    tags.insert(i + 1, clauses[name])
+                # 兜底: 桶有句但锚点轴零词 (极少数) → 拼末尾, 防生成句静默丢失
+                stragglers = [clauses[n] for n, _axs in anchors
+                              if clauses.get(n) and n not in ins]
+                if stragglers:
+                    tags.append(" ".join(stragglers))
+                text = self._join_output(tags, dedupe=dedupe, separator=sep,
+                                         prefix=prefix, suffix=suffix)
+            elif nl_mode == "auto":
+                tail = nl.compile_tail(snap, res.picks, seed)   # 散句没料 → 回落到尾段
+                if tail:
+                    text = (text + ". " + tail) if text and not text.endswith((".", "!", "?")) \
+                        else ((text + " " + tail) if text else tail)
+        elif nl_mode == "tail":
             tail = nl.compile_tail(snap, res.picks, seed)
             if tail:
                 text = (text + ". " + tail) if text and not text.endswith((".", "!", "?")) \
@@ -220,7 +255,8 @@ class TagLibraryNode:
             return f"({text}:{w:g})"
         return text
 
-    def _record_pnginfo(self, extra_pnginfo, unique_id, text: str, mode: str, seed) -> None:
+    def _record_pnginfo(self, extra_pnginfo, unique_id, text: str, mode: str, seed,
+                        selection_state=None, echo_json=None) -> None:
         """本节点实际输出的提示词 → PNG 元数据 (extra_pnginfo["TagLibrary"])。
 
         ComfyUI 存图的 prompt 元数据里 CLIPTextEncode.text 只存 ["节点ID",0] 链接引用,
@@ -236,10 +272,136 @@ class TagLibraryNode:
         try:
             lst = extra_pnginfo.setdefault("TagLibrary", [])
             entry = {"node": str(unique_id), "mode": mode, "seed": seed, "prompt": text}
+            ens = self._echo_en_list(echo_json)
+            if ens:
+                entry["tags"] = ens
             lst[:] = [e for e in lst if e.get("node") != entry["node"]]
             lst.append(entry)
         except Exception:  # noqa: BLE001 — 元数据写入失败绝不影响出图
             pass
+        try:
+            self._rewrite_workflow_meta(extra_pnginfo, unique_id, selection_state, echo_json)
+        except Exception:  # noqa: BLE001
+            pass
+
+    @staticmethod
+    def _echo_en_list(echo_json) -> list[str]:
+        """echo 条目 JSON → 英文词列表 (元数据用)。坏的输入返回空表, 绝不抛。"""
+        try:
+            items = json.loads(echo_json) if isinstance(echo_json, str) else echo_json
+        except (json.JSONDecodeError, TypeError):
+            return []
+        if not isinstance(items, list):
+            return []
+        return [str(it.get("en", "")).strip() for it in items
+                if isinstance(it, dict) and str(it.get("en", "")).strip()]
+
+    def _rewrite_workflow_meta(self, extra_pnginfo, unique_id, selection_state, echo_json) -> None:
+        """把 workflow 段里本节点的 selection_state 改写为"本张图实际用的词"。
+
+        拖图回 ComfyUI 的重建数据源是 PNG 里 workflow 段 (队列时 graphToPrompt 序列化),
+        auto 模式的实际出词在队列之后才生成 —— 不改写的话拖图看到的是上次队列的旧状态
+        (慢一拍, 参数像"没保存")。合并语义与前端 executed 回显一致, 改一处要改两处。
+        """
+        if not isinstance(extra_pnginfo, dict) or not echo_json or not selection_state:
+            return
+        wf = extra_pnginfo.get("workflow")
+        if not isinstance(wf, dict):
+            return
+        nodes = wf.get("nodes")
+        if not isinstance(nodes, list):
+            return
+        try:
+            nid = int(str(unique_id).strip())
+        except (TypeError, ValueError):
+            return
+        target = None
+        for n in nodes:
+            if (isinstance(n, dict) and n.get("type") == "TagLibraryNode"
+                    and n.get("id") == nid):
+                target = n
+                break
+        if target is None:
+            return
+        wv = target.get("widgets_values")
+        if not isinstance(wv, list) or not wv:
+            return
+        try:
+            state = json.loads(selection_state)
+            echo = json.loads(echo_json)
+        except (json.JSONDecodeError, TypeError):
+            return
+        if not isinstance(state, dict) or not isinstance(echo, list) or not echo:
+            return
+        merged = self._echo_merged_state(state, library.get_merged(), echo)
+        if merged is None:
+            return
+        wv[0] = json.dumps(merged, ensure_ascii=False)
+
+    @staticmethod
+    def _echo_merged_state(state: dict, lib: dict, echo_items: list) -> dict | None:
+        """复刻前端 executed 回显: 保留(钉选/手选/排除类目) + 新抽词 _auto, 按类目序排。
+
+        与 web/taglibrary.js 的 executed 监听器同语义 (kept 过滤 → fresh 去重 → 类目序
+        排序), 两边必须同步修改。返回新 state dict (不原地改), 无抽词返回 None。
+        """
+        if not isinstance(echo_items, list) or not echo_items:
+            return None
+        _by_en, en_path, _by_id = _manual_index(lib)
+        cat_names = [c.get("name") or c.get("id") or ""
+                     for c in lib.get("categories", [])]
+        cat_idx = {name: i for i, name in enumerate(cat_names) if name}
+        excluded = {str(x) for x in (state.get("exclude_categories") or [])}
+
+        def _cat_of(en) -> str:
+            p = en_path.get(str(en or "").strip().lower())
+            if not p:
+                return ""
+            c = p[0]
+            if isinstance(c, dict):
+                return c.get("name") or c.get("id") or ""
+            return str(c or "")
+
+        kept: list[dict] = []
+        for t in state.get("tags") or []:
+            if not isinstance(t, dict):
+                continue
+            if t.get("pinned") or not t.get("_auto"):
+                kept.append(dict(t))
+                continue
+            if _cat_of(t.get("en")) in excluded:
+                kept.append(dict(t))
+        for t in kept:
+            if not t.get("_cat"):
+                t["_cat"] = _cat_of(t.get("en"))
+
+        have = {str(t.get("en") or "").strip().lower() for t in kept}
+        fresh: list[dict] = []
+        for it in echo_items:
+            if not isinstance(it, dict):
+                continue
+            en = str(it.get("en") or "").strip()
+            en_l = en.lower()
+            if not en or en_l in have:
+                continue
+            have.add(en_l)
+            fresh.append({
+                "en": en, "zh": it.get("zh") or "",
+                "nsfw": bool(it.get("nsfw")),
+                "gender": it.get("gender") or "",
+                "enabled": True,
+                "_cat": it.get("cat") or _cat_of(en),
+                "_auto": True,  # 引擎抽取, 下轮可被替换 (与前端一致)
+            })
+
+        def _sort_key(item):
+            t, i = item
+            c = t.get("_cat") or ""
+            return (cat_idx.get(c, 999) if c else -1, i)
+
+        merged = [t for t, _i in sorted(
+            ((t, i) for i, t in enumerate(kept + fresh)), key=_sort_key)]
+        return {**state, "tags": merged}
 
     @staticmethod
     def _join_output(tags: list[str], *, dedupe: bool, separator: str,
@@ -278,8 +440,15 @@ class TagLibraryNode:
                 seed = int(kwargs.get("seed", 0))
             except (TypeError, ValueError):
                 seed = 0
+            echo_json = None
+            if isinstance(result, dict):
+                ui = result.get("ui")
+                if isinstance(ui, dict):
+                    echo_json = ui.get("taglib_echo")
             self._record_pnginfo(kwargs.get("extra_pnginfo"), kwargs.get("unique_id"),
-                                 text or "", str(mode), seed)
+                                 text or "", str(mode), seed,
+                                 selection_state=kwargs.get("selection_state"),
+                                 echo_json=echo_json)
         except Exception:  # noqa: BLE001
             pass
         return result

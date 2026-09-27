@@ -187,23 +187,21 @@ def main() -> None:
     else:
         check("manual 兼容旧selected", True, "skipped - smile 不在默认库")
 
-    # auto 模式: 总控制 1~3 → 每子分类抽 1~3 个 (35 子分类 → 数量远超旧 min/max)
-    mixA = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    # auto 模式: 逐槽位内置配额 (每槽位 0~SLOT_MAX, 35 子分类 → 总量远超旧的 1~3)
+    mixA = node.build('{}', "auto", 123)
     mixA = mixA["result"] if isinstance(mixA, dict) else mixA
-    mixB = node.build('{"fill_master":true,"fill_master_min":1,"fill_master_max":3}', "auto", 123)
+    mixB = node.build('{}', "auto", 123)
     mixB = mixB["result"] if isinstance(mixB, dict) else mixB
     print(f"      sample(auto seed123): {mixA[0][:60]}...")
     check("auto 同seed复现", mixA[0] == mixB[0])
     cntA = len([p for p in mixA[0].split(", ") if p])
     check("auto 总控制1~3 → 总量>=35", cntA >= 35, str(cntA))
-    # 子分类独立范围: fill_master=false + 画质大类整个 0~0 → 该大类不出
-    # (大类下每个子分类都设 0~0, 模拟 UI 里用户给每个子分类单独设 0)
+    # 整轴关闭: exclude_categories 填质量大类名 → 该大类的独有词不出
+    # (旧 fill_master=false 逐子分类 0~0 玩法随自定义配额一同退役, 2026-09-27)
     qcat_name = next(c["name"] for c in library.get_merged()["categories"]
                      if any(t["en"] == "masterpiece"
                             for s in c["subcategories"] for t in s["tags"]))
-    q_subs = next(c for c in library.get_merged()["categories"] if c["name"] == qcat_name)
-    zero_ranges = {s["id"]: {"min": 0, "max": 0} for s in q_subs["subcategories"]}
-    __r_mixC = node.build(json.dumps({"fill_master": False, "fill_sub_ranges": zero_ranges}), "auto", 7)
+    __r_mixC = node.build(json.dumps({"exclude_categories": [qcat_name]}), "auto", 7)
     mixC = __r_mixC["result"] if isinstance(__r_mixC, dict) else __r_mixC
     flat_all = TagLibraryNode._flat(library.get_merged())
     # 只判定"仅在该质量大类"存在的独有词 (同名标签在别类出现属合法)
@@ -212,7 +210,7 @@ def main() -> None:
     q_exclusive = q_only - others
     parts_c = [p.strip().lower() for p in mixC[0].split(",")]
     leaked_q = [en for en in q_exclusive if en and en in parts_c]
-    check("子分类独立0~0 跳过", not leaked_q, str(leaked_q[:3]))
+    check("整轴关闭(masterpiece 大类) 无泄漏", not leaked_q, str(leaked_q[:3]))
 
     # mix_scope 范围限制: 只在'光影氛围'抽 → 结果全在该分类
     __r_scoped = node.build(json.dumps({"fill_master":True,"fill_master_min":1,"fill_master_max":2,"exclude_categories":[c["name"] for c in library.get_merged()["categories"] if c["name"] != "光影氛围"]}), "auto", 42)

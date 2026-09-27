@@ -59,14 +59,27 @@ ONLINE = [
     ("feature_e2e_test", "全功能真机端到端 (预设/场景条/强度/重摇/批量/吸收/未成年锁/negative)"),
 ]
 
-# 会被测试写到的目录 (跑前快照、跑后还原)
-SNAPSHOT_DIRS = [os.path.join(ROOT, "data", "default", "taglib")]
+# 会被测试写到的目录/文件 (跑前快照、跑后还原)
+# 1.14.0 起反冲突规则写进 tag_library.json 的 rules 段, 该文件必须一起快照。
+SNAPSHOT_DIRS = [
+    os.path.join(ROOT, "data", "default", "taglib"),
+    os.path.join(ROOT, "data", "default", "tag_library.json"),
+]
 
 
 def _snapshot(dst_root: str) -> list[tuple[str, str]]:
     """逐个文件快照 (不做整目录拷贝/删除 —— 逐文件还原更稳, 也不触发批量删除保护)。"""
     out: list[tuple[str, str]] = []
     for src in SNAPSHOT_DIRS:
+        if os.path.isfile(src):
+            dst = os.path.join(dst_root, "files", os.path.basename(src))
+            try:
+                os.makedirs(os.path.dirname(dst), exist_ok=True)
+                shutil.copy2(src, dst)
+            except OSError:
+                continue
+            out.append((src, dst))
+            continue
         if not os.path.isdir(src):
             continue
         for root, _dirs, files in os.walk(src):

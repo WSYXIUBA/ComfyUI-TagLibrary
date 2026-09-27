@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-"""扩展包生成器 —— 从 ext_vocab 策展词表构建三个数据文件 (全部 gitignore, 不入发布包):
+"""扩展包生成器 —— 从 ext_vocab 策展词表构建扩展库文件 (全部 gitignore, 不入发布包):
 
-  data/default/tag_library.ext.json    第三库源 (deep_merge: default ← ext ← user)
-  data/default/taglib/nsfw_grouprules.json   NSFW 互斥域 (与出厂域同名并集)
-  data/default/taglib/nsfw_conflicts.json    NSFW 跨池规则 (word↔slot)
+  data/default/tag_library.ext.json    第三库源 (deep_merge: default ← ext ← user),
+                                       含 rules 段: NSFW 互斥域 + 跨池规则 (1.14.0 并入)
 
 收录规则:
   1. danbooru post_count >= min (默认 1500) —— 模型没见过的词不收
@@ -30,8 +29,6 @@ TAGLIB_DIR = os.path.join(DEFAULT_DIR, "taglib")
 DANBOORU_DIR = os.path.join(ROOT, "data", "packs", "_danbooru")
 
 EXT_PATH = os.path.join(DEFAULT_DIR, "tag_library.ext.json")
-NSFW_GROUPS_PATH = os.path.join(TAGLIB_DIR, "nsfw_grouprules.json")
-NSFW_CONFLICTS_PATH = os.path.join(TAGLIB_DIR, "nsfw_conflicts.json")
 COUNTS_PATH = os.path.join(ROOT, "data", "packs", "danbooru_counts.json")
 
 
@@ -258,17 +255,19 @@ def main() -> None:
                              "color": src.get("color", "#888888"),
                              "subcategories": adds})
 
+    # ---------- 规则段 (互斥域 + 跨池规则, 1.14.0 起内嵌 ext 库文件) ----------
+    groups = [{"id": gid, "members": sorted(set(members))}
+              for gid, members in V._domain_members().items()]
+
     ext_pack = {
         "version": 1,
         "_说明": ("扩展包 (v1.8.0): NSFW 词表体系 + SFW 高频词补齐。"
                   "由 tools/build_ext_pack.py 生成, 加载顺序 default ← ext ← user。"
+                  "rules 段: NSFW 互斥域 (与出厂同名并集) + 跨池规则。"
                   "本文件不入 git / 不入发布包。"),
         "categories": ext_list,
+        "rules": {"conflicts": V.CROSS_RULES, "groups": groups},
     }
-
-    # ---------- NSFW 互斥域 ----------
-    groups = [{"id": gid, "members": sorted(set(members))}
-              for gid, members in V._domain_members().items()]
 
     # ---------- 落盘 ----------
     print(f"新增 {report['added']} 词 | 跳过重名 {report['dup']} | 低于门槛 {len(report['low'])}")
@@ -279,18 +278,11 @@ def main() -> None:
     if dry:
         print("(dry-run, 未写盘)")
         return
-    os.makedirs(TAGLIB_DIR, exist_ok=True)
+    os.makedirs(DEFAULT_DIR, exist_ok=True)
     json.dump(ext_pack, open(EXT_PATH, "w", encoding="utf-8"),
               ensure_ascii=False, indent=1)
-    json.dump({"version": 1, "groups": groups},
-              open(NSFW_GROUPS_PATH, "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
-    json.dump({"_说明": "NSFW 跨池规则 (ext 扩展包配套), 与 conflicts.json 合并生效。",
-               "version": 1, "rules": V.CROSS_RULES},
-              open(NSFW_CONFLICTS_PATH, "w", encoding="utf-8"),
-              ensure_ascii=False, indent=1)
     json.dump(counts, open(COUNTS_PATH, "w", encoding="utf-8"))
-    print(f"写出: {EXT_PATH}\n写出: {NSFW_GROUPS_PATH}\n写出: {NSFW_CONFLICTS_PATH}")
+    print(f"写出: {EXT_PATH} (+ rules: {len(V.CROSS_RULES)} 条跨池 / {len(groups)} 个互斥域)")
 
 
 if __name__ == "__main__":

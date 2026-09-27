@@ -67,9 +67,6 @@ PIN_GIRL_GUN = {"tags": [{"en": "1girl", "pinned": True},
                          {"en": "rifle", "pinned": True}],
                 "fill_master": True, "fill_master_min": 1, "fill_master_max": 2}
 RAND = {"fill_master": True, "fill_master_min": 2, "fill_master_max": 3}
-NAIL = {"fill_master": False,
-        "fill_sub_ranges": {},
-        "tags": [], "nsfw": False}
 
 cases = [
     ("钉刀雨夜×3", PIN_KAT, "auto", 11),

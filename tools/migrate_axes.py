@@ -30,8 +30,11 @@ sys.path.insert(0, ROOT)
 import axes  # noqa: E402
 import tagconflicts  # noqa: E402
 import library  # noqa: E402
+import datapaths  # noqa: E402
 
-MUTEX_PATH = tagconflicts.CONFLICTS_PATH  # 跨池规则原地重写回 conflicts.json (契约不破)
+# 旧 contract: 跨池规则曾独立成文件。1.14.0 起规则并入词库文件 rules 段,
+# 重跑本脚本写出的 conflicts.json 会在下次启动时被 library._migrate_rules_files() 并回。
+MUTEX_PATH = os.path.join(datapaths.LIBRARY_DIR, "conflicts.json")
 
 
 def _norm(x) -> str:

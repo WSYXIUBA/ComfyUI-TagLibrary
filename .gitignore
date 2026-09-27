@@ -41,9 +41,17 @@ data/**/*.bak-*
 
 # ---- 1.8.0 扩展包 (NSFW 体系, 合规隔离: 不入 git / 不入发布包) ----
 data/default/tag_library.ext.json
-data/default/taglib/nsfw_grouprules.json
-data/default/taglib/nsfw_conflicts.json
 data/packs/
 data/default/taglib/nsfw_nl.json
 data/default/tag_library.user.json
 .ruff_cache/
+
+# 多词库矩阵的生成产物 (tools/testlib_gen.py 可再生成, 不入库)
+tools/_testlibs/
+
+# 本地参考数据 (含第三方效果图, 不进仓库/发布包)
+resources/
+# 迁移归档 (一次性, 本机保留; 迁移逻辑可再从旧文件重建)
+data/default/backups/legacy-rules/
+# 矩阵跑分报告 (tools/testlib_matrix.py 可再生成)
+tools/_testlibs_report.json

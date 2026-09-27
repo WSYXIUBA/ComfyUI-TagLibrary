@@ -83,6 +83,124 @@ def _migrate_legacy_layout() -> None:
 
 _migrate_legacy_layout()
 
+
+# ------------------------------------------------ 1.14.0: 规则文件并入词库 (单文件化)
+
+def _read_rules_list(path: str) -> list:
+    """读旧独立反冲突文件的 rules 数组 (缺失/损坏 = [])。"""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            data = json.load(f)
+        rules = data.get("rules") if isinstance(data, dict) else None
+        return [r for r in (rules or []) if isinstance(r, dict)]
+    except (OSError, ValueError):
+        return []
+
+
+def _read_groups_list(path: str) -> list:
+    """读旧独立互斥域文件的 groups 数组 (缺失/损坏 = []; 保留 note)。"""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            data = json.load(f)
+        groups = data.get("groups") if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return []
+    out = []
+    for g in groups or []:
+        if not isinstance(g, dict) or not str(g.get("id") or "").strip():
+            continue
+        members = [str(m).strip() for m in (g.get("members") or []) if str(m).strip()]
+        if len(members) < 2:
+            continue
+        item = {"id": str(g["id"]).strip(), "members": members}
+        if g.get("note"):
+            item["note"] = g["note"]
+        out.append(item)
+    return out
+
+
+def _legacy_groups_to_rules(path: str) -> list:
+    """v1.1.0 前的根级 conflicts.json (groups: [{id,name,tags}]) → 旧式互斥规则。"""
+    try:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            old = json.load(f)
+    except (OSError, ValueError):
+        return []
+    rules = []
+    for i, g in enumerate(old.get("groups") or []):
+        tags = [str(t).strip() for t in (g.get("tags") or []) if str(t).strip()]
+        if len(tags) < 2:
+            continue
+        rules.append({
+            "id": f"legacy.{g.get('id') or i}",
+            "note": f"旧互斥组: {g.get('name') or g.get('id') or i}",
+            "left": {"kind": "tags", "value": tags},
+            "right": [{"kind": "tag", "value": t} for t in tags],
+        })
+    return rules
+
+
+def _migrate_rules_files() -> None:
+    """旧独立规则文件 → 并入所在层库文件的 rules 段 (1.14.0 单文件化, 幂等)。
+
+    层对应: conflicts.json / grouprules.json       → tag_library.json
+            nsfw_conflicts.json / nsfw_grouprules.json → tag_library.ext.json
+    只在该层库文件**尚无 rules 段**且有旧文件时执行; 旧文件归档到 backups/legacy-rules/。
+    库文件损坏时跳过 (宁可晚迁, 不覆盖数据)。
+    """
+    legacy_dir = os.path.join(os.path.dirname(DEFAULT_PATH), "taglib")
+    plan = [
+        (DEFAULT_PATH, "conflicts.json", "grouprules.json"),
+        (EXT_PATH, "nsfw_conflicts.json", "nsfw_grouprules.json"),
+    ]
+    changed = False
+    for lib_path, conf_name, grp_name in plan:
+        conf_p = os.path.join(legacy_dir, conf_name)
+        grp_p = os.path.join(legacy_dir, grp_name)
+        if not (os.path.isfile(conf_p) or os.path.isfile(grp_p)):
+            continue
+        if os.path.isfile(lib_path):
+            try:
+                lib = _read_json(lib_path)
+            except (OSError, ValueError):
+                continue  # 库文件损坏: 不迁不覆盖
+        else:
+            lib = {}  # ext 层允许新建 (nsfw 规则先于 ext 库存在)
+        if lib.get("rules"):
+            continue  # 已迁移过 (或新装自带)
+        rules: dict = {}
+        conflicts = _read_rules_list(conf_p)
+        if not conflicts and lib_path == DEFAULT_PATH and not os.path.isfile(conf_p):
+            # 兜底: 只有上古根级文件 (data/default/conflicts.json, 旧 groups 格式)
+            conflicts = _legacy_groups_to_rules(os.path.join(os.path.dirname(DEFAULT_PATH),
+                                                             "conflicts.json"))
+        if conflicts:
+            rules["conflicts"] = conflicts
+        groups = _read_groups_list(grp_p)
+        if groups:
+            rules["groups"] = groups
+        if not rules:
+            continue
+        lib.setdefault("version", 1)
+        lib.setdefault("categories", [])
+        lib["rules"] = rules
+        jsonio.atomic_write_json(lib_path, lib)
+        bdir = os.path.join(os.path.dirname(DEFAULT_PATH), "backups", "legacy-rules")
+        os.makedirs(bdir, exist_ok=True)
+        for name in (conf_name, grp_name):
+            p = os.path.join(legacy_dir, name)
+            if os.path.isfile(p):
+                try:
+                    os.replace(p, os.path.join(bdir, name))
+                except OSError:
+                    pass
+        changed = True
+        print(f"[TagLibrary] 📦 规则文件已并入 {os.path.basename(lib_path)} 的 rules 段"
+              f" (旧文件归档 backups/legacy-rules/)")
+    if changed:
+        invalidate_cache()
+
+
 _ID_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_.\-]{0,79}$")
 
 _lock = threading.RLock()
@@ -163,6 +281,39 @@ def _merge_level(default_items: list[dict], user_items: list[dict]) -> list[dict
     return merged
 
 
+def _merge_rules(base: dict, over: dict) -> dict:
+    """规则段合并 (层序 default ← ext ← user, 与分类树一致)。
+
+    conflicts: 按 id 后者整体覆盖 (同名规则 ext/user 层优先);
+    groups:    按 id 成员并集 (同名互斥域两侧词共同守护 —— 沿用 1.8.0 语义)。
+    """
+    out: dict[str, list] = {}
+    conf: dict[str, dict] = {}
+    for r in list(base.get("conflicts") or []) + list(over.get("conflicts") or []):
+        if isinstance(r, dict) and str(r.get("id") or "").strip():
+            conf[str(r["id"]).strip()] = r
+    if conf:
+        out["conflicts"] = list(conf.values())
+    grp: dict[str, dict] = {}
+    for g in list(base.get("groups") or []) + list(over.get("groups") or []):
+        if not isinstance(g, dict) or not str(g.get("id") or "").strip():
+            continue
+        gid = str(g["id"]).strip()
+        cur = grp.get(gid)
+        if cur is None:
+            cur = {"id": gid, "members": []}
+            if g.get("note"):
+                cur["note"] = g["note"]
+            grp[gid] = cur
+        for m in g.get("members") or []:
+            m = str(m).strip().lower()
+            if m and m not in cur["members"]:
+                cur["members"].append(m)
+    if grp:
+        out["groups"] = list(grp.values())
+    return out
+
+
 def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
     """default + user -> 完整库 (不修改两个输入)。"""
     tombstones = set(user.get("_tombstones") or [])
@@ -228,7 +379,7 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
         cat["subcategories"] = out_subs
         out_cats.append(cat)
 
-    return {
+    out = {
         **default,
         "categories": out_cats,
         "settings": {**default.get("settings", {}), **user.get("settings", {})},
@@ -237,6 +388,13 @@ def deep_merge(default: dict[str, Any], user: dict[str, Any]) -> dict[str, Any]:
             "has_user_data": bool(user.get("categories")) or bool(tombstones),
         },
     }
+    # 规则段 (反冲突/互斥域) 同层归并; 两侧都没有时不带这个键
+    rules = _merge_rules(default.get("rules") or {}, user.get("rules") or {})
+    if rules:
+        out["rules"] = rules
+    else:
+        out.pop("rules", None)
+    return out
 
 
 # ---------------------------------------------------------------- validate & save
@@ -405,6 +563,9 @@ def save_user_library(payload: dict, client_mtime: float | None = None,
 
         out = dict(payload)
         out.pop("_cleared", None)  # 显式保存 = 退出空库状态 (清空标记只在 DELETE 端点写入)
+        # 规则段 (反冲突/互斥域) 不随管理页保存进用户库: 编辑走反冲突编辑器,
+        # 由 tagconflicts.save_rules / grouprules.save_grouprules 写回默认库文件。
+        out.pop("rules", None)
         out["_tombstones"] = sorted(new_tombs)
         out["settings"] = {**load_default().get("settings", {}),
                            **payload.get("settings", {})}
@@ -430,6 +591,28 @@ def _auto_backup_user(payload: dict) -> None:
         jsonio.atomic_write_json(dst, payload)
     except Exception:  # noqa: BLE001 — 备份失败不能挡保存
         pass
+
+
+def save_rules_into_default(conflicts: list | None = None,
+                            groups: list | None = None) -> None:
+    """把规则段写回默认库文件的 rules 段 (管理页编辑走这里, 不动其他键)。
+
+    conflicts=None / groups=None 表示该项不动; 传 [] 清空该项;
+    两项皆空时移除整个 rules 键。写入后清空合并缓存。
+    """
+    with _lock:
+        lib = _read_json(DEFAULT_PATH)
+        rules = dict(lib.get("rules") or {})
+        if conflicts is not None:
+            rules["conflicts"] = list(conflicts)
+        if groups is not None:
+            rules["groups"] = list(groups)
+        if rules.get("conflicts") or rules.get("groups"):
+            lib["rules"] = rules
+        else:
+            lib.pop("rules", None)
+        jsonio.atomic_write_json(DEFAULT_PATH, lib)
+        invalidate_cache()
 
 
 # ---------------------------------------------------------------- cache
@@ -476,3 +659,6 @@ def invalidate_cache() -> None:
     global _cache
     with _lock:
         _cache = None
+
+
+_migrate_rules_files()

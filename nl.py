@@ -159,15 +159,22 @@ def _render_subject(t: str, S: str, singular: bool) -> str:
     return t.replace("{S}", S)
 
 
-def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
-                 want_gaze: bool = True) -> str:
-    """picks (engine.Pick 列表) → 0~N 句连贯英文段落。无素材 = 空串。"""
+def _build_sentences(snap, picks, seed: int, *, max_sentences: int = 4,
+                     want_gaze: bool = True) -> list:
+    """picks → [(段位, 句子)]; 段位 ∈ subject / action / scene。
+
+    段位决定这句插在提示词的哪一段 (subject 跟主体标签 / action 跟动作标签 /
+    scene 跟场景光影标签), 见 compile_clauses。抽取顺序与随机数消耗顺序保持原样。
+    """
     F = load_flavors()
     if not F:
         return ""
     fam = F.get("families") or {}
     rng = _random.Random((seed & 0xFFFFFFFF) ^ 0x5EED)
     ens = {p.en.lower() for p in picks}
+    # "no humans" 场景: 一切"人"向句 (武器持有/视线/NSFW) 都不该生成 ——
+    # 实测 no humans + claymore 会拼出 "She carries ... on her back" 的人物句 (多轮审计高频 high)。
+    no_human = "no humans" in ens
     S, POS = _pronouns(ens)
     plural = S == "They"
     # 人数轴上没有多人词 = 单人场景 (判据直接来自快照的人数轴分类, 不另立词表)
@@ -175,7 +182,10 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
         p.id is not None and snap.axis_arr[p.id] == "count"
         and p.en.lower() not in slotpolicy.SINGLE_COUNT_WORDS
         for p in picks)
-    out: list[str] = []
+    out: list = []          # [(段位, 句子)]
+
+    def _add(kind: str, text: str) -> None:
+        out.append((kind, text))
 
     def fill(t: str) -> str:
         t = _render_subject(t, S, not plural).replace("{POS}", POS)
@@ -206,17 +216,17 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
         if k in ens:
             vs = intro.get(k)
             if vs:
-                out.append(rng.choice(vs))
+                _add("subject", rng.choice(vs))
             break
 
     # 2. NSFW 场景句 (1.8.0): 任一 nsfw 词在场且句式包提供 nsfw_scene 族时插入 ——
     #    没有该族时静默跳过 (回落到下方 describe/wear 兜底, 不硬凑)
     has_nsfw = any(p.nsfw for p in picks)
-    last_start = out[-1].split(" ", 1)[0] if out else ""
-    if has_nsfw:
+    last_start = out[-1][1].split(" ", 1)[0] if out else ""
+    if has_nsfw and not no_human:
         s = take("nsfw_scene", avoid_start=last_start)
         if s:
-            out.append(s)
+            _add("action", s)
 
     # 3. 动作句: 第一个武器束 (sub_family 表 → family)
     sub_fam = F.get("sub_family") or {}
@@ -224,8 +234,8 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
     words = F.get("words") or {}
     pose_map = F.get("pose_map") or {}
     seen_bundle: set[str] = set()
-    last_start = out[-1].split(" ", 1)[0] if out else ""
-    for p in picks:
+    last_start = out[-1][1].split(" ", 1)[0] if out else ""
+    for p in (() if no_human else picks):
         if p.kind != "ext" or p.is_extra or not p.bundle:
             continue
         pid, _, pose_id = p.bundle.partition(":")
@@ -242,17 +252,17 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
         O = rng.choice(opool)
         sentence = take(family, avoid_start=last_start)
         if sentence:
-            out.append(sentence.replace("{O}", O))
+            _add("action", sentence.replace("{O}", O))
         break  # 一段只描一个动作 (多武器时第二把靠 tag 自己说话)
 
-    # 3. 视线句 (若动作句未含 gaze 族且命中视线词)
-    if want_gaze and len(out) < max_sentences:
-        last_start = out[-1].split(" ", 1)[0] if out else ""
+    # 3. 视线句 (若动作句未含 gaze 族且命中视线词; no humans 时视线词本就不该在)
+    if want_gaze and not no_human and len(out) < max_sentences:
+        last_start = out[-1][1].split(" ", 1)[0] if out else ""
         for e, g in GAZE_MAP.items():
             if g and e in ens:
                 s = take(g, avoid_start=last_start)
                 if s:
-                    out.append(s)
+                    _add("action", s)
                 break
 
     # 4. 环境句 (命中即描, 最多一句)
@@ -261,7 +271,13 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
             if k in ens:
                 vs = (F.get("env") or {}).get(k)
                 if vs:
-                    out.append(fill(rng.choice(vs)))
+                    if no_human:
+                        # no humans = 空镜: 只选无代词变体, 否则句里冒出 "behind her";
+                        # 该族全带人称时宁可不写, 也不给空镜安个人。
+                        vs = [v for v in vs if "{POS}" not in v and "{S}" not in v]
+                        if not vs:
+                            break
+                    _add("scene", fill(rng.choice(vs)))
                     break
 
     # 5. 光线句 (预算还够才加)
@@ -270,7 +286,11 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
             if k in ens:
                 vs = (F.get("light") or {}).get(k)
                 if vs:
-                    out.append(fill(rng.choice(vs)))
+                    if no_human:
+                        vs = [v for v in vs if "{POS}" not in v and "{S}" not in v]
+                        if not vs:
+                            break
+                    _add("scene", fill(rng.choice(vs)))
                     break
 
     # 6. 兜底: 保证尾段至少 2 句, 且**按有无人物分流**
@@ -287,7 +307,6 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
                 return sent
             return sent.replace(" has ", " have ").replace(" is ", " are ")
 
-        no_human = any(str(p.en).strip().lower() == "no humans" for p in picks)
         app = [_human(p.en) for p in picks
                if p.axis == "appearance" and 0 < len(p.en.split()) <= 4][:2]
         wear = [_human(p.en) for p in picks
@@ -308,17 +327,41 @@ def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
             if len(out) >= 2:
                 break
             tpl = rng.choice(fam.get(family) or ["{S} has {A}."])
-            out.append(_agree(fill(tpl).replace("{" + ph + "}", val)))
+            _add("fill", _agree(fill(tpl).replace("{" + ph + "}", val)))
         # 仍不足 (例如补完一句后素材用尽) -> 再补场景句, 有界
         guard = 0
         while len(out) < 2 and guard < 3:
             guard += 1
             tpl = rng.choice(fam.get("scene") or ["{E1} fills the frame."])
             cand = tpl.replace("{E1}", env[guard % max(len(env), 1)] if env else "the whole frame")
-            if cand not in out:
-                out.append(cand)
+            if cand not in [x[1] for x in out]:
+                _add("fill", cand)
 
     out = out[:max_sentences]
     # 句首强制大写
-    out = [s[:1].upper() + s[1:] if s else s for s in out]
-    return " ".join(out)
+    out = [(k, s[:1].upper() + s[1:] if s else s) for k, s in out]
+    return out
+
+
+def compile_tail(snap, picks, seed: int, *, max_sentences: int = 4,
+                 want_gaze: bool = True) -> str:
+    """整段贴末尾 (旧接口, 保留)。"""
+    return " ".join(s for _, s in _build_sentences(
+        snap, picks, seed, max_sentences=max_sentences, want_gaze=want_gaze))
+
+
+def compile_clauses(snap, picks, seed: int, *, max_sentences: int = 4,
+                    want_gaze: bool = True) -> dict:
+    """按段位分桶的散句: subject / action / scene。桶为空 = 该处不插句。
+
+    "fill" 是兜底句 (把标签复述一遍的那种), 散句模式下只有在三段全空时才用 ——
+    实测它跟后面的标签重复 ("He has hair down and dutch braid" 之后又跟 hair down, dutch braid)。
+    """
+    buckets = {"subject": [], "action": [], "scene": []}
+    fills = []
+    for kind, s in _build_sentences(snap, picks, seed,
+                                    max_sentences=max_sentences, want_gaze=want_gaze):
+        (fills if kind == "fill" else buckets[kind]).append(s)
+    if not any(buckets.values()):
+        buckets["subject"] = fills
+    return {k: " ".join(v) for k, v in buckets.items()}

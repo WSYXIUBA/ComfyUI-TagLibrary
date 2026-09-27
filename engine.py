@@ -273,14 +273,11 @@ class _Extraction:
         self.count_no_human = None
         self.count_single = None
         self.excl_used = None
-        self.master = None
         self.minor_age = None
         self.pools = None
         self.search_l = None
         self.slot_filled = None
         self.stats = None
-        self.sub_ids_str = None
-        self.sub_ranges = None
 
     def tag_ok(self, tid: int) -> bool:
         """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
@@ -306,6 +303,11 @@ class _Extraction:
         si = self.snap.sub_of[tid]
         cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
         if cname in self.excl_cats or self.snap.sub_keys[si] in self.excl_keys:
+            return False
+        # 类目语义词根闸门: 分类不在被排除类目、但语义是它的词 (detailed armor /
+        # skirt hold / lace fabric … 分类在画质/动作/材质) 一并排除 —— 不设此闸,
+        # "排除服装"下真机仍有 4/12 张出复杂服装。
+        if self.excl_cats and slotpolicy.semantic_hit(self.snap.tag_lower[tid], self.excl_cats):
             return False
         # ---- 场景条闸门 (1.8.1) ----
         _sk = self.snap.sub_keys[si]
@@ -537,13 +539,9 @@ class _Extraction:
         for w, bad_slots in slotpolicy.BLOCK_SLOTS_BY_WORD.items():
             if sub_key in bad_slots and w in self.led.used_lower:
                 return False, 0
-        if self.master:
-            cap = slotpolicy.caps_for(sub_key)[1]      # max_n
-            if self.nsfw_intensity >= 2:
-                cap += slotpolicy.nsfw_boost(sub_key)  # 纯欲档: NSFW 槽位配额加成
-        else:
-            r = (self.sub_ranges.get(self.sub_ids_str[si]) or {})
-            cap = max(self._int_or(r.get("min"), 1), self._int_or(r.get("max"), 1))
+        cap = slotpolicy.caps_for(sub_key)[1]      # max_n (逐槽位配额已内置)
+        if self.nsfw_intensity >= 2:
+            cap += slotpolicy.nsfw_boost(sub_key)  # 纯欲档: NSFW 槽位配额加成
         return (cap - self.slot_filled.get(si, 0)) > 0, max(cap - self.slot_filled.get(si, 0), 0)
 
     def _pool_fill(self, si: int, want: int) -> int:
@@ -743,13 +741,6 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     pool_ids = sorted(range(len(snap.sub_names)),
                       key=lambda si: (snap.pool_order[si], si))
 
-    master = state.get("fill_master")
-    master = True if master is None else bool(master)
-
-
-    sub_ranges = state.get("fill_sub_ranges") or {}
-    sub_ids_str = snap.sub_ids_str
-
     pools = snap.pools if nsfw_on else snap.pools_nonsfw
     if gmode == "female":
         base = snap.pools_nomale
@@ -791,14 +782,11 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     ex.count_no_human = count_no_human
     ex.count_single = count_single
     ex.excl_used = excl_used
-    ex.master = master
     ex.minor_age = minor_age
     ex.pools = pools
     ex.search_l = search_l
     ex.slot_filled = slot_filled
     ex.stats = stats
-    ex.sub_ids_str = sub_ids_str
-    ex.sub_ranges = sub_ranges
 
 
 
@@ -808,16 +796,10 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
         if not ok:
             continue
         sub_key = snap.sub_keys[si]
-        if master:
-            mn, mx = slotpolicy.caps_for(sub_key)      # (min_n, max_n)
-            if nsfw_intensity >= 2:
-                mx += slotpolicy.nsfw_boost(sub_key)
-                mn += slotpolicy.nsfw_min_boost(sub_key)   # 保底: 性行为/服装状态至少 1
-        else:
-            r = (sub_ranges.get(sub_ids_str[si]) or {})
-            a = ex._int_or(r.get("min"), 1)
-            b = ex._int_or(r.get("max"), 1)
-            mn, mx = min(a, b), max(a, b)
+        mn, mx = slotpolicy.caps_for(sub_key)      # (min_n, max_n) 逐槽位配额已内置
+        if nsfw_intensity >= 2:
+            mx += slotpolicy.nsfw_boost(sub_key)
+            mn += slotpolicy.nsfw_min_boost(sub_key)   # 保底: 性行为/服装状态至少 1
         used_n = pinned_sub_count.get(si, 0)
         mn, mx = max(0, mn - used_n), max(0, mx - used_n)
         mx = min(mx, room)
@@ -889,39 +871,74 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     _gl = led.gender_lock if led.gender_lock in (1, 2) else (
         1 if gmode == "female" else 2 if gmode == "male" else 0)
     if _gl:
-        _tbl = (("1girl", "girl", "girls", "female", "woman", "multiple girls") if _gl == 1
-                else ("1boy", "boy", "boys", "male", "man", "multiple boys"))
-        _low = {p.en.lower() for p in picks}
-        if not (_low & set(_tbl)):
+        # 判据与挑词都走**标签自带的 gender 声明**, 不认具体词名 ——
+        # 换个库、换个叫法 (1girl / girl / woman / female focus ...) 同样生效。
+        have = any(p.id is not None and snap.gender_flag[p.id] == _gl for p in picks)
+        if not have:
+            _pref = ("1girl", "girl", "woman", "female") if _gl == 1 \
+                else ("1boy", "boy", "man", "male")
+            _pool: dict = {}
+            for tid in range(len(snap.tag_text)):
+                if snap.gender_flag[tid] == _gl and ex.tag_ok(tid):
+                    _pool.setdefault(snap.axis_arr[tid], []).append(tid)
+            for _lst in _pool.values():          # 有规范写法的优先 (真库顺序不变)
+                _lst.sort(key=lambda t: (_pref.index(snap.tag_lower[t])
+                                         if snap.tag_lower[t] in _pref else len(_pref)))
             _counts = [p for p in picks if p.axis == "count"]
-            _soloish = bool(_low & {"solo", "solo focus", "alone", "only one"})
-            _add = None
-            _done = False
-            if _counts and not _soloish:
-                # 人数轴上是性别中性词 (couple / multiple others ...): 换成带性别的等价词。
-                # 只换不塞 —— 人数轴必须保持 1 个词 (quality_gate Q4 没有任何例外条款)。
-                _swap = "multiple girls" if _gl == 1 else "multiple boys"
-                _old = _counts[0]
-                _tid = snap.en_to_id.get(_swap)
-                if (_tid is not None and _tid != _old.id and _swap not in ex.led.used_lower
-                        and ex.tag_ok(_tid)):
+            _soloish = bool({p.en.lower() for p in picks} &
+                            {"solo", "solo focus", "alone", "only one"})
+            _tid = None
+            if _pool.get("count"):
+                if _counts and not _soloish:
+                    # 人数轴上是性别中性词 (couple / multiple others): 换掉它。
+                    # 只换不塞 —— "人数轴唯一" 是硬不变量 (quality_gate Q4 无例外条款)。
+                    _old = _counts[0]
+                    if _pool["count"][0] != _old.id:
+                        picks = [p for p in picks if p is not _old]
+                        _tid = _pool["count"][0]
+                elif not _counts:
+                    _tid = _pool["count"][0]
+            if _tid is None and _pool.get("character"):
+                # 角色轴有性别词但槽里已有词: 替换掉一个"无性别声明"的词 (槽内词数不变,
+                # 配额不破, have=False 前提保证换走的不是异性/同性词), pinned 不动。
+                # 旧逻辑 "not any(character)" 在"性别词全在角色轴"的库 (实测 char_only
+                # 20000 词全 character 轴) 下直接把锚点堵死 —— 要男全出不了男词。
+                _cand = [p for p in picks if p.axis == "character" and p.id is not None
+                         and p.source != "pinned" and snap.gender_flag[p.id] == 0]
+                if _cand:
+                    _old = _cand[0]
                     picks = [p for p in picks if p is not _old]
-                    picks.append(ex.make_pick(_tid, "gender_anchor"))
-                    _done = True
-            elif not _counts:
-                _add = "1girl" if _gl == 1 else "1boy"
-                _done = True
-            if not _done:
-                # 人数轴拿不到名额时不碰它 —— 性别名词走**角色身份轴** (girl / boy),
-                # 与人数轴互不影响 (1girl 是人数轴的词, 塞进去会让"人数轴唯一"门禁变红)。
-                # 该槽配额上限=1: 槽里已有身份词 (necromancer / ghost ...) 时不能再塞第二个。
-                if not any(p.axis == "character" for p in picks):
-                    _add = "girl" if _gl == 1 else "boy"
-            if _add:
-                _tid = snap.en_to_id.get(_add)
-                if _tid is not None and _add not in ex.led.used_lower and ex.tag_ok(_tid):
-                    picks.append(ex.make_pick(_tid, "gender_anchor"))
+                    _tid = _pool["character"][0]
+            if _tid is None and _pool.get("appearance"):
+                _tid = _pool["appearance"][0]
+            if _tid is not None and snap.tag_lower[_tid] not in ex.led.used_lower:
+                picks.append(ex.make_pick(_tid, "gender_anchor"))
             picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
+
+    # 🎯人物特写: 取景白名单此前**只做禁止、不做保证** —— 实测 96 次里 67 次整个取景槽
+    # 空着, 用户视角就是"开关按了没用"。这里缺了就补一个 (仍在取景白名单里挑, 不新造词),
+    # 判定走槽位字段而不是词名, 换库照样成立。
+    if focus_portrait:
+        _fr_sk = "构图镜头/取景范围"
+        _has_fr = False
+        for p in picks:
+            if p.id is None:
+                continue
+            _si = snap.sub_of[p.id]
+            if _si >= 0 and snap.sub_keys[_si] == _fr_sk:
+                _has_fr = True
+                break
+        if not _has_fr:
+            for tid in range(len(snap.tag_text)):
+                _si = snap.sub_of[tid]
+                if _si < 0 or snap.sub_keys[_si] != _fr_sk:
+                    continue
+                if snap.tag_lower[tid] not in slotpolicy.PORTRAIT_FRAMING_WORDS:
+                    continue
+                if not ex.tag_ok(tid) or snap.tag_lower[tid] in ex.led.used_lower:
+                    continue
+                picks.append(ex.make_pick(tid, "portrait_framing"))
+                break
 
     # ---------- 4. 未成年锁终检 (词级, 与抽取顺序无关) ----------
     # 闸门本身是"年龄词落位后才封成人词", 顺序反了就漏 —— 实测 nsfw=on / 档位 1

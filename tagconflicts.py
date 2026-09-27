@@ -1,4 +1,10 @@
-"""反冲突规则引擎 —— data/taglib/conflicts.json。
+"""反冲突规则引擎 —— 规则内嵌于词库文件 (1.14.0 单文件化)。
+
+真源: 各层词库文件的 rules.conflicts 段, 按层归并 (default ← ext ← user, 同名 id 后者覆盖):
+  data/default/tag_library.json      → 出厂规则
+  data/default/tag_library.ext.json  → NSFW 扩展规则 (ext 扩展包配套, 不入 git/发布)
+管理页保存写回默认库文件的 rules 段; ext 层规则 (ext.*) 归扩展包管, 不双写。
+旧独立文件 (conflicts.json / nsfw_conflicts.json) 由 library._migrate_rules_files() 启动时并入。
 
 规则模型 (双向互斥: 随机抽取时抽到 left 一侧, right 一侧全部让位; 手动点选不拦):
 
@@ -16,39 +22,23 @@ kind 取值:
   cat  = 一级分类 (value="一级分类名")
 
 语义: left/right 各解析成标签集合; 已抽中的标签命中一侧 → 另一侧进入禁选集。
-文件缺失时用 DEFAULT_RULES 生成 (裸露/泳装 ↔ 服装子分类; 配饰不冲突)。
-旧版互斥组 (data/conflicts.json groups) 自动迁移为 tags 组规则。
+库中无规则段时用 DEFAULT_RULES (裸露/泳装 ↔ 服装子分类; 配饰不冲突)。
 """
 
 from __future__ import annotations
 
-import json
-import os
 import re
 import threading
 
 try:  # ComfyUI 包加载 -> 相对导入; 独立脚本 -> 顶层导入
-    from . import jsonio
     from . import library
-    from . import datapaths
 except ImportError:  # pragma: no cover
-    import jsonio
     import library
-    import datapaths
-
-CONFLICTS_PATH = os.path.join(datapaths.LIBRARY_DIR, "conflicts.json")
-LEGACY_GROUPS_PATH = os.path.join(os.path.dirname(datapaths.LIBRARY_DIR), "conflicts.json")
-# 1.8.0: NSFW 跨池规则 (ext 扩展包配套, 不入 git/发布); 与出厂规则合并生效。
-# 路径由 CONFLICTS_PATH 派生 (测试沙箱替换 CONFLICTS_PATH 时自动跟随, 隔离才成立)
-
-
-def _nsfw_conflicts_path() -> str:
-    return os.path.join(os.path.dirname(CONFLICTS_PATH), "nsfw_conflicts.json")
 
 _DOC_TEXT = (
-    "这是 ComfyUI-TagLibrary 的反冲突文件 (conflicts.json)。"
+    "这是 ComfyUI-TagLibrary 的反冲突规则 (已内嵌于词库文件 tag_library.json 的 rules.conflicts 段)。"
     "把本文件和「全量模板 taglib_模板_全量.md」一起发给 AI, AI 即可认识库中全部标签,"
-    "按下面的规则格式生成新的反冲突文件; 拿回来在管理页「📥 导入」预览确认即可。\n"
+    "按下面的规则格式生成新的规则表; 拿回来在管理页「📥 导入」预览确认即可。\n"
     "规则 = left 与 right 双向互斥: 随机填充/自动模式抽到 left 一侧时, right 一侧的标签自动让位"
     " (手动点选不受影响)。\n"
     "left/right 的 kind 取值:\n"
@@ -56,7 +46,7 @@ _DOC_TEXT = (
     "  tags = 多个标签, value 填英文数组 (仅 left 使用)\n"
     '  sub  = 二级分类, value 填 "一级分类名/二级分类名" (如 "服装系统/上装")\n'
     '  cat  = 一级分类, value 填一级分类名 (如 "光影氛围")\n'
-    "每条规则必须有唯一 id; note 为可选备注。完成后输出整个 JSON 文件内容。"
+    "每条规则必须有唯一 id; note 为可选备注。完成后输出形如 {\"rules\": [...]} 的 JSON。"
 )
 
 _NSFW_NUDE = ["nude", "topless", "completely nude", "partially nude", "bottomless",
@@ -106,63 +96,15 @@ def _norm_en(x) -> str:
 
 
 def _mtime_c() -> float:
-    m1 = m2 = 0.0
-    try:
-        m1 = os.stat(CONFLICTS_PATH).st_mtime
-    except OSError:
-        pass
-    try:
-        m2 = os.stat(_nsfw_conflicts_path()).st_mtime
-    except OSError:
-        pass
-    return max(m1, m2)
+    """规则真源 = 各层库文件 (runtime_snapshot 缓存键用), 取三层最大 mtime。"""
+    return max(library._mtime(library.DEFAULT_PATH),
+               library._mtime(library.EXT_PATH),
+               library._mtime(library.USER_PATH))
 
 
 def _lib_key() -> tuple:
     return (library._mtime(library.DEFAULT_PATH), library._mtime(library.USER_PATH),
             library._mtime(library.EXT_PATH))
-
-
-def _write_file(payload: dict) -> None:
-    jsonio.atomic_write_json(CONFLICTS_PATH, payload)
-
-
-def _migrate_legacy_groups() -> list[dict]:
-    try:
-        with open(LEGACY_GROUPS_PATH, "r", encoding="utf-8-sig") as f:
-            old = json.load(f)
-    except (OSError, ValueError):
-        return []
-    rules = []
-    for i, g in enumerate(old.get("groups", []) or []):
-        tags = [str(t).strip() for t in (g.get("tags") or []) if str(t).strip()]
-        if len(tags) < 2:
-            continue
-        rules.append({
-            "id": f"legacy.{g.get('id') or i}",
-            "note": f"旧互斥组: {g.get('name') or g.get('id') or i}",
-            "left": {"kind": "tags", "value": tags},
-            "right": [{"kind": "tag", "value": t} for t in tags],
-        })
-    return rules
-
-
-def _fresh_payload() -> dict:
-    rules = list(DEFAULT_RULES)
-    have = {r["id"] for r in rules}
-    for r in _migrate_legacy_groups():
-        if r["id"] not in have:
-            rules.append(r)
-            have.add(r["id"])
-    return {"_说明": _DOC_TEXT, "version": 1, "rules": rules}
-
-
-def _ensure_file() -> None:
-    if not os.path.isfile(CONFLICTS_PATH):
-        try:
-            _write_file(_fresh_payload())
-        except OSError:
-            pass
 
 
 def _valid_shape(r) -> bool:
@@ -187,60 +129,56 @@ def _valid_shape(r) -> bool:
     return True
 
 
+def _rules_from_lib() -> list[dict]:
+    """从合并库读规则段; 无 rules 键时回退出厂默认 (纯内存, 不落盘)。"""
+    lib = library.get_merged()
+    raw = (lib.get("rules") or {}).get("conflicts")
+    if raw is None:
+        return [dict(r) for r in DEFAULT_RULES]
+    return [r for r in raw if _valid_shape(r)]
+
+
 def load_rules() -> list[dict]:
     global _cache, _cache_key
-    key = (_lib_key(), _mtime_c())
+    key = _lib_key()
     with _lock:
         if _cache is not None and _cache_key == key:
             return _cache["rules"]
-        _ensure_file()
-        rules: list[dict] = []
-        try:
-            with open(CONFLICTS_PATH, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            for r in data.get("rules", []) or []:
-                if _valid_shape(r):
-                    rules.append(r)
-        except (OSError, ValueError):
-            rules = [dict(r) for r in DEFAULT_RULES]
-        # 1.8.0: NSFW 扩展规则并入 (文件缺失 = 无; 规则引用解析失败时自动跳过)
-        try:
-            with open(_nsfw_conflicts_path(), "r", encoding="utf-8") as f:
-                nfw = json.load(f)
-            for r in nfw.get("rules", []) or []:
-                if _valid_shape(r) and str(r.get("id") or "").startswith("ext."):
-                    rules.append(r)
-        except (OSError, ValueError):
-            pass
+    rules = _rules_from_lib()
+    with _lock:
         _cache, _cache_key = {"rules": rules}, key
         return rules
 
 
-def save_rules(rules: list[dict], doc: str | None = None) -> dict:
-    global _cache, _cache_key
+def save_rules(rules: list[dict]) -> dict:
+    """整表保存 (管理页用): 校验/去重后写回默认库文件的 rules.conflicts 段。
+
+    ext 层规则 (ext.* 前缀, 或 ext 库文件中的同 id) 归扩展包管, 不写进默认库 ——
+    前端 GET 拿到的是合并整表, 用户随手删一条就会把扩展规则整批回写, 这里挡住。
+    """
     clean, seen = [], set()
+    try:
+        ext_rules = (library.load_ext_raw().get("rules") or {}).get("conflicts") or []
+    except Exception:  # noqa: BLE001 — ext 库损坏不挡保存
+        ext_rules = []
+    ext_ids = {str(r.get("id") or "").strip() for r in ext_rules if isinstance(r, dict)}
     for r in rules or []:
         if not _valid_shape(r):
             continue
-        # 扩展包规则 (ext.*) 归 nsfw_conflicts.json 管, 主文件里存一份会变成
-        # 双份 + 影子旧值 (load_rules 两个文件都读)。前端 GET 拿到的是合并后的
-        # 整表, 用户随手删一条就会把扩展规则整批回写进主文件 —— 这里挡住。
-        if str(r.get("id") or "").strip().startswith("ext."):
-            continue
         rid = str(r["id"]).strip()
+        if rid.startswith("ext.") or rid in ext_ids:
+            continue
         n = 2
         while rid in seen:
             rid = f"{r['id']}-{n}"
             n += 1
         seen.add(rid)
         clean.append({**r, "id": rid})
-    payload = {"_说明": doc or _DOC_TEXT, "version": 1, "rules": clean}
+    library.save_rules_into_default(conflicts=clean)
+    global _cache, _cache_key
     with _lock:
-        _write_file(payload)
-        # ⚠ 绝不能把刚写的 clean 塞进缓存: clean 里**没有**扩展包规则 (ext.* 由
-        #   nsfw_conflicts.json 提供), 塞进去会让本进程的合并视图少掉那一批, 直到
-        #   下次文件变更才恢复。实测: 就地加一条规则后 GET 由 45 条变 35 条
-        #   (2026-09-21)。缓存置空 = 下次 load_rules 重新合并两个文件。
+        # ⚠ 绝不能把 clean 塞进缓存: 里面没有 ext 层规则, 塞了本进程合并视图就少一批
+        #   (2026-09-21 踩过: 就地加一条规则后 GET 由 45 条变 35 条)。置空 = 重新合并。
         _cache, _cache_key = None, None
     return {"ok": True, "count": len(clean)}
 
@@ -358,36 +296,7 @@ class ExclusionIndex:
         return banned
 
 
-# ---------------------------------------------------------------- 旧接口兼容
-
-def get_groups() -> list[dict]:
-    """旧接口: tags 组规则还原成组形式 (组内互斥语义由调用方触发式使用)。"""
-    out = []
-    for r in load_rules():
-        if r["left"].get("kind") == "tags" and all(
-                ref.get("kind") == "tag" for ref in r.get("right", [])):
-            members = [str(v) for v in r["left"]["value"]]
-            if {str(ref["value"]) for ref in r["right"]} >= set(members):
-                out.append({"id": r["id"], "name": r.get("note", ""), "tags": members})
-    return out
-
-
-def save_groups(groups: list[dict]) -> None:
-    """旧接口: 组列表追加迁移进新规则文件。"""
-    rules = load_rules()
-    have = {r.get("id") for r in rules}
-    for i, g in enumerate(groups or []):
-        tags = [str(t).strip() for t in (g.get("tags") or []) if str(t).strip()]
-        if len(tags) < 2:
-            continue
-        rid = f"legacy.{g.get('id') or i}"
-        if rid in have:
-            continue
-        rules.append({"id": rid, "note": f"旧互斥组: {g.get('name') or rid}",
-                      "left": {"kind": "tags", "value": tags},
-                      "right": [{"kind": "tag", "value": t} for t in tags]})
-    save_rules(rules)
-
+# ---------------------------------------------------------------- 体检
 
 def check_selection(en_list: list[str], lib: dict | None = None) -> dict[str, list[str]]:
     """勾选集冲突体检: {标签: 与之互斥的其他已选标签}。"""

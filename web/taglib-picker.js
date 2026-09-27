@@ -367,7 +367,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         <button class="tp-tabbtn tp-hometab active">🏠 首页</button>
         <button class="tp-tabbtn tp-picktab">挑标签</button>
         <button class="tp-tabbtn tp-grptab">🧬 互斥域</button>
-        <button class="tp-tabbtn tp-nltab">✍ NL 句式</button>
+        <button class="tp-tabbtn tp-nltab">✍ 自然语言</button>
         <button class="tp-tabbtn tp-prtab">📦 预设</button>
         <button class="tp-tabbtn tp-settab">⚙ 设置</button>
         <input class="tp-search" placeholder="🔍 搜中文 / 英文 / 别名…" />
@@ -475,7 +475,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     catsBox.innerHTML = "";
     if (!ui.openAxes) ui.openAxes = new Set();
     const st = getState(node);
-    const master = st.fill_master ?? true;
     const tmin = st.total_min ?? 40;
     const tmax = st.total_max ?? 60;
     const excludedSet = new Set(getExcluded() || []);
@@ -496,26 +495,20 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const allCount = libCats().reduce((n2, c) => n2 + countTags(c), 0);
 
     // ---- 总预算 ----
+    // (逐槽位自定义配额已退役: 槽位配额全部走引擎内置 SLOT_MAX, 面板只读展示)
     const masterBox = document.createElement("div");
     masterBox.className = "tp-master";
     masterBox.innerHTML = `
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-        <input type="checkbox" class="tp-master-sw" ${master ? "checked" : ""}
-          style="width:14px;height:14px;accent-color:#54a0ff"/>
-        <b style="font-size:12px">自动配额</b>
+      <label style="display:flex;align-items:center;gap:6px;user-select:none">
+        <b style="font-size:12px">总词数</b>
       </label>
-      <div class="tp-range" style="${master ? "" : "opacity:.35"}">
+      <div class="tp-range">
         <input type="number" class="tp-total-min" min="0" max="200" value="${tmin}"/>
         <span>~</span>
         <input type="number" class="tp-total-max" min="0" max="300" value="${tmax}"/>
       </div>
-      <div class="tp-range-hint">全库共出 ${tmin}~${tmax} 个词 · 各槽位配额已内置<br>
-        关掉此开关则改为逐槽位自定义</div>`;
+      <div class="tp-range-hint">全库共出 ${tmin}~${tmax} 个词 · 各槽位配额已内置</div>`;
     catsBox.appendChild(masterBox);
-    masterBox.querySelector(".tp-master-sw").onchange = (e) => {
-      setState(node, { fill_master: e.target.checked });
-      renderCats();
-    };
     const saveMaster = () => {
       const mn = parseInt(masterBox.querySelector(".tp-total-min").value) || 0;
       const mx = parseInt(masterBox.querySelector(".tp-total-max").value) || 0;
@@ -523,7 +516,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       const hi = Math.min(300, Math.max(0, Math.max(mn, mx)));
       setState(node, { total_min: lo, total_max: hi });
       masterBox.querySelector(".tp-range-hint").innerHTML =
-        `全库共出 ${lo}~${hi} 个词 · 各槽位配额已内置<br>关掉此开关则改为逐槽位自定义`;
+        `全库共出 ${lo}~${hi} 个词 · 各槽位配额已内置`;
     };
     masterBox.querySelector(".tp-total-min").onchange = saveMaster;
     masterBox.querySelector(".tp-total-max").onchange = saveMaster;
@@ -572,27 +565,17 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       for (const sub of c.subcategories || []) {
         const key = `${c.name}/${sub.name}`;
         const sEx = cEx || isEx(key);
-        // ⚠ 默认值必须是**引擎内置配额** (slotpolicy.SLOT_MAX, 由 panel-index 带过来),
-        // 不能写死 1/1 —— 引擎对 画质增强 5/3、细节强化 4/2、眼部 2 … 都有配额,
-        // 面板显示 1/1 会让用户按错的数字理解输出 (2026-09-21 修)。
-        const override = (st.fill_sub_ranges || {})[sub.id];
-        const subRange = override || panelSlotCap(key);
+        // 配额显示 = 引擎内置配额 (slotpolicy.SLOT_MAX, 由 panel-index 带过来), 只读。
+        // (逐槽位自定义范围已退役: 几乎全是 1~1, 各功能调整走代码内置)
         const cap = panelSlotCap(key);
         mkRow(catsBox, {
           id: sub.id, name: sub.name + (sEx ? " · 已关" : ""), count: (sub.tags || []).length,
           depth: 1, active: ui.activeSlot === sub.name,
           toggle: { on: !sEx, title: cEx ? "所属轴已关闭" : (isEx(key) ? "该槽位已关闭" : "点击关闭该槽位"),
                     onToggle: (on) => toggleEx(key, on, c.name) },
-          range: cEx ? { min: 0, max: 0, locked: true }
-            : { min: subRange.min, max: subRange.max,
-                title: override
-                  ? `自定义配额 ${subRange.min}~${subRange.max}（关掉上方「自动配额」总开关后才生效；现在走引擎内置 ${cap.min}~${cap.max}）`
-                  : `引擎内置配额 ${cap.min}~${cap.max}（改这里 = 自定义，需关掉上方「自动配额」总开关）` },
-          onRange: (mn, mx) => {
-            const all = { ...(getState(node).fill_sub_ranges || {}) };
-            all[sub.id] = { min: mn, max: mx };
-            setState(node, { fill_sub_ranges: all });
-          },
+          range: { text: cEx ? "0~0" : `${cap.min}~${cap.max}`,
+                   title: cEx ? "所属轴已关闭"
+                     : `引擎内置配额 ${cap.min}~${cap.max}（该槽位实际抽取数量, 只读）` },
           onclick: () => { ui.activeAxis = aId; ui.activeSlot = sub.name; renderCats(); renderChips(); },
         });
         for (const g of sub.groups || []) {
@@ -611,7 +594,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
   }
 
 
-  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, onRange, toggle, leaf }) {
+  function mkRow(box, { id, icon = "", name, count, depth, color, chevron, open, active, onclick, onchevron, range, toggle, leaf }) {
     const el = document.createElement("div");
     el.className = "tp-cat tp-cat-l" + depth + (active ? " active" : "");
     // 可定位标识: 前端此前零门禁覆盖, 而这些行没有任何 data 属性 → 选择器无从下手。
@@ -623,12 +606,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     if (depth === 1) el.style.paddingLeft = "22px";
     if (depth === 2) el.style.paddingLeft = "38px";
     const rangeHtml = range ? `
-      <span class="tp-range" style="${range.locked ? "opacity:.35" : ""}"
-            title="${esc(String(range.title || "该槽位抽取数量范围"))}">
-        <input type="number" min="0" max="20" value="${range.min}" data-r="min" ${range.locked ? "disabled" : ""}/>
-        <span>~</span>
-        <input type="number" min="0" max="20" value="${range.max}" data-r="max" ${range.locked ? "disabled" : ""}/>
-      </span>` : "";
+      <span class="tp-range" title="${esc(String(range.title || "该槽位抽取数量范围"))}">${esc(String(range.text || ""))}</span>` : "";
     el.innerHTML =
       (toggle ? `<input type="checkbox" class="tp-row-tog" ${toggle.on ? "checked" : ""}`
                 + ` aria-label="${esc(String(name))}"`
@@ -644,16 +622,6 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     el.onclick = onclick;
     if (onchevron) {
       el.querySelector(".tp-chev").onclick = (e) => { e.stopPropagation(); onchevron(); };
-    }
-    if (range && onRange) {
-      el.querySelectorAll(".tp-range input").forEach((inp) => {
-        inp.onclick = (e) => e.stopPropagation();
-        inp.onchange = () => {
-          const mn = parseInt(el.querySelector('[data-r="min"]').value) || 0;
-          const mx = parseInt(el.querySelector('[data-r="max"]').value) || 0;
-          onRange(Math.min(20, Math.max(0, mn)), Math.min(20, Math.max(0, mx)));
-        };
-      });
     }
     box.appendChild(el);
   }
@@ -1632,10 +1600,14 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       </div>
       </details>
       <details class="tp-set-sec" open>
-      <summary>1.3.0 引擎 <span class="sub">· 组互斥/资源算账/武器束/NL 尾段</span></summary>
+      <summary>1.3.0 引擎 <span class="sub">· 组互斥/资源算账/武器束/自然语言</span></summary>
       <div class="tp-set-card">
-        ${row("自然语言尾段", `<input type="checkbox" class="sv-nltail" ${st.nl_tail !== false ? "checked" : ""}/>`,
-          "输出末尾追加 2~4 句连贯英文描述 (句式随 seed 变, 关掉=纯标签)")}
+        ${row("自然语言", `<select class="sv-nlmode">
+            <option value="auto" ${(st.nl_mode || (st.nl_tail === false ? "off" : "auto")) === "auto" ? "selected" : ""}>自动 · 按段散句</option>
+            <option value="tail" ${(st.nl_mode || "") === "tail" ? "selected" : ""}>末尾整段（旧）</option>
+            <option value="off" ${(st.nl_mode || (st.nl_tail === false ? "off" : "auto")) === "off" ? "selected" : ""}>纯标签</option>
+          </select>`,
+          "自动: 主体/动作/场景光影三段之后各插一句自然语言 —— 高质量提示词本来就不止纯标签, 也不可能全堆末尾; 没有素材时自动回落到末尾整段")}
         ${row("武器带姿势概率", `<input type="number" class="sv-bundleprob" min="0" max="100" step="5" value="${Math.round((st.bundle_pose_prob ?? 0.85) * 100)}"/>`,
           "% · 抽中武器时自动带出该武器一条姿势的概率")}
         ${row("同时武器上限", `<input type="number" class="sv-maxweap" min="1" max="4" step="1" value="${st.max_weapons ?? 2}"/>`,
@@ -1685,7 +1657,9 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     $(".sv-dd").onchange = (e) => saveNode({ dedupe: e.target.checked });
     $(".sv-search").onchange = (e) => saveNode({ search_text: e.target.value.trim() });
     const clampPct = (v, d) => Math.min(100, Math.max(0, parseInt(v) ?? d)) / 100;
-    $(".sv-nltail").onchange = (e) => saveNode({ nl_tail: e.target.checked });
+    $(".sv-nlmode").onchange = (e) => saveNode({
+      nl_mode: e.target.value, nl_tail: e.target.value !== "off",
+    });
     $(".sv-bundleprob").onchange = (e) => saveNode({ bundle_pose_prob: clampPct(e.target.value, 85) });
     $(".sv-maxweap").onchange = (e) => saveNode({ max_weapons: Math.min(4, Math.max(1, parseInt(e.target.value) || 2)) });
     $(".sv-extrprob").onchange = (e) => saveNode({ extra_prob: clampPct(e.target.value, 35) });
@@ -2091,7 +2065,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     nlView.innerHTML = `<div style="padding:30px;text-align:center;color:#8b93a5">加载中…</div>`;
     let d;
     try { d = await fetch("/taglib/api/nl").then((r) => r.json()); }
-    catch { nlView.innerHTML = `<div style="padding:30px;color:#ff6b6b">NL 接口加载失败</div>`; return; }
+    catch { nlView.innerHTML = `<div style="padding:30px;color:#ff6b6b">自然语言接口加载失败</div>`; return; }
     nlUncovered = d.uncovered || [];
     nlWork = JSON.parse(JSON.stringify(d.data || {}));
     nlWork.families = nlWork.families || {};
@@ -2107,11 +2081,22 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     const fams = _nlFams();
     const total = fams.reduce((n, [, v]) => n + v.length, 0);
     const pm = Object.entries(nlWork.pose_map).filter(([k]) => k !== "null");
+    const _st = getState(node);
+    const _mode = _st.nl_mode || (_st.nl_tail === false ? "off" : "auto");
     let html = `
-      <div class="tp-h1">✍ NL 句式素材
+      <div class="tp-h1">✍ 自然语言
         <span class="tp-h1-sub">${fams.length} 族 · ${total} 句 · ${pm.length} 条动作映射</span>
         <button class="tp-eadd tp-addfam" style="margin-left:auto">＋ 新增句式族</button></div>
-      <div class="tp-note">末尾自然语言段的素材库。占位符 <code>{S}</code> 主语 (随人数词自动 She/He/They) · <code>{POS}</code> 所有格 · <code>{O}</code> 宾语 (从档案 obj_kind→words 解析)。
+      <div class="tp-set-card" style="margin-bottom:10px">
+        <label style="font-weight:600">接入方式
+          <select class="tp-nlmode" style="margin-left:8px">
+            <option value="auto" ${_mode === "auto" ? "selected" : ""}>自动 · 三段散句</option>
+            <option value="tail" ${_mode === "tail" ? "selected" : ""}>末尾整段</option>
+            <option value="off" ${_mode === "off" ? "selected" : ""}>纯标签</option>
+          </select></label>
+        <div class="tp-note" style="margin:6px 0 0">自动 = 主体 / 动作 / 场景光影 三段之后各插一句自然语言, 其余保持纯标签; 素材不足时回落到末尾整段。</div>
+      </div>
+      <div class="tp-note">下面是自然语言用的句式素材 (模板)。占位符 <code>{S}</code> 主语 (随人数词自动 She/He/They) · <code>{POS}</code> 所有格 · <code>{O}</code> 宾语 (从档案 obj_kind→words 解析)。
       ${nlUncovered.length ? `<br><b style="color:var(--tl-warn,#e0a35e)">⚠ 档案姿势词未进下方映射 (${nlUncovered.length}): ${esc(nlUncovered.join(", "))}</b>` : `<br><b style="color:var(--tl-ok)">✓ 全部武器姿势词已有句式覆盖</b>`}</div>`;
     fams.forEach(([fam, vs], fi) => {
       html += `
@@ -2151,6 +2136,13 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
       </details>`;
     nlView.innerHTML = html;
     bindLang(nlView, drawNl);
+    const _nm = nlView.querySelector(".tp-nlmode");
+    if (_nm) {
+      _nm.onchange = (e) => {
+        setState(node, { nl_mode: e.target.value, nl_tail: e.target.value !== "off" });
+        onNodeState?.();
+      };
+    }
 
     // 族改名 (保序重建 + 同步 pose_map 指向)
     nlView.querySelectorAll('input[data-nf="famname"]').forEach((el) => {
@@ -2297,7 +2289,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
         </div>
         <div class="tp-cf-rights"></div>
         <button class="tp-cf-save">💾 保存规则</button>
-        <span class="tp-cf-note" style="font-size:11px;color:#6b7385;margin-left:10px">保存后立即写入 data/taglib/conflicts.json</span>
+        <span class="tp-cf-note" style="font-size:11px;color:#6b7385;margin-left:10px">保存后立即写入词库文件 (rules.conflicts 段)</span>
       </div>
       ${cfDatalist("tag")}${cfDatalist("sub")}${cfDatalist("cat")}`;
 
@@ -2428,7 +2420,7 @@ function mountTagPicker(rootEl, { onCancel, onConfirm, onNodeState, onGlobalChan
     } else if (tab === "grp") {
       info.innerHTML = `🧬 同域任意两词永不共存 (引擎抽取期拦截)`;
     } else if (tab === "nl") {
-      info.innerHTML = `✍ 句式素材 · 与标签同 seed 确定性输出`;
+      info.innerHTML = `✍ 自然语言 · 与标签同 seed 确定性输出`;
     } else {
       info.innerHTML = `节点参数即改即存 · 全局偏好双向同步`;
     }

@@ -945,7 +945,7 @@ ${data.categories.length} 个分类 / ${nTags} 个标签
   async function exportConflicts() {
     const st = await fetch("/taglib/api/conflicts").then((r) => r.json());
     downloadText(JSON.stringify({ _说明: st.doc, version: 1, rules: st.rules }, null, 1),
-                 "conflicts.json");
+                 "反冲突规则.json");
   }
 
   /* 反冲突文件导入: 预览 -> 替换/合并 -> 落盘 */

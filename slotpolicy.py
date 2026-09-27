@@ -25,6 +25,8 @@
 
 from __future__ import annotations
 
+import re
+
 # ------------------------------------------------------------------ 逐槽位配额
 # (max_n, min_n)
 SLOT_MAX: dict[str, tuple[int, int]] = {
@@ -264,6 +266,10 @@ MINOR_AGE_WORDS = frozenset({
     "toddler", "infant", "child", "preteen", "loli", "shota",
     "teen", "teenage girl", "teenage boy", "early teens", "late teens",
     "young girl", "young boy",
+    # "aged down" = 幼态化变换词, 与成人词同现即未成年风险 (子智能体审计实测漏网)
+    "aged down",
+    # "newborn" = 新生儿词, 真机审核实测与成人向场景同池 (子智能体报告+WD14 抽查)
+    "newborn",
 })
 
 MINOR_BLOCK_WORDS = frozenset({
@@ -447,6 +453,8 @@ SOLO_NO_MIRROR_WORDS = frozenset({
     "polaroid", "multiple views", "split screen", "split image",
     "double exposure", "frame within frame", "photo inset", "inset",
     "collage", "montage", "hands only",
+    # 群像/多人构图词 (各库取景范围槽的多人语义词; 子智能体审计实测单人锁漏网)
+    "crowd shot", "group portrait", "two-shot",
 })
 
 # 词面带镜像/多次成像语义的一律封 (自动覆盖将来新增的写法, 不用手工维护)。
@@ -469,3 +477,43 @@ def is_solo_anchor_combo(axis_words) -> bool:
     """人数轴上的词是否只是 '单人性别词 + solo' 这一对 (冲突表保留的黄金组合)。"""
     ws = {str(w).strip().lower() for w in axis_words}
     return "solo" in ws and ws <= SOLO_ANCHOR_COMBO
+
+
+# ------------------------------------------------------------------ 类目语义词根
+# 类目被排除时, 命中下列词根 (词首前缀匹配) 的词一并排除 —— 哪怕它的分类不在
+# 被排除的类目里。为什么必需: 真机审计实测, "排除服装"开启后 12 张仍有 4 张出
+# 复杂服装 —— 泄漏词 (detailed armor / skirt hold / lace fabric / buttoning …)
+# 的分类在 画质规格/动作姿态/材质特效, 类目匹配 (按分类路径) 够不到它们。
+# 词根是语言级知识 (英文词库通用), 不是某个库的冲突规则 —— 不依赖任何数据文件。
+CAT_SEMANTIC_ROOTS: dict[str, tuple[str, ...]] = {
+    "服装": (
+        "clothes", "clothing", "outfit", "dress", "skirt", "shirt", "armor",
+        "chainmail", "pauldron",
+        "lace", "fabric", "robe", "gown", "corset", "uniform", "kimono",
+        "sleeve", "collar", "apron", "cape", "cloak", "jacket", "coat",
+        "vest", "pants", "trouser", "swimsuit", "bikini", "lingerie",
+        "stocking", "sock", "shoe", "boot", "sandal", "necktie", "bowtie",
+        "glove", "scarf", "belt", "button", "frill", "ruffle", "hemline",
+        "hosiery", "nightgown", "pajama",
+    ),
+    "道具武器": (
+        "sword", "blade", "gun", "rifle", "spear", "axe", "dagger",
+        "katana", "halberd", "shield", "knife", "pistol", "cannon",
+        "scythe", "grenade", "firearm", "crossbow", "longbow",
+    ),
+}
+
+_ROOTS_RE: dict[str, tuple] = {}
+for _cat, _roots in CAT_SEMANTIC_ROOTS.items():
+    _ROOTS_RE[_cat] = tuple(
+        re.compile(r"\b" + re.escape(r)) for r in _roots
+    )
+
+
+def semantic_hit(tag_lower: str, excl_cats) -> bool:
+    """tag 文本是否命中任一被排除大类的语义词根 (词首边界, 防 bowl→bow 类误伤)。"""
+    for cat in excl_cats:
+        for rx in _ROOTS_RE.get(cat, ()):
+            if rx.search(tag_lower):
+                return True
+    return False

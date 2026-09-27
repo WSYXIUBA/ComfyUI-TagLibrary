@@ -484,8 +484,13 @@ def _snapshot_key(lib: dict) -> tuple:
 
 def get_snapshot(lib: dict | None = None) -> RuntimeSnapshot:
     global _current, _current_key
+    explicit = lib is not None
     if lib is None:
         lib = library.get_merged()
+    if explicit:
+        # 显式传入的库**不能走缓存**: _snapshot_key 只取库文件 mtime, 与传入的字典无关,
+        # 换了库也会命中默认库的旧快照 (逐库对比测试就栽在这)。显式路径直接重建。
+        return build_snapshot(lib, tagconflicts.load_rules(), profiles_mod.load_profiles())
     key = _snapshot_key(lib)
     with _lock:
         if _current is not None and _current_key == key:
