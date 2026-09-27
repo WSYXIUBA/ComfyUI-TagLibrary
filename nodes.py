@@ -62,6 +62,27 @@ def _manual_index(merged: dict) -> tuple[dict, dict, dict]:
     return by_en, en_path, by_id
 
 
+def _gender_negative(neg: str, state) -> str:
+    """性别锁的负向补强。
+
+    正向槽位配额上限=1 (人数轴 / 角色身份轴都只有 1 个名额), 已经抽到词时就塞不进
+    第二个主体名词 —— 实测"仅女性"配置里仍有约四分之一到三分之一的提示词没有任何
+    女性主体名词, 画面性别只能靠角色 LoRA 撑。负向不受槽位配额约束, 改从这里压制异性。
+    """
+    if not neg:
+        return neg
+    g = str(state.get("gender") or "").lower()
+    if g == "female":
+        extra = "1boy, 2boys, multiple boys, male focus"
+    elif g == "male":
+        extra = "1girl, 2girls, multiple girls, female focus"
+    else:
+        return neg
+    if extra.split(",")[0].strip() in neg:
+        return neg
+    return (neg.rstrip(", ") + ", " + extra)
+
+
 class TagLibraryNode:
     CATEGORY = "纸心/prompt"
     FUNCTION = "build"
@@ -166,6 +187,7 @@ class TagLibraryNode:
                     else ((text + " " + tail) if text else tail)
         dropped_en = [snap.tag_text[i] for i in res.dropped_ids]
         neg = self.NEGATIVE_PRESET if state.get("negative_out", True) else ""
+        neg = _gender_negative(neg, state)
         return {
             "ui": {"taglib_echo": json.dumps(echo_items, ensure_ascii=False),
                    "taglib_echo_dropped": json.dumps(dropped_en, ensure_ascii=False)},
@@ -388,6 +410,7 @@ class TagLibraryNode:
         text = self._join_output(tags, dedupe=dedupe, separator=separator,
                                  prefix=prefix, suffix=suffix)
         neg = self.NEGATIVE_PRESET if state.get("negative_out", True) else ""
+        neg = _gender_negative(neg, state)
         return (text, text, neg)
 
     @staticmethod

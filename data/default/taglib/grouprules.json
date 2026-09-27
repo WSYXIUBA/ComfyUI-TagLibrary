@@ -331,7 +331,11 @@
     "eye-level shot",
     "from above",
     "from below",
-    "pov"
+    "pov",
+    "dutch angle view",
+    "dutch tilt",
+    "dutch tilt composition",
+    "canted angle"
    ]
   },
   {
@@ -343,7 +347,15 @@
     "full body",
     "portrait",
     "upper body",
-    "wide shot"
+    "wide shot",
+    "portrait photography",
+    "srpg portrait",
+    "fighting game portrait",
+    "medium close-up",
+    "medium shot",
+    "medium portrait",
+    "headshot",
+    "bust shot"
    ]
   },
   {
@@ -1321,6 +1333,76 @@
     "tropical downpour",
     "typhoon",
     "wet snow"
+   ]
+  },
+  {
+   "id": "camera_vertical",
+   "members": [
+    "aerial view",
+    "between the legs view",
+    "bird's-eye view",
+    "bottom-up view",
+    "drone shot",
+    "eye level straight",
+    "eye-level shot",
+    "from above",
+    "from below",
+    "ground-level shot",
+    "high angle",
+    "low angle",
+    "low angle composition",
+    "over-the-head view",
+    "slight high angle",
+    "slight low angle",
+    "top-down view",
+    "worm's eye view"
+   ]
+  },
+  {
+   "id": "camera_facing",
+   "members": [
+    "back view",
+    "backturned",
+    "facing away",
+    "facing viewer",
+    "from behind",
+    "from side",
+    "front view",
+    "profile",
+    "three-quarter back view",
+    "three-quarter view",
+    "three-quarter view shot"
+   ]
+  },
+  {
+   "id": "camera_pov",
+   "members": [
+    "dashcam view",
+    "female pov",
+    "first-person view",
+    "peeping view",
+    "pov",
+    "pov crotch",
+    "pov hands",
+    "security camera view",
+    "split level view",
+    "third-person view"
+   ]
+  },
+  {
+   "id": "camera_roll",
+   "members": [
+    "dutch angle view",
+    "dutch tilt",
+    "canted angle"
+   ]
+  },
+  {
+   "id": "camera_projection",
+   "members": [
+    "isometric view",
+    "orthographic view",
+    "forced perspective"
    ]
   }
  ]

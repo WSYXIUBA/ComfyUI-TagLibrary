@@ -437,6 +437,25 @@ SOLO_PARTNER_WORDS = frozenset({
 #   是误伤。故只认"another's" + 上面显式列的两个。
 SOLO_PARTNER_SUBSTR = ("another's",)
 
+# 👤单人锁 · "多次成像"构图词 (2026-09-23 出词审查补)
+# 单人锁开着, 提示词里仍会抽到 mirror / reflection / polaroid / multiple views 这类构图词 ——
+# 它们本身就会让模型画出第二个人形或第二个视角。全矩阵实测 (24 组 × 200~400 seed) 命中率
+# 13~18%; 真机复核过带 mirror / reflection 的两张, 分别画出约 4 个与 8~9 个人形 (提示词写着 solo)。
+# ⚠ first-person view / third-person view 是**机位**词, 不在列 —— 旧注释已记录过误伤 (13 个命中里 8 个是机位/种族词)。
+SOLO_NO_MIRROR_WORDS = frozenset({
+    "mirror", "reflection", "water reflection", "mirror reflection",
+    "polaroid", "multiple views", "split screen", "split image",
+    "double exposure", "frame within frame", "photo inset", "inset",
+    "collage", "montage", "hands only",
+})
+
+# 词面带镜像/多次成像语义的一律封 (自动覆盖将来新增的写法, 不用手工维护)。
+# 精确表拦不住的三种写法实测漏网: "infinity mirror" / "looking at mirror" / "reflection view" ——
+# 它们画出的东西与 mirror 同类。⚠ 不用 first-person view / another world 这类大词 (旧误伤已记录)。
+SOLO_NO_MIRROR_SUBSTR = ("mirror", "reflection", "polaroid", "multiple views",
+                         "split screen", "split image", "double exposure",
+                         "collage", "montage", "frame within frame", "photo inset")
+
 # 👤单人锁 · 人数锚点补强 (2026-09-23 真机出图审查补)
 # 87 张真机出图 (全部单人锁开) 实测: 提示词里是 solo 的 37 张只有 **3%** 出多人;
 # 是 1girl 的 39 张有 **21%**; 出图被判女性的比例 solo 组 97% / 1girl 组 74%。

@@ -324,6 +324,17 @@ class _Extraction:
                 return False
             if any(h in _lo for h in slotpolicy.SOLO_PARTNER_SUBSTR):
                 return False
+            # 多次成像构图词 (mirror / reflection / polaroid / multiple views ...) ——
+            # 它们自己不预设第二个人, 但会让模型画出第二个视角/人形 (精确表 + 子串兜底)
+            if _lo in slotpolicy.SOLO_NO_MIRROR_WORDS:
+                return False
+            if any(h in _lo for h in slotpolicy.SOLO_NO_MIRROR_SUBSTR):
+                return False
+        # 异性 focus 词闸门 —— 库内 gender_flag 未必标全 (实测 male focus 混进仅女性配置 1~3%)
+        if self.led.gender_lock == 1 and self.snap.tag_lower[tid] == "male focus":
+            return False
+        if self.led.gender_lock == 2 and self.snap.tag_lower[tid] == "female focus":
+            return False
         if self.bg_simple:
             if _sk in slotpolicy.SIMPLE_BG_BAN_SLOTS:
                 return False
@@ -869,6 +880,49 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
                 picks.append(ex.make_pick(_solo_tid, "solo_anchor"))
                 picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
 
+    # ---------- 4.55 性别主体锚点保证 ----------
+    # 性别锁只做"排除异性", 不保证"己方主体名词在场"。实测 (gender=female, 60 seed × 2):
+    # 单人锁开 25 条、单人锁关 34 条的**最终提示词里一个女性主体名词都没有** ——
+    # 人数轴每次只抽一个词, 抽到 solo / couple / multiple others 就没有 1girl;
+    # 而 4.5 的黄金组合只补 solo, 从不补 1girl (只落地了一半)。主体名词缺位时画面性别
+    # 全靠角色 LoRA 撑, 模型很容易画成异性 —— 真机现象就是"开了仅女性却出了男性"。
+    _gl = led.gender_lock if led.gender_lock in (1, 2) else (
+        1 if gmode == "female" else 2 if gmode == "male" else 0)
+    if _gl:
+        _tbl = (("1girl", "girl", "girls", "female", "woman", "multiple girls") if _gl == 1
+                else ("1boy", "boy", "boys", "male", "man", "multiple boys"))
+        _low = {p.en.lower() for p in picks}
+        if not (_low & set(_tbl)):
+            _counts = [p for p in picks if p.axis == "count"]
+            _soloish = bool(_low & {"solo", "solo focus", "alone", "only one"})
+            _add = None
+            _done = False
+            if _counts and not _soloish:
+                # 人数轴上是性别中性词 (couple / multiple others ...): 换成带性别的等价词。
+                # 只换不塞 —— 人数轴必须保持 1 个词 (quality_gate Q4 没有任何例外条款)。
+                _swap = "multiple girls" if _gl == 1 else "multiple boys"
+                _old = _counts[0]
+                _tid = snap.en_to_id.get(_swap)
+                if (_tid is not None and _tid != _old.id and _swap not in ex.led.used_lower
+                        and ex.tag_ok(_tid)):
+                    picks = [p for p in picks if p is not _old]
+                    picks.append(ex.make_pick(_tid, "gender_anchor"))
+                    _done = True
+            elif not _counts:
+                _add = "1girl" if _gl == 1 else "1boy"
+                _done = True
+            if not _done:
+                # 人数轴拿不到名额时不碰它 —— 性别名词走**角色身份轴** (girl / boy),
+                # 与人数轴互不影响 (1girl 是人数轴的词, 塞进去会让"人数轴唯一"门禁变红)。
+                # 该槽配额上限=1: 槽里已有身份词 (necromancer / ghost ...) 时不能再塞第二个。
+                if not any(p.axis == "character" for p in picks):
+                    _add = "girl" if _gl == 1 else "boy"
+            if _add:
+                _tid = snap.en_to_id.get(_add)
+                if _tid is not None and _add not in ex.led.used_lower and ex.tag_ok(_tid):
+                    picks.append(ex.make_pick(_tid, "gender_anchor"))
+            picks.sort(key=lambda p: (p.order, 0 if p.source == "pinned" else 1))
+
     # ---------- 4. 未成年锁终检 (词级, 与抽取顺序无关) ----------
     # 闸门本身是"年龄词落位后才封成人词", 顺序反了就漏 —— 实测 nsfw=on / 档位 1
     # 1500 seed 里 12 条年龄词与成人词同框 (child/loli/preteen + bra)。这里按**最终
@@ -903,5 +957,16 @@ def run_auto(snap, state: dict, seed: int, *, nsfw_on: bool,
     if any(p.id is not None and snap.tag_lower[p.id] in slotpolicy.NO_HUMAN_COUNT_WORDS
            for p in picks):
         picks = [p for p in picks if p.axis not in slotpolicy.NO_HUMAN_SKIP_AXES]
+
+    # ---------- 4.8 单人锁 · 多次成像构图词终检 ----------
+    # 抽取阶段的闸门 (tag_ok) 挡不住**束成员** —— 束走 commit_tag 不过 tag_ok (既有契约),
+    # 全矩阵实测残留 8~11% (mirror / reflection / polaroid / multiple views ...)。
+    # 按最终结果剔, 与抽取顺序无关; 这些词不是束宿主, 剔掉不会留下孤儿成员。
+    if solo_lock:
+        _mir = slotpolicy.SOLO_NO_MIRROR_WORDS
+        _mis = slotpolicy.SOLO_NO_MIRROR_SUBSTR
+        picks = [p for p in picks
+                 if p.id is None or (snap.tag_lower[p.id] not in _mir
+                                     and not any(h in snap.tag_lower[p.id] for h in _mis))]
 
     return AutoResult(picks, dropped, stats)
