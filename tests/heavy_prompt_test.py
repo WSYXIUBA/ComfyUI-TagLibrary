@@ -170,11 +170,12 @@ def check_engine_semantics(snap, state, seed, picks, rep: Report, tag_prefix="E"
             continue
         # ⚠ 纯欲档 (intensity>=2) 对 NSFW 槽位有**有意的**配额 boost
         # (README v1.8.0: "纯欲档 NSFW 槽位配额加成与削减豁免")。
-        # 定向复测证实: 档0/档1 全部 0 超限, 只有档2 超 (身体细节2→4 / 裸露与暴露1→2 /
-        # 束缚道具1→2 / 服装状态2→4)。用基础上限去卡档2 会产出假阳性。
-        # 第一版要求"槽位内全部词都带 nsfw 标记"才跳过 → 条件过严, 漏掉混槽位。
-        if intensity >= 2 and slot_nsfw.get(k, 0) > 0:
-            continue
+        # 判据必须与 engine 同款: engine.py 在 intensity>=2 时 cap += nsfw_boost(槽)。
+        # boost 是**槽级**的, 与"出的词带不带 nsfw 标记"无关 —— 旧判据按
+        # "槽内有 nsfw 词"才豁免, 混槽 (无标词先出) 下会假阳性
+        # (CI 实测: 档2 seed16 裸露与暴露 出 2 个无标词被误报)。
+        if intensity >= 2:
+            cap += slotpolicy.nsfw_boost(k)
         if v > cap:
             rep.fail(f"{pre}2 槽位配额",
                      f"{tag}seed{seed}: {k} 出 {v} 个 (上限 {cap}, nsfw词 {slot_nsfw.get(k, 0)})")
