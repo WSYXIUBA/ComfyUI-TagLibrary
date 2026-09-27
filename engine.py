@@ -94,7 +94,8 @@ class _Ledger:
     """单次抽取的账本: 用过的词/组名/资源/状态槽 + 增量违禁集。"""
 
     __slots__ = ("used_lower", "used_groups", "hands", "gaze", "states",
-                 "used_ids", "banned_ids", "prop_count", "gender_lock", "props_lib")
+                 "used_ids", "banned_ids", "scene_banned", "prop_count",
+                 "gender_lock", "props_lib")
 
     def __init__(self):
         self.used_lower: set[str] = set()
@@ -104,6 +105,7 @@ class _Ledger:
         self.states: dict[str, str] = {}   # slot -> value
         self.used_ids: set[int] = set()
         self.banned_ids: set[int] = set()  # cross_banned 增量并集
+        self.scene_banned: set[str] = set()  # 场景违和闸 (en 小写; 同 en 多副本一并禁)
         self.prop_count = 0                # 已出生的武器档案身份词数
         self.props_lib = 0                 # prop 轴库内词总数 (max_props_total 上限用)
         self.gender_lock = 0               # 0=未锁 1=女 2=男 (count 轴推导)
@@ -267,6 +269,9 @@ class _Extraction:
         self.rng = rng
         self.snap = snap
         self.solo_lock = solo_lock
+        # 时代门 (1.15.x): 0=未定调; 首个带 era 的词 (钉选先于抽取提交) 定调后,
+        # 管辖词 (道具轴 + 服装配饰三槽) 中时代不符者候选级排除。
+        self.era_lock = 0
 
         # 后算出来的状态 (run_auto 在算出来之后赋值)
         self.bundled_only = None
@@ -293,6 +298,16 @@ class _Extraction:
         if self.nsfw_on and self.snap.tag_lower[tid] in slotpolicy.TEEN_AGE_WORDS:
             return False
         if self.minor_age and (self.snap.tag_lower[tid] in self.minor_block_words):
+            return False
+        # ---- 时代门 (1.15.x) ----
+        # 定调后 (era_lock>0), 管辖词中 era 明确且不符者排除; era=0 (中性/未标)
+        # 的词永远放行 —— 门只拦"有明确时代色"的少数, 不误伤跨时代常用词。
+        if self.era_lock and self.snap.era_gated[tid]:
+            _ef = self.snap.era_flag[tid]
+            if _ef and _ef != self.era_lock:
+                return False
+        # ---- 场景违和闸 (1.15.x): 场景词出生时被拉黑的配对词 (en 级, 全副本) ----
+        if self.snap.tag_lower[tid] in self.led.scene_banned:
             return False
         g = self.snap.gender_flag[tid]
         if self.gmode == "female" and g == 2:
@@ -382,6 +397,19 @@ class _Extraction:
         p.order = self.snap.order_arr[tid] + len(self.picks) * 1e-5
         self.picks.append(p)
         self.led.used_ids.add(tid)
+        # 时代门 (1.15.x): 定调只认"钉选/手选词"与"场景轴词" —— 避免随机配饰抢跑
+        # 定调; 场景词按池序晚于道具出生, 但钉选场景 (预设) 时在抽取之前锁已就位。
+        if not self.era_lock:
+            _ef = self.snap.era_flag[tid]
+            if _ef and (source in ("pinned", "manual")
+                        or self.snap.axis_arr[tid] == "environment"):
+                self.era_lock = _ef
+        # 场景违和闸 (1.15.x): 场景词出生时, 把其"必毁图"配对词加入封禁
+        # (beach → 菜刀/笔记本/VR …; 表见 slotpolicy.SCENE_BAN_WORDS)。
+        # en 级封禁: 同 en 的多槽副本一并拦截 (id 级会漏副本)。
+        _bans = slotpolicy.SCENE_BAN_WORDS.get(self.snap.tag_lower[tid])
+        if _bans:
+            self.led.scene_banned.update(_bans)
         self.led.used_lower.add(self.snap.tag_lower[tid])
         self.led.used_groups |= self.snap.group_sets[tid]
         if self.cross_banned:

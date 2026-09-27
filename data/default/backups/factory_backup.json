@@ -21504,7 +21504,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "rapier",
@@ -21524,7 +21525,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "staff",
@@ -21542,7 +21544,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "magic wand",
@@ -21562,7 +21565,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "gun",
@@ -21582,7 +21586,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "sword",
@@ -21602,7 +21607,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "scythe",
@@ -21622,7 +21628,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "bow (weapon)",
@@ -21643,7 +21650,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "shield",
@@ -21661,7 +21669,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "spear",
@@ -21681,7 +21690,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "axe",
@@ -21701,7 +21711,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "dagger",
@@ -21719,7 +21730,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "kunai",
@@ -21737,7 +21749,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "shuriken",
@@ -21755,7 +21768,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "sniper rifle",
@@ -21775,7 +21789,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "pistol",
@@ -21795,7 +21810,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "lightsaber",
@@ -21815,7 +21831,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "chainsaw",
@@ -21835,7 +21852,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "katana sheath",
@@ -21853,7 +21871,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "dual swords",
@@ -21873,7 +21892,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "greatsword",
@@ -21893,7 +21913,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "war hammer",
@@ -21913,7 +21934,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "battle axe",
@@ -21933,7 +21955,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "crossbow",
@@ -21953,7 +21976,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "sniper scope",
@@ -21973,7 +21997,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "energy sword",
@@ -21993,7 +22018,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "plasma rifle",
@@ -22013,7 +22039,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "magical staff",
@@ -22031,7 +22058,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "grimoire",
@@ -22049,7 +22077,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "shield bash",
@@ -22067,7 +22096,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "dual pistols",
@@ -22085,7 +22115,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "assault rifle",
@@ -22105,7 +22136,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "shotgun",
@@ -22125,7 +22157,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "compound bow",
@@ -22145,7 +22178,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "throwing knives",
@@ -22165,7 +22199,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "chain whip",
@@ -22183,7 +22218,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "katana on back",
@@ -22203,7 +22239,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "sheathed sword",
@@ -22223,7 +22260,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "claymore",
@@ -22243,7 +22281,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "odachi",
@@ -22263,7 +22302,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "naginata",
@@ -22283,7 +22323,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "halberd",
@@ -22303,7 +22344,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "trident",
@@ -22323,7 +22365,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "mace",
@@ -22343,7 +22386,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "flail",
@@ -22363,7 +22407,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "bow and arrow",
@@ -22381,7 +22426,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "quiver",
@@ -22399,7 +22445,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "revolver",
@@ -22417,7 +22464,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "rifle",
@@ -22437,7 +22485,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "submachine gun",
@@ -22457,7 +22506,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "rocket launcher",
@@ -22477,7 +22527,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "energy gun",
@@ -22497,7 +22548,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "laser pistol",
@@ -22517,7 +22569,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       }
      ],
      "random_quota": null,
@@ -22707,7 +22760,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "bubble tea",
@@ -22725,7 +22779,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "ramen",
@@ -22905,7 +22960,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "matcha",
@@ -22995,7 +23051,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "parfait",
@@ -23013,7 +23070,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "taiyaki",
@@ -23193,7 +23251,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "chocolate fountain",
@@ -23211,7 +23270,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "teapot",
@@ -23283,7 +23343,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "water bottle",
@@ -23373,7 +23434,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "macaron",
@@ -23599,7 +23661,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "spellbook",
@@ -23617,7 +23680,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "book",
@@ -23653,7 +23717,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "game controller",
@@ -23671,7 +23736,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "pen",
@@ -23707,7 +23773,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "teddy bear",
@@ -23779,7 +23846,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "motorcycle",
@@ -23797,7 +23865,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "fan",
@@ -23815,7 +23884,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "folding fan",
@@ -23833,7 +23903,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "potion",
@@ -23851,7 +23922,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "scroll",
@@ -23869,7 +23941,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "crystal ball",
@@ -23887,7 +23960,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "hourglass",
@@ -23905,7 +23979,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "scepter",
@@ -23923,7 +23998,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "orb",
@@ -23941,7 +24017,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "key",
@@ -23977,7 +24054,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "playing cards",
@@ -24013,7 +24091,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "backpack",
@@ -24031,7 +24110,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "gift",
@@ -24121,7 +24201,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "pillow",
@@ -24193,7 +24274,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "bouquet",
@@ -24265,7 +24347,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "doll",
@@ -24301,7 +24384,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "pocket watch",
@@ -24319,7 +24403,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "compass",
@@ -24337,7 +24422,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "map",
@@ -24373,7 +24459,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "binoculars",
@@ -24391,7 +24478,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "flashlight",
@@ -24409,7 +24497,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "lighter",
@@ -24427,7 +24516,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "cigarette",
@@ -24445,7 +24535,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "cigar",
@@ -24463,7 +24554,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "pipe",
@@ -24481,7 +24573,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "vinyl record",
@@ -24499,7 +24592,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "cassette tape",
@@ -24517,7 +24611,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "polaroid camera",
@@ -24535,7 +24630,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "film camera",
@@ -24553,7 +24649,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "floating book",
@@ -24571,7 +24668,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "tarot cards",
@@ -24589,7 +24687,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "dice",
@@ -24715,7 +24814,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "laptop",
@@ -24733,7 +24833,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "headphones around neck",
@@ -24751,7 +24852,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "earbuds",
@@ -24769,7 +24871,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "walkman",
@@ -24787,7 +24890,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "cassette player",
@@ -24805,7 +24909,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "megaphone",
@@ -24823,7 +24928,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "flag",
@@ -24877,7 +24983,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "watering can",
@@ -24949,7 +25056,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "knitting needles",
@@ -24967,7 +25075,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "yarn",
@@ -25219,7 +25328,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "rosary",
@@ -25237,7 +25347,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "prayer beads",
@@ -25255,7 +25366,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "ofuda",
@@ -25273,7 +25385,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "omamori",
@@ -25291,7 +25404,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       }
      ],
      "random_quota": null,
@@ -25319,7 +25433,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "violin",
@@ -25337,7 +25452,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "guitar",
@@ -25355,7 +25471,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "microphone",
@@ -25373,7 +25490,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "basketball",
@@ -25391,7 +25509,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "tennis racket",
@@ -25409,7 +25528,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "soccer ball",
@@ -25427,7 +25547,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "baseball bat",
@@ -25445,7 +25566,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "dumbbell",
@@ -25465,7 +25587,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "piano",
@@ -25483,7 +25606,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "flute",
@@ -25519,7 +25643,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "drum",
@@ -25555,7 +25680,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "acoustic guitar",
@@ -25573,7 +25699,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "harp",
@@ -25591,7 +25718,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "cello",
@@ -25609,7 +25737,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "yoga mat",
@@ -25627,7 +25756,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "barbell",
@@ -25645,7 +25775,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "boxing gloves",
@@ -25663,7 +25794,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "tennis ball",
@@ -25681,7 +25813,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "golf club",
@@ -25699,7 +25832,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "surfboard",
@@ -25717,7 +25851,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "skateboard deck",
@@ -25735,7 +25870,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "harmonica",
@@ -25753,7 +25889,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "trumpet",
@@ -25771,7 +25908,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "drumsticks",
@@ -25807,7 +25945,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "grand piano",
@@ -25825,7 +25964,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "erhu",
@@ -25843,7 +25983,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "shamisen",
@@ -25861,7 +26002,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "biwa",
@@ -25879,7 +26021,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "retro"
       },
       {
        "en": "ocarina",
@@ -25897,7 +26040,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "fantasy"
       },
       {
        "en": "beach ball",
@@ -25915,7 +26059,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "snowboard",
@@ -25933,7 +26078,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       },
       {
        "en": "skis",
@@ -25951,7 +26097,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "prop"
+       "axis": "prop",
+       "era": "modern"
       }
      ],
      "random_quota": null,
@@ -37390,7 +37537,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "fantasy"
       },
       {
        "en": "straw hat",
@@ -37453,7 +37601,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "top hat",
@@ -37473,7 +37622,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "maid headdress",
@@ -37493,7 +37643,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "flower crown",
@@ -37737,7 +37888,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "fantasy"
       },
       {
        "en": "crown",
@@ -37758,7 +37910,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "fantasy"
       },
       {
        "en": "tiara",
@@ -37800,7 +37953,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "goggles on head",
@@ -37818,7 +37972,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "veil",
@@ -37838,7 +37993,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "mask on head",
@@ -37878,7 +38034,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "round eyewear",
@@ -37898,7 +38055,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "half glasses",
@@ -37916,7 +38074,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "beret with pin",
@@ -37936,7 +38095,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "flat cap",
@@ -37956,7 +38116,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "visor cap",
@@ -37976,7 +38137,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "beanie",
@@ -37996,7 +38158,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "sun hat",
@@ -38016,7 +38179,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "hachimaki",
@@ -38036,7 +38200,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "headband (wide)",
@@ -38076,7 +38241,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "ear muffs",
@@ -38096,7 +38262,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "animal ear headwear",
@@ -38200,7 +38367,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "bunny ear headband",
@@ -38280,7 +38448,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "kanzashi",
@@ -38300,7 +38469,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "veil with lace",
@@ -38321,7 +38491,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "bridal veil",
@@ -38342,7 +38513,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "gas mask",
@@ -38363,7 +38535,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "plague doctor mask",
@@ -38384,7 +38557,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "oni mask",
@@ -38405,7 +38579,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "kitsune mask",
@@ -38426,7 +38601,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "half face mask",
@@ -38488,7 +38664,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "round glasses",
@@ -38508,7 +38685,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "square glasses",
@@ -39457,7 +39635,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "earing studs",
@@ -39529,7 +39708,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "brooch",
@@ -39601,7 +39781,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "diamond necklace",
@@ -39709,7 +39890,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "navel piercing",
@@ -39728,7 +39910,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "nipple piercing",
@@ -39747,7 +39930,8 @@
        "mutex_with": [],
        "desc": "",
        "meta": {},
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "tongue piercing",
@@ -39765,7 +39949,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "ear gauges",
@@ -39783,7 +39968,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "multiple ear piercings",
@@ -39801,7 +39987,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "ribbon choker",
@@ -39837,7 +40024,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "spike collar",
@@ -39855,7 +40043,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "bell collar",
@@ -40017,7 +40206,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "ear cuffs",
@@ -40161,7 +40351,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "multiple rings",
@@ -40197,7 +40388,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "corsage",
@@ -40215,7 +40407,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "boutonniere",
@@ -40233,7 +40426,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "retro"
       },
       {
        "en": "wristwatch",
@@ -40251,7 +40445,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       },
       {
        "en": "smartwatch",
@@ -40269,7 +40464,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "clothing"
+       "axis": "clothing",
+       "era": "modern"
       }
      ],
      "random_quota": null,
@@ -58606,7 +58802,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "office",
@@ -58624,7 +58821,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "cafe",
@@ -58642,7 +58840,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "bathroom",
@@ -58822,7 +59021,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "mirror",
@@ -58878,7 +59078,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "kitchen",
@@ -58988,7 +59189,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "laboratory",
@@ -59008,7 +59210,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "hotel room",
@@ -59044,7 +59247,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "church",
@@ -59062,7 +59266,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "castle interior",
@@ -59080,7 +59285,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "tavern",
@@ -59098,7 +59304,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "dojo",
@@ -59134,7 +59341,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "elevator",
@@ -59206,7 +59414,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "convenience store",
@@ -59224,7 +59433,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "supermarket",
@@ -59242,7 +59452,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "shopping mall",
@@ -59260,7 +59471,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "bookstore",
@@ -59314,7 +59526,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "karaoke",
@@ -59332,7 +59545,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "movie theater",
@@ -59350,7 +59564,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "theater stage",
@@ -59586,7 +59801,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "art room",
@@ -59622,7 +59838,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "music room",
@@ -59676,7 +59893,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "shrine office",
@@ -59694,7 +59912,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "bathhouse",
@@ -59748,7 +59967,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "tatami room",
@@ -59766,7 +59986,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "onsen",
@@ -59784,7 +60005,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "public bath",
@@ -59892,7 +60114,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "candlelit dining room",
@@ -59910,7 +60133,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "luxury bathroom",
@@ -60036,7 +60260,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "engawa",
@@ -60054,7 +60279,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "genkan",
@@ -60072,7 +60298,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "onsen interior",
@@ -60090,7 +60317,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "sento",
@@ -60108,7 +60336,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "changing stall",
@@ -60180,7 +60409,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "photo studio",
@@ -60198,7 +60428,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "darkroom",
@@ -60234,7 +60465,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "radio booth",
@@ -60252,7 +60484,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "control room",
@@ -60270,7 +60503,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "server room",
@@ -60288,7 +60522,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "data center",
@@ -60306,7 +60541,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "workshop",
@@ -60360,7 +60596,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "pottery studio",
@@ -60558,7 +60795,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "mosque interior",
@@ -60576,7 +60814,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "pagoda interior",
@@ -60594,7 +60833,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "tea house",
@@ -60612,7 +60852,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "izakaya",
@@ -60630,7 +60871,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "ramen shop",
@@ -60756,7 +60998,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "nightclub interior",
@@ -60828,7 +61071,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "internet cafe",
@@ -60846,7 +61090,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "maid cafe",
@@ -60918,7 +61163,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "startup office",
@@ -60936,7 +61182,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "corner office",
@@ -60954,7 +61201,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "boardroom",
@@ -61062,7 +61310,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "operating room",
@@ -61634,7 +61883,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "jungle",
@@ -62084,7 +62334,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "autumn mountain path",
@@ -62958,7 +63209,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "park",
@@ -62994,7 +63246,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "city street",
@@ -63014,7 +63267,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "alley",
@@ -63142,7 +63396,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "market stall",
@@ -63160,7 +63415,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "parking lot",
@@ -63178,7 +63434,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "train station",
@@ -63196,7 +63453,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "bus stop",
@@ -63214,7 +63472,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "subway station",
@@ -63232,7 +63491,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "harbor",
@@ -63286,7 +63546,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "farmland",
@@ -63304,7 +63565,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "castle town",
@@ -63322,7 +63584,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "medieval street",
@@ -63340,7 +63603,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "neon city",
@@ -63358,7 +63622,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "post-apocalyptic ruins",
@@ -63448,7 +63713,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "skyscraper",
@@ -63466,7 +63732,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "windmill",
@@ -63484,7 +63751,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "ferris wheel",
@@ -63502,7 +63770,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "roller coaster",
@@ -63520,7 +63789,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "carousel",
@@ -63628,7 +63898,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "torii",
@@ -63646,7 +63917,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "pagoda",
@@ -63664,7 +63936,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "garden",
@@ -63828,7 +64101,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "rainy street at night",
@@ -63918,7 +64192,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "modern city plaza",
@@ -63936,7 +64211,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "quiet residential street",
@@ -63954,7 +64230,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "shibuya crossing",
@@ -63972,7 +64249,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "narrow alley night",
@@ -64008,7 +64286,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "flea market",
@@ -64080,7 +64359,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "cobblestone street",
@@ -64098,7 +64378,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "canal city",
@@ -64188,7 +64469,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "onsen town",
@@ -64206,7 +64488,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "castle approach",
@@ -64242,7 +64525,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "temple grounds",
@@ -64260,7 +64544,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "cemetery",
@@ -64278,7 +64563,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "graveyard at night",
@@ -64296,7 +64582,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "university campus",
@@ -64494,7 +64781,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "rain-slick streets",
@@ -64512,7 +64800,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "tram street",
@@ -64530,7 +64819,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "bus terminal",
@@ -64548,7 +64838,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "airport terminal",
@@ -64566,7 +64857,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "observation deck",
@@ -64584,7 +64876,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "clock tower",
@@ -64602,7 +64895,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "water tower",
@@ -64620,7 +64914,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "radio tower",
@@ -64638,7 +64933,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "modern"
       },
       {
        "en": "suspension bridge",
@@ -64674,7 +64970,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "covered bridge",
@@ -64692,7 +64989,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       },
       {
        "en": "aqueduct",
@@ -64710,7 +65008,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "retro"
       }
      ],
      "random_quota": null,
@@ -64738,7 +65037,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "fantasy landscape",
@@ -64756,7 +65056,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "ruins",
@@ -64774,7 +65075,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "space station",
@@ -64792,7 +65094,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "castle",
@@ -64810,7 +65113,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "magic circle",
@@ -64828,7 +65132,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "floating islands",
@@ -64846,7 +65151,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "ancient ruins",
@@ -64864,7 +65170,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "another world",
@@ -64882,7 +65189,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "fairy forest",
@@ -64900,7 +65208,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dragon lair",
@@ -64918,7 +65227,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "haunted mansion",
@@ -64936,7 +65246,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "forbidden library",
@@ -64954,7 +65265,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "pocket dimension",
@@ -64972,7 +65284,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dreamscape",
@@ -64990,7 +65303,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "heaven",
@@ -65008,7 +65322,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "underworld",
@@ -65026,7 +65341,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "spirit realm",
@@ -65044,7 +65360,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "wizard tower",
@@ -65062,7 +65379,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "enchanted lake",
@@ -65080,7 +65398,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "portal gate",
@@ -65098,7 +65417,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "airship",
@@ -65116,7 +65436,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "hot air balloon",
@@ -65134,7 +65455,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "space",
@@ -65152,7 +65474,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "planet",
@@ -65170,7 +65493,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "nebula",
@@ -65188,7 +65512,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "future city",
@@ -65206,7 +65531,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "battlefield",
@@ -65224,7 +65550,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dungeon",
@@ -65242,7 +65569,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "prison",
@@ -65260,7 +65588,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "throne room",
@@ -65278,7 +65607,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "alchemy lab",
@@ -65296,7 +65626,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "pirate ship",
@@ -65314,7 +65645,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "sailing ship",
@@ -65332,7 +65664,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "shipwreck",
@@ -65350,7 +65683,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "floating castle",
@@ -65368,7 +65702,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "crystal palace",
@@ -65386,7 +65721,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dragon nest",
@@ -65404,7 +65740,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "ancient temple ruins",
@@ -65422,7 +65759,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "cyberpunk street",
@@ -65440,7 +65778,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "neon-drenched city",
@@ -65458,7 +65797,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "space colony",
@@ -65476,7 +65816,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "underwater city",
@@ -65494,7 +65835,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "floating island city",
@@ -65512,7 +65854,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "magitech laboratory",
@@ -65530,7 +65873,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "arcane library",
@@ -65548,7 +65892,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "floating citadel",
@@ -65566,7 +65911,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "obsidian castle",
@@ -65584,7 +65930,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "clockwork city",
@@ -65602,7 +65949,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "undercity",
@@ -65620,7 +65968,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "sewer kingdom",
@@ -65638,7 +65987,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "mycelium cavern",
@@ -65656,7 +66006,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "world tree",
@@ -65674,7 +66025,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "yggdrasil branches",
@@ -65692,7 +66044,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "moon colony",
@@ -65710,7 +66063,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "mars outpost",
@@ -65728,7 +66082,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "orbital ring",
@@ -65746,7 +66101,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "generation ship",
@@ -65764,7 +66120,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "derelict spaceship",
@@ -65782,7 +66139,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "alien jungle",
@@ -65800,7 +66158,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "silicon desert",
@@ -65818,7 +66177,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "neon megacity",
@@ -65836,7 +66196,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "vertical slums",
@@ -65854,7 +66215,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "corporate arcology",
@@ -65872,7 +66234,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "skybridge city",
@@ -65890,7 +66253,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "underwater dome",
@@ -65908,7 +66272,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "atlantis ruins",
@@ -65926,7 +66291,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "time rift",
@@ -65944,7 +66310,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "mirror dimension",
@@ -65962,7 +66329,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "void space",
@@ -65980,7 +66348,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "celestial observatory",
@@ -65998,7 +66367,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "god realm",
@@ -66016,7 +66386,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "demon castle",
@@ -66034,7 +66405,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "purgatory",
@@ -66052,7 +66424,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "elysium",
@@ -66070,7 +66443,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "fae court",
@@ -66088,7 +66462,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "witch's hut",
@@ -66106,7 +66481,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "baba yaga house",
@@ -66124,7 +66500,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "giant's hall",
@@ -66142,7 +66519,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dwarven mine",
@@ -66160,7 +66538,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "dragon aerie",
@@ -66178,7 +66557,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "phoenix nest",
@@ -66196,7 +66576,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       },
       {
        "en": "starforge",
@@ -66214,7 +66595,8 @@
        "desc": "",
        "meta": {},
        "gender": "",
-       "axis": "environment"
+       "axis": "environment",
+       "era": "fantasy"
       }
      ],
      "random_quota": null,

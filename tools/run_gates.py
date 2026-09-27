@@ -44,6 +44,7 @@ OFFLINE = [
     ("prompt_quality_test", "完整提示词重度测试 (文本层语义/段位/性别/负向词)"),
     ("api_security_test", "API 安全门禁 (CSRF 中间件/导入 .json 载荷防呆)"),
     ("tag_edit_test", "标签就地编辑 (推导/新增/改字段/校验拒绝/首页分段/待完善)"),
+    ("era_gate_test", "时代门 (场景定调 × 道具/配饰时代一致性 + 钉选豁免)"),
     ("lint_check", "死代码门禁 (ruff: 死导入 / 重复定义 / 死变量)"),
     ("nsfw_pack_test", "1.8.0 NSFW 扩展门禁 (扩展包/互斥域/未成年锁/手账本/重摇/吸收/negative/NL)"),
     ("heavy_prompt_test", "重度提示词矩阵 (708 条 × 模式/NSFW档/性别/场景/排除 + 3000 次压力)"),

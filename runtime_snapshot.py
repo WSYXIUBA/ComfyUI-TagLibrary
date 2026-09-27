@@ -35,6 +35,9 @@ except ImportError:  # pragma: no cover
 
 ALL = object()  # banned 集合中的全禁哨兵
 
+# 时代锚编码 (1.15.x): 词条 era 字段 → 紧凑 int; 0 = 无/中性 (不受门拦)
+_ERA_CODE = {"modern": 1, "retro": 2, "fantasy": 3}
+
 
 class _TagIndex:
     """规则引用解析器 (编译期临时结构)。"""
@@ -102,6 +105,8 @@ class RuntimeSnapshot:
         "minor_block_words",  # 未成年在场时全池屏蔽词 (出厂表 ∪ 扩展包 minor_block 词)
         "hands_cost",        # per-tag 双手资源占用 (lib 词级, 如乳交=2; 0 = 无)
         "explicit_flag",     # 显式档标记 (NSFW 强度旋钮的分层加权输入)
+        "era_flag",          # 时代锚编码 (0=无/中性, 1=modern, 2=retro, 3=fantasy)
+        "era_gated",         # 该词是否受时代门管辖 (道具轴 + 服装三配饰槽)
         "bg_slot_words",     # 背景处理槽里出现的全部词 (跨槽副本也认) —— 简背景闸门用
         # ---- 旧编译规则 (conflicts 页语义保留; 1.3.0 起仅作兜底黑名单)
         "conflict_map", "require_closure", "boost_map", "cond_effects",
@@ -154,6 +159,8 @@ class RuntimeSnapshot:
         self.bg_slot_words: frozenset = frozenset()
         self.hands_cost: list[int] = []
         self.explicit_flag = bytearray()
+        self.era_flag = bytearray()
+        self.era_gated = bytearray()
         self.tags_ext: list[dict] = []
         self.profiles: list = []
         self.profile_errors: list[dict] = []
@@ -199,6 +206,11 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
     pools_nofemale: dict[int, list[int]] = {}
     pools_nomale: dict[int, list[int]] = {}
     _minor_extra: set[str] = set()
+    # 时代门管辖槽 (1.15.x): 跨时代混装最严重的服装配饰三槽 (道具轴在词级按 axis 判定)
+    _ERA_GATED_SLOTS = {
+        ("服装", "头部配饰"), ("服装", "首饰珠宝"), ("服装", "手套围巾与包袋"),
+    }
+    _era_gated_subs: set[int] = set()
 
     tid = 0
     for cat in lib.get("categories", []) or []:
@@ -223,6 +235,8 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
             axis, order = axes.axis_of(cname, sname)
             snap.pool_axis[si] = axis
             snap.pool_order[si] = order
+            if (cname, sname) in _ERA_GATED_SLOTS:
+                _era_gated_subs.add(si)
             stags: list[int] = []
             snonsfw: list[int] = []
             sub_tag_ids.append(stags)
@@ -258,6 +272,10 @@ def build_snapshot(lib: dict, raw_rules: list[dict] | None = None,
                 except (TypeError, ValueError):
                     snap.hands_cost.append(0)
                 snap.explicit_flag.append(1 if t.get("explicit") else 0)
+                # 时代锚 (1.15.x): 词条 era 字段 → 编码; 管辖 = 道具轴全部 + 服装配饰三槽
+                snap.era_flag.append(_ERA_CODE.get(str(t.get("era") or "").strip().lower(), 0))
+                _ax = str(t.get("axis") or axis)
+                snap.era_gated.append(1 if (_ax == "prop" or si in _era_gated_subs) else 0)
 
                 snap.sub_of.append(si)
                 _low = en.lower()

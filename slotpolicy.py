@@ -520,3 +520,21 @@ def semantic_hit(tag_lower: str, excl_cats) -> bool:
             if rx.search(tag_lower):
                 return True
     return False
+
+
+# 场景违和闸 (1.15.x): 场景轴词出生时, 把"与该场景必然风格冲突"的少数词加封禁 ——
+# 治"海滩配菜刀 / 卧室配煎锅"类跨类目毁图。保守表: 只收高置信违和对 (宁缺毋滥),
+# 键与值都是 en 小写精确匹配; 词在库中不存在时静默跳过。
+SCENE_BAN_WORDS: dict[str, tuple] = {
+    "beach": (
+        "frying pan", "chef knife", "scissors", "trowel", "laptop",
+        "tablet computer", "vr headset", "game controller",
+        "knitting needles", "needle and thread", "cassette player",
+        "walkman", "megaphone",
+    ),
+    "bedroom": ("frying pan", "chef knife", "trowel", "scissors"),
+    "classroom": ("frying pan", "chef knife"),
+    "bathtub": ("frying pan", "chef knife", "laptop"),
+    "hot spring": ("frying pan", "chef knife", "laptop", "scissors"),
+    "swimming pool": ("frying pan", "chef knife", "scissors", "laptop"),
+}

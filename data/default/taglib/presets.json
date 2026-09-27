@@ -202,6 +202,53 @@
    ],
    "config": {},
    "note": "海边"
+  },
+  {
+   "id": "p.bg-fantasy",
+   "name": "奇幻世界",
+   "kind": "背景",
+   "pinned": [
+    "fantasy landscape"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/城镇人文",
+    "场景环境/自然景观"
+   ],
+   "sub_ranges": {},
+   "config": {},
+   "note": "幻想世界 (fantasy 锁场: 道具/配饰只出奇幻系与中性词)"
+  },
+  {
+   "id": "p.bg-medieval",
+   "name": "中世纪街道",
+   "kind": "背景",
+   "pinned": [
+    "medieval street"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/自然景观",
+    "场景环境/幻想科幻"
+   ],
+   "sub_ranges": {},
+   "config": {},
+   "note": "古典欧式 (retro 锁场: 道具/配饰不出数码现代物)"
+  },
+  {
+   "id": "p.bg-cyber",
+   "name": "赛博都市",
+   "kind": "背景",
+   "pinned": [
+    "cyberpunk city"
+   ],
+   "exclude": [
+    "场景环境/室内",
+    "场景环境/自然景观"
+   ],
+   "sub_ranges": {},
+   "config": {},
+   "note": "赛博朋克 (fantasy 锁场: 现代+科幻道具都合理)"
   }
  ]
 }

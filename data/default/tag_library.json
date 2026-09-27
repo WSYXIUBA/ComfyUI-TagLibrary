@@ -36376,7 +36376,8 @@
        "meta": {},
        "gender": "female",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "fantasy"
       },
       {
        "en": "straw hat",
@@ -36433,7 +36434,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "top hat",
@@ -36452,7 +36454,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "maid headdress",
@@ -36471,7 +36474,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "flower crown",
@@ -36699,7 +36703,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "fantasy"
       },
       {
        "en": "crown",
@@ -36718,7 +36723,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "fantasy"
       },
       {
        "en": "tiara",
@@ -36756,7 +36762,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "goggles on head",
@@ -36775,7 +36782,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "veil",
@@ -36794,7 +36802,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "mask on head",
@@ -36832,7 +36841,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "round eyewear",
@@ -36851,7 +36861,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "half glasses",
@@ -36870,7 +36881,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "beret with pin",
@@ -36889,7 +36901,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "flat cap",
@@ -36908,7 +36921,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "visor cap",
@@ -36927,7 +36941,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "beanie",
@@ -36946,7 +36961,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "sun hat",
@@ -36965,7 +36981,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "hachimaki",
@@ -36984,7 +37001,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "headband (wide)",
@@ -37022,7 +37040,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "ear muffs",
@@ -37041,7 +37060,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "animal ear headwear",
@@ -37136,7 +37156,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "bunny ear headband",
@@ -37212,7 +37233,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "kanzashi",
@@ -37231,7 +37253,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "veil with lace",
@@ -37250,7 +37273,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "bridal veil",
@@ -37269,7 +37293,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "gas mask",
@@ -37288,7 +37313,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "plague doctor mask",
@@ -37307,7 +37333,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "oni mask",
@@ -37326,7 +37353,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "kitsune mask",
@@ -37345,7 +37373,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "half face mask",
@@ -37402,7 +37431,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "round glasses",
@@ -37421,7 +37451,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "square glasses",
@@ -38400,7 +38431,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "earing studs",
@@ -38476,7 +38508,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "brooch",
@@ -38552,7 +38585,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "diamond necklace",
@@ -38666,7 +38700,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "navel piercing",
@@ -38686,7 +38721,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "nipple piercing",
@@ -38706,7 +38742,8 @@
        "desc": "",
        "meta": {},
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "tongue piercing",
@@ -38725,7 +38762,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "ear gauges",
@@ -38744,7 +38782,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "multiple ear piercings",
@@ -38763,7 +38802,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "ribbon choker",
@@ -38801,7 +38841,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "spike collar",
@@ -38820,7 +38861,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "bell collar",
@@ -38991,7 +39033,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "ear cuffs",
@@ -39143,7 +39186,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "multiple rings",
@@ -39181,7 +39225,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "corsage",
@@ -39200,7 +39245,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "boutonniere",
@@ -39219,7 +39265,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "retro"
       },
       {
        "en": "wristwatch",
@@ -39238,7 +39285,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "smartwatch",
@@ -39257,7 +39305,8 @@
        "meta": {},
        "gender": "",
        "axis": "clothing",
-       "facet": "服装系统"
+       "facet": "服装系统",
+       "era": "modern"
       },
       {
        "en": "jewelry",
@@ -42848,7 +42897,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "rapier",
@@ -42867,7 +42917,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "staff",
@@ -42886,7 +42937,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "magic wand",
@@ -42905,7 +42957,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "gun",
@@ -42924,7 +42977,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "sword",
@@ -42943,7 +42997,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "scythe",
@@ -42962,7 +43017,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "bow (weapon)",
@@ -42981,7 +43037,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "shield",
@@ -43000,7 +43057,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "spear",
@@ -43019,7 +43077,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "axe",
@@ -43038,7 +43097,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "dagger",
@@ -43057,7 +43117,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "kunai",
@@ -43076,7 +43137,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "shuriken",
@@ -43095,7 +43157,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "sniper rifle",
@@ -43114,7 +43177,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "pistol",
@@ -43133,7 +43197,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "lightsaber",
@@ -43152,7 +43217,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "chainsaw",
@@ -43171,7 +43237,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "katana sheath",
@@ -43190,7 +43257,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "dual swords",
@@ -43209,7 +43277,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "greatsword",
@@ -43228,7 +43297,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "war hammer",
@@ -43247,7 +43317,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "battle axe",
@@ -43266,7 +43337,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "crossbow",
@@ -43285,7 +43357,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "sniper scope",
@@ -43304,7 +43377,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "energy sword",
@@ -43323,7 +43397,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "plasma rifle",
@@ -43342,7 +43417,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "magical staff",
@@ -43361,7 +43437,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "grimoire",
@@ -43380,7 +43457,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "shield bash",
@@ -43399,7 +43477,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "dual pistols",
@@ -43418,7 +43497,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "assault rifle",
@@ -43437,7 +43517,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "shotgun",
@@ -43456,7 +43537,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "compound bow",
@@ -43475,7 +43557,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "throwing knives",
@@ -43494,7 +43577,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "chain whip",
@@ -43513,7 +43597,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "katana on back",
@@ -43532,7 +43617,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "sheathed sword",
@@ -43551,7 +43637,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "claymore",
@@ -43570,7 +43657,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "odachi",
@@ -43589,7 +43677,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "naginata",
@@ -43608,7 +43697,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "halberd",
@@ -43627,7 +43717,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "trident",
@@ -43646,7 +43737,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "mace",
@@ -43665,7 +43757,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "flail",
@@ -43684,7 +43777,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "bow and arrow",
@@ -43703,7 +43797,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "quiver",
@@ -43722,7 +43817,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "revolver",
@@ -43741,7 +43837,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "rifle",
@@ -43760,7 +43857,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "submachine gun",
@@ -43779,7 +43877,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "rocket launcher",
@@ -43798,7 +43897,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "energy gun",
@@ -43817,7 +43917,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "laser pistol",
@@ -43836,7 +43937,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       }
      ],
      "random_quota": null,
@@ -44036,7 +44138,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "bubble tea",
@@ -44055,7 +44158,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "ramen",
@@ -44245,7 +44349,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "matcha",
@@ -44340,7 +44445,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "parfait",
@@ -44359,7 +44465,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "taiyaki",
@@ -44549,7 +44656,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "chocolate fountain",
@@ -44568,7 +44676,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "teapot",
@@ -44644,7 +44753,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "water bottle",
@@ -44739,7 +44849,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "macaron",
@@ -45034,7 +45145,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "spellbook",
@@ -45053,7 +45165,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "book",
@@ -45091,7 +45204,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "game controller",
@@ -45110,7 +45224,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "pen",
@@ -45148,7 +45263,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "teddy bear",
@@ -45224,7 +45340,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "motorcycle",
@@ -45243,7 +45360,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "fan",
@@ -45262,7 +45380,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "folding fan",
@@ -45281,7 +45400,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "potion",
@@ -45300,7 +45420,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "scroll",
@@ -45319,7 +45440,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "crystal ball",
@@ -45338,7 +45460,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "hourglass",
@@ -45357,7 +45480,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "scepter",
@@ -45376,7 +45500,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "orb",
@@ -45395,7 +45520,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "key",
@@ -45433,7 +45559,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "playing cards",
@@ -45471,7 +45598,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "backpack",
@@ -45490,7 +45618,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "gift",
@@ -45585,7 +45714,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "pillow",
@@ -45661,7 +45791,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "bouquet",
@@ -45737,7 +45868,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "doll",
@@ -45775,7 +45907,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "pocket watch",
@@ -45794,7 +45927,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "compass",
@@ -45813,7 +45947,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "map",
@@ -45851,7 +45986,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "binoculars",
@@ -45870,7 +46006,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "flashlight",
@@ -45889,7 +46026,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "lighter",
@@ -45908,7 +46046,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "cigarette",
@@ -45927,7 +46066,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "cigar",
@@ -45946,7 +46086,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "pipe",
@@ -45965,7 +46106,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "vinyl record",
@@ -45984,7 +46126,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "cassette tape",
@@ -46003,7 +46146,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "polaroid camera",
@@ -46022,7 +46166,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "film camera",
@@ -46041,7 +46186,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "floating book",
@@ -46060,7 +46206,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "tarot cards",
@@ -46079,7 +46226,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "dice",
@@ -46212,7 +46360,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "laptop",
@@ -46231,7 +46380,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "headphones around neck",
@@ -46250,7 +46400,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "earbuds",
@@ -46269,7 +46420,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "walkman",
@@ -46288,7 +46440,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "cassette player",
@@ -46307,7 +46460,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "megaphone",
@@ -46326,7 +46480,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "flag",
@@ -46383,7 +46538,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "watering can",
@@ -46459,7 +46615,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "knitting needles",
@@ -46478,7 +46635,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "yarn",
@@ -46744,7 +46902,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "rosary",
@@ -46763,7 +46922,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "prayer beads",
@@ -46782,7 +46942,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "ofuda",
@@ -46801,7 +46962,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "omamori",
@@ -46820,7 +46982,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "cup",
@@ -46934,7 +47097,8 @@
        "enabled": true,
        "gender": "",
        "id": "reorg.s12.phone",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       }
      ],
      "random_quota": null,
@@ -46963,7 +47127,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "violin",
@@ -46982,7 +47147,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "guitar",
@@ -47001,7 +47167,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "microphone",
@@ -47020,7 +47187,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "basketball",
@@ -47039,7 +47207,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "tennis racket",
@@ -47058,7 +47227,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "soccer ball",
@@ -47077,7 +47247,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "baseball bat",
@@ -47096,7 +47267,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "dumbbell",
@@ -47117,7 +47289,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "piano",
@@ -47136,7 +47309,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "flute",
@@ -47174,7 +47348,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "drum",
@@ -47212,7 +47387,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "acoustic guitar",
@@ -47231,7 +47407,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "harp",
@@ -47250,7 +47427,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "cello",
@@ -47269,7 +47447,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "yoga mat",
@@ -47288,7 +47467,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "barbell",
@@ -47307,7 +47487,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "boxing gloves",
@@ -47326,7 +47507,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "tennis ball",
@@ -47345,7 +47527,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "golf club",
@@ -47364,7 +47547,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "surfboard",
@@ -47383,7 +47567,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "skateboard deck",
@@ -47402,7 +47587,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "harmonica",
@@ -47421,7 +47607,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "trumpet",
@@ -47440,7 +47627,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "drumsticks",
@@ -47478,7 +47666,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "grand piano",
@@ -47497,7 +47686,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "erhu",
@@ -47516,7 +47706,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "shamisen",
@@ -47535,7 +47726,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "biwa",
@@ -47554,7 +47746,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "retro"
       },
       {
        "en": "ocarina",
@@ -47573,7 +47766,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "fantasy"
       },
       {
        "en": "beach ball",
@@ -47592,7 +47786,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "snowboard",
@@ -47611,7 +47806,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       },
       {
        "en": "skis",
@@ -47630,7 +47826,8 @@
        "meta": {},
        "gender": "",
        "axis": "prop",
-       "facet": "人物主体"
+       "facet": "人物主体",
+       "era": "modern"
       }
      ],
      "random_quota": null,
@@ -55726,7 +55923,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "office",
@@ -55745,7 +55943,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "cafe",
@@ -55764,7 +55963,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "bathroom",
@@ -55954,7 +56154,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "mirror",
@@ -56011,7 +56212,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "kitchen",
@@ -56125,7 +56327,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "laboratory",
@@ -56144,7 +56347,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "hotel room",
@@ -56182,7 +56386,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "church",
@@ -56201,7 +56406,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "castle interior",
@@ -56220,7 +56426,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "tavern",
@@ -56239,7 +56446,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "dojo",
@@ -56277,7 +56485,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "elevator",
@@ -56353,7 +56562,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "convenience store",
@@ -56372,7 +56582,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "supermarket",
@@ -56391,7 +56602,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "shopping mall",
@@ -56410,7 +56622,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "bookstore",
@@ -56467,7 +56680,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "karaoke",
@@ -56486,7 +56700,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "movie theater",
@@ -56505,7 +56720,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "theater stage",
@@ -56752,7 +56968,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "art room",
@@ -56790,7 +57007,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "music room",
@@ -56847,7 +57065,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "shrine office",
@@ -56866,7 +57085,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "bathhouse",
@@ -56923,7 +57143,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "tatami room",
@@ -56942,7 +57163,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "onsen",
@@ -56961,7 +57183,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "public bath",
@@ -57075,7 +57298,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "candlelit dining room",
@@ -57094,7 +57318,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "luxury bathroom",
@@ -57227,7 +57452,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "engawa",
@@ -57246,7 +57472,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "genkan",
@@ -57265,7 +57492,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "onsen interior",
@@ -57284,7 +57512,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "sento",
@@ -57303,7 +57532,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "changing stall",
@@ -57379,7 +57609,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "photo studio",
@@ -57398,7 +57629,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "darkroom",
@@ -57436,7 +57668,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "radio booth",
@@ -57455,7 +57688,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "control room",
@@ -57474,7 +57708,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "server room",
@@ -57493,7 +57728,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "data center",
@@ -57512,7 +57748,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "workshop",
@@ -57569,7 +57806,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "pottery studio",
@@ -57778,7 +58016,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "mosque interior",
@@ -57797,7 +58036,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "pagoda interior",
@@ -57816,7 +58056,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "tea house",
@@ -57835,7 +58076,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "izakaya",
@@ -57854,7 +58096,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "ramen shop",
@@ -57987,7 +58230,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "nightclub interior",
@@ -58063,7 +58307,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "internet cafe",
@@ -58082,7 +58327,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "maid cafe",
@@ -58158,7 +58404,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "startup office",
@@ -58177,7 +58424,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "corner office",
@@ -58196,7 +58444,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "boardroom",
@@ -58310,7 +58559,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "operating room",
@@ -58909,7 +59159,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "jungle",
@@ -59384,7 +59635,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "autumn mountain path",
@@ -60420,7 +60672,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "park",
@@ -60458,7 +60711,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "city street",
@@ -60477,7 +60731,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "alley",
@@ -60610,7 +60865,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "market stall",
@@ -60629,7 +60885,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "parking lot",
@@ -60648,7 +60905,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "train station",
@@ -60667,7 +60925,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "bus stop",
@@ -60686,7 +60945,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "subway station",
@@ -60705,7 +60965,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "harbor",
@@ -60762,7 +61023,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "farmland",
@@ -60781,7 +61043,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "castle town",
@@ -60800,7 +61063,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "medieval street",
@@ -60819,7 +61083,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "neon city",
@@ -60838,7 +61103,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "post-apocalyptic ruins",
@@ -60933,7 +61199,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "skyscraper",
@@ -60952,7 +61219,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "windmill",
@@ -60971,7 +61239,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "ferris wheel",
@@ -60990,7 +61259,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "roller coaster",
@@ -61009,7 +61279,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "carousel",
@@ -61123,7 +61394,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "torii",
@@ -61142,7 +61414,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "pagoda",
@@ -61161,7 +61434,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "garden",
@@ -61332,7 +61606,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "rainy street at night",
@@ -61427,7 +61702,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "modern city plaza",
@@ -61446,7 +61722,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "quiet residential street",
@@ -61465,7 +61742,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "shibuya crossing",
@@ -61484,7 +61762,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "narrow alley night",
@@ -61522,7 +61801,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "flea market",
@@ -61598,7 +61878,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "cobblestone street",
@@ -61617,7 +61898,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "canal city",
@@ -61712,7 +61994,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "onsen town",
@@ -61731,7 +62014,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "castle approach",
@@ -61769,7 +62053,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "temple grounds",
@@ -61788,7 +62073,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "cemetery",
@@ -61807,7 +62093,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "graveyard at night",
@@ -61826,7 +62113,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "university campus",
@@ -62035,7 +62323,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "rain-slick streets",
@@ -62054,7 +62343,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "tram street",
@@ -62073,7 +62363,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "bus terminal",
@@ -62092,7 +62383,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "airport terminal",
@@ -62111,7 +62403,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "observation deck",
@@ -62130,7 +62423,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "clock tower",
@@ -62149,7 +62443,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "water tower",
@@ -62168,7 +62463,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "radio tower",
@@ -62187,7 +62483,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "modern"
       },
       {
        "en": "suspension bridge",
@@ -62225,7 +62522,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "covered bridge",
@@ -62244,7 +62542,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       },
       {
        "en": "aqueduct",
@@ -62263,7 +62562,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "retro"
       }
      ],
      "random_quota": null,
@@ -62292,7 +62592,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "fantasy landscape",
@@ -62311,7 +62612,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "ruins",
@@ -62330,7 +62632,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "space station",
@@ -62349,7 +62652,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "castle",
@@ -62368,7 +62672,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "magic circle",
@@ -62387,7 +62692,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "floating islands",
@@ -62406,7 +62712,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "ancient ruins",
@@ -62425,7 +62732,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "another world",
@@ -62444,7 +62752,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "fairy forest",
@@ -62463,7 +62772,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dragon lair",
@@ -62482,7 +62792,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "haunted mansion",
@@ -62501,7 +62812,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "forbidden library",
@@ -62520,7 +62832,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "pocket dimension",
@@ -62539,7 +62852,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dreamscape",
@@ -62558,7 +62872,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "heaven",
@@ -62577,7 +62892,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "underworld",
@@ -62596,7 +62912,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "spirit realm",
@@ -62615,7 +62932,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "wizard tower",
@@ -62634,7 +62952,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "enchanted lake",
@@ -62653,7 +62972,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "portal gate",
@@ -62672,7 +62992,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "airship",
@@ -62691,7 +63012,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "hot air balloon",
@@ -62710,7 +63032,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "space",
@@ -62729,7 +63052,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "planet",
@@ -62748,7 +63072,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "nebula",
@@ -62767,7 +63092,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "future city",
@@ -62786,7 +63112,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "battlefield",
@@ -62805,7 +63132,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dungeon",
@@ -62824,7 +63152,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "prison",
@@ -62843,7 +63172,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "throne room",
@@ -62862,7 +63192,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "alchemy lab",
@@ -62881,7 +63212,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "pirate ship",
@@ -62900,7 +63232,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "sailing ship",
@@ -62919,7 +63252,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "shipwreck",
@@ -62938,7 +63272,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "floating castle",
@@ -62957,7 +63292,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "crystal palace",
@@ -62976,7 +63312,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dragon nest",
@@ -62995,7 +63332,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "ancient temple ruins",
@@ -63014,7 +63352,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "cyberpunk street",
@@ -63033,7 +63372,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "neon-drenched city",
@@ -63052,7 +63392,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "space colony",
@@ -63071,7 +63412,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "underwater city",
@@ -63090,7 +63432,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "floating island city",
@@ -63109,7 +63452,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "magitech laboratory",
@@ -63128,7 +63472,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "arcane library",
@@ -63147,7 +63492,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "floating citadel",
@@ -63166,7 +63512,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "obsidian castle",
@@ -63185,7 +63532,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "clockwork city",
@@ -63204,7 +63552,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "undercity",
@@ -63223,7 +63572,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "sewer kingdom",
@@ -63242,7 +63592,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "mycelium cavern",
@@ -63261,7 +63612,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "world tree",
@@ -63280,7 +63632,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "yggdrasil branches",
@@ -63299,7 +63652,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "moon colony",
@@ -63318,7 +63672,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "mars outpost",
@@ -63337,7 +63692,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "orbital ring",
@@ -63356,7 +63712,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "generation ship",
@@ -63375,7 +63732,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "derelict spaceship",
@@ -63394,7 +63752,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "alien jungle",
@@ -63413,7 +63772,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "silicon desert",
@@ -63432,7 +63792,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "neon megacity",
@@ -63451,7 +63812,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "vertical slums",
@@ -63470,7 +63832,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "corporate arcology",
@@ -63489,7 +63852,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "skybridge city",
@@ -63508,7 +63872,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "underwater dome",
@@ -63527,7 +63892,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "atlantis ruins",
@@ -63546,7 +63912,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "time rift",
@@ -63565,7 +63932,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "mirror dimension",
@@ -63584,7 +63952,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "void space",
@@ -63603,7 +63972,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "celestial observatory",
@@ -63622,7 +63992,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "god realm",
@@ -63641,7 +64012,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "demon castle",
@@ -63660,7 +64032,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "purgatory",
@@ -63679,7 +64052,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "elysium",
@@ -63698,7 +64072,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "fae court",
@@ -63717,7 +64092,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "witch's hut",
@@ -63736,7 +64112,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "baba yaga house",
@@ -63755,7 +64132,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "giant's hall",
@@ -63774,7 +64152,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dwarven mine",
@@ -63793,7 +64172,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "dragon aerie",
@@ -63812,7 +64192,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "phoenix nest",
@@ -63831,7 +64212,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       },
       {
        "en": "starforge",
@@ -63850,7 +64232,8 @@
        "meta": {},
        "gender": "",
        "axis": "environment",
-       "facet": "场景环境"
+       "facet": "场景环境",
+       "era": "fantasy"
       }
      ],
      "random_quota": null,
