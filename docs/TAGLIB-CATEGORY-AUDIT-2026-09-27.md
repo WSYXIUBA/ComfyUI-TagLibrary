@@ -63,8 +63,29 @@
 **C 组（联动数据报告 #3~#7/#9，各自独立）**
 - C1 Anima negative 预设、C2 NL 无标点短语族、C3 武器档案补类、C4 臂挂配件不占手、C5 参数预设、C6 输出格式决策(权重/内联 lora，需对齐)
 
-## 4. 待确认（回复编号）
+## 4. 待确认（回复编号）✅ 已全部落地（2026-09-27，见 CHANGELOG v1.15.0）
 1. 画师轴灌词：来源=danbooru 高热度画师？规模（30/100/300）？还是只留"常用绑定"预设？
 2. 近义 18 组：保留 danbooru 主形、旧形转 aliases（不再单独抽出）？还是直接删旧形？
 3. 大槽拆分：拆哪几个、按什么维度？（建议先只拆"手部动作"一个试点，其余暂缓）
 4. 画质规格 5 词 + bow 消歧：直接补？
+
+> 落地口径：① 100 词 = 社区实测采样 37 + danbooru 榜前 63（裸名存储、输出补 @）；② 保留 danbooru 活词形、
+> 旧形转别名（16 个死/不存在词形退役、2 个升级活词形、单复数双活词 4 组保留）；③ 仅拆「手部动作」为
+> 单手 76 / 双手与交互 38 / 面部与头部 38（其余大槽暂缓）；④ 5 词直接补 + bow 双语消歧 desc。
+
+## 5. 执行后新发现（2026-09-27 复核，下一批候选，未动手）
+
+- **跨槽同 en 10 对（会真实双出）**：`bare arms` / `bare back` / `bare feet` / `bare legs` / `bare midriff`
+  （外貌特征·体型 ↔ 服装·裸露与暴露，各一对）、`detailed background`（画质规格·细节强化 ↔ 场景环境·背景处理）、
+  `fog`（场景环境·天气现象 ↔ 材质特效·视觉特效）、`hair ornament`（服装·头部配饰 ↔ 服装·首饰珠宝）、
+  `ribbon`（服装·头部配饰 ↔ 服装·服装细节）、`sweatdrop`（外貌特征·表情 ↔ 材质特效·视觉特效）。
+- **手部三槽内近义簇（共 10 组）**：
+  - 叉腰系 5 条：`hand on own hip` / `hands on own hips` / `both hands on hips` / `akimbo` / `arms akimbo`
+  - 握拳：`fist clench` / `clenched fist`；敬礼：`saluting` / `salute` / `military salute`
+  - 打响指：`snap fingers` / `snapping fingers`；嘘：`shushing` / `shushing gesture`
+  - 合十：`praying` / `praying hands` / `namaste`；持物：`holding` / `holding object`
+  - 手指抵唇：`finger to mouth` / `finger to lips`；V 手势：`peace sign` / `v sign`
+  - 抚胸：`hand on own chest` / `hand over heart` / `clutching chest`
+- **人数轴历史 12 条"同 en 后位条"**仍在库文件（`0others` / `trio` / `pair` / `group` 等，合并视图由
+  同槽去重器隐掉、user_auto 已记 12 墓碑）；可选清理项，对使用无影响。
+

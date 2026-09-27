@@ -2,7 +2,42 @@
 
 本插件的版本变更史。版本号规则：小型 bug 修复 +0.0.1，功能/底层演进 +0.1。
 
-## v1.14.0（开发中）— 反冲突规则单文件化 · 配额功能退役 · 节点分类与元数据修复（2026-09-27）
+## v1.15.0 — 词库治理: 画师轴灌词 · 近义归并 · 手部动作拆分 · 画质补词（2026-09-27）
+
+**画师轴（原 0 词空轴）灌入 100 画师词**
+- 来源组合：Anima 社区实测采样（Civitai，37 个）+ danbooru 画师榜按贴数前 63。
+- 库内**裸名**存储（`sw33t` / `hong doo`），输出时引擎自动补 `@` 前缀（Anima 官方：不带 @ 效果很弱）；
+  另存 `@` 前缀别名，带 @ 搜索可命中。
+- 画师仍为「选定维度」：默认不参与自动抽取，面板点选/点名时从词表挑。
+
+**近义 18 组核验归并（死词形退役，旧名转别名不再单独抽出）**
+- 16 个 danbooru 死词形 / 不存在词形退役：`arms crossed`→`crossed arms`、`bandage`→`bandages`、
+  `arm outstretched`→`outstretched arm`、`arms outstretched`→`outstretched arms`、
+  `hand holding`→`holding hands`、`long sleeve`→`long sleeves`、`light leaks`→`light leak`、
+  `film grain heavy`→`heavy film grain`、`inner colored hair`→`colored inner hair`、
+  `reaching toward viewer`→`reaching towards viewer`、`dumbbells`→`dumbbell`、
+  `finger guns`→`finger gun`、`stretching arm`（并入 outstretched 系列）、
+  `lips parted slightly` + `lips slightly parted`→`parted lips`。
+- 2 个升级为 danbooru 活词形：`hand on hip`→`hand on own hip`（23 万帖）、
+  `hands on hips`→`hands on own hips`（4.5 万帖）；旧形进别名。
+- 单复数双活词（`hand up`/`hands up`、`arm up`/`arms up`、`outstretched arm`/`arms`、
+  `hand on own cheek`/`cheeks`）经 post_count 核查为 danbooru 两个独立词（单手/双手语义），两条保留。
+- 旧形全部转为别名（搜索旧名仍可命中）；相关互斥域（legacy.arms_pos / legacy.mouth / mouth_state2 / pose-base）成员同步更新。
+
+**「手部动作」158 词拆为三槽**
+- `手部动作·单手`(76) / `手部动作·双手与交互`(38) / `手部动作·面部与头部`(38)；
+- 词条 id 保持稳定（不随槽迁移重置）；槽位配额 2/1/1（单手可双出）；旧槽墓碑化，不回归。
+- ext 包 4 个 SFW 补齐词（`holding` / `hands up` / `outstretched arm` / `outstretched arms`）迁入主库。
+
+**画质规格补 5 词 + bow 消歧**
+- `score_7_up` / `score_8_up` / `safe` / `year 2025` / `no lineart`（真实采样缺口；
+  score_*_up 为社区高频写法、danbooru 无对应词条——按真实采样收录）。
+- `bow`（蝴蝶结）与 `bow (weapon)`（弓）词条加 desc 消歧说明（两词中文名本已区分）。
+
+**修复**
+- `ui_v13_check` 页签断言同步产品文案（「✍ NL 句式」→「✍ 自然语言」，1.14.0 改名时漏同步，全量门禁暴露）。
+
+## v1.14.0 — 反冲突规则单文件化 · 配额功能退役 · 节点分类与元数据修复（2026-09-27）
 
 **架构 · 规则并入库文件（单文件化）**
 - 反冲突规则表与全局互斥域从独立文件（`conflicts.json` / `grouprules.json` / `nsfw_conflicts.json` / `nsfw_grouprules.json`）

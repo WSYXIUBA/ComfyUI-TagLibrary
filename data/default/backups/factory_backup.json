@@ -623,24 +623,6 @@
        "axis": "meta"
       },
       {
-       "en": "film grain heavy",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "厚重胶片颗粒",
-       "id": "imported.c1.sub.film-grain-heavy",
-       "type": "quality",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "meta"
-      },
-      {
        "en": "sharp edges",
        "aliases": [],
        "weight": 1.0,
@@ -5949,26 +5931,10 @@
        "axis": "appearance"
       },
       {
-       "en": "inner colored hair",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "内层染色发",
-       "id": "imported.c2.sub-2-3.inner-colored-hair",
-       "type": "content",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "appearance"
-      },
-      {
        "en": "colored inner hair",
-       "aliases": [],
+       "aliases": [
+        "inner colored hair"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "发内彩",
@@ -15383,7 +15349,10 @@
       },
       {
        "en": "parted lips",
-       "aliases": [],
+       "aliases": [
+        "lips parted slightly",
+        "lips slightly parted"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "微张唇",
@@ -15780,26 +15749,6 @@
        "axis": "appearance"
       },
       {
-       "en": "lips parted slightly",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "微启唇",
-       "id": "reorg.s4.lips-parted-slightly",
-       "type": "content",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [
-        "m:mouth_state2"
-       ],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "appearance"
-      },
-      {
        "en": "wobbly mouth",
        "aliases": [],
        "weight": 1.0,
@@ -15963,24 +15912,6 @@
        "groups": [
         "m:legacy.mouth"
        ],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "appearance"
-      },
-      {
-       "en": "lips slightly parted",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "微启的唇",
-       "id": "reorg.s4.lips-slightly-parted",
-       "type": "content",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -17155,7 +17086,9 @@
       },
       {
        "en": "bandages",
-       "aliases": [],
+       "aliases": [
+        "bandage"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "绷带",
@@ -25516,7 +25449,9 @@
       },
       {
        "en": "dumbbell",
-       "aliases": [],
+       "aliases": [
+        "dumbbells"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "哑铃",
@@ -25683,24 +25618,6 @@
        "enabled": true,
        "zh": "瑜伽垫",
        "id": "reorg.s13.yoga-mat",
-       "type": "content",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "prop"
-      },
-      {
-       "en": "dumbbells",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "哑铃组",
-       "id": "reorg.s13.dumbbells",
        "type": "content",
        "priority": 50,
        "rarity": "common",
@@ -27942,24 +27859,6 @@
        "enabled": true,
        "zh": "罗纹毛衣",
        "id": "imported.c3.sub.ribbed-sweater",
-       "type": "descriptor",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "clothing"
-      },
-      {
-       "en": "long sleeve",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "长袖",
-       "id": "imported.c3.sub.long-sleeve",
        "type": "descriptor",
        "priority": 50,
        "rarity": "common",
@@ -43856,28 +43755,10 @@
        "axis": "action"
       },
       {
-       "en": "arm outstretched",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "手臂前伸",
-       "id": "reorg.s23.arm-outstretched",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [
-        "m:pose-base"
-       ],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
        "en": "reaching towards viewer",
-       "aliases": [],
+       "aliases": [
+        "reaching toward viewer"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "伸手向镜头",
@@ -46240,24 +46121,6 @@
        "axis": "action"
       },
       {
-       "en": "hand holding",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "牵手",
-       "id": "reorg.s26.hand-holding",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
        "en": "leaning on person",
        "aliases": [],
        "weight": 1.0,
@@ -46839,7 +46702,9 @@
       },
       {
        "en": "holding hands",
-       "aliases": [],
+       "aliases": [
+        "hand holding"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "牵手",
@@ -47509,8 +47374,10 @@
        "axis": "action"
       },
       {
-       "en": "hand on hip",
-       "aliases": [],
+       "en": "hand on own hip",
+       "aliases": [
+        "hand on hip"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "叉腰",
@@ -47519,26 +47386,6 @@
        "priority": 50,
        "rarity": "common",
        "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
-       "en": "arms crossed",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "双臂交叉",
-       "id": "imported.c4.sub-2.arms-crossed",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [
-        "m:legacy.arms_pos"
-       ],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -47603,8 +47450,10 @@
        "axis": "action"
       },
       {
-       "en": "hands on hips",
-       "aliases": [],
+       "en": "hands on own hips",
+       "aliases": [
+        "hands on hips"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "叉腰",
@@ -47635,24 +47484,6 @@
        "groups": [
         "m:legacy.arms_pos"
        ],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
-       "en": "stretching arm",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "伸展手臂",
-       "id": "imported.c4.sub-2.stretching-arm",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
        "requires": [],
        "mutex_with": [],
        "desc": "",
@@ -48029,24 +47860,6 @@
        "enabled": true,
        "zh": "手指抵唇",
        "id": "imported.c4.sub-2.finger-to-mouth",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
-       "en": "fist raised",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "握拳举起",
-       "id": "imported.c4.sub-2.fist-raised",
        "type": "pose",
        "priority": 50,
        "rarity": "common",
@@ -48513,24 +48326,6 @@
        "axis": "action"
       },
       {
-       "en": "finger guns",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "手指枪",
-       "id": "imported.c4.sub-2.finger-guns",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
        "en": "heart hands",
        "aliases": [],
        "weight": 1.0,
@@ -48838,24 +48633,6 @@
        "axis": "action"
       },
       {
-       "en": "arms outstretched",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "双臂张开",
-       "id": "imported.c4.sub-2.arms-outstretched",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
        "en": "stretching arms",
        "aliases": [],
        "weight": 1.0,
@@ -48880,24 +48657,6 @@
        "enabled": true,
        "zh": "向上伸手",
        "id": "imported.c4.sub-2.reaching-up",
-       "type": "pose",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "action"
-      },
-      {
-       "en": "reaching toward viewer",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "向镜头伸手",
-       "id": "imported.c4.sub-2.reaching-toward-viewer",
        "type": "pose",
        "priority": 50,
        "rarity": "common",
@@ -48983,7 +48742,9 @@
       },
       {
        "en": "finger gun",
-       "aliases": [],
+       "aliases": [
+        "finger guns"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "手指枪",
@@ -49073,7 +48834,9 @@
       },
       {
        "en": "raised fist",
-       "aliases": [],
+       "aliases": [
+        "fist raised"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "举起拳头",
@@ -49091,7 +48854,9 @@
       },
       {
        "en": "crossed arms",
-       "aliases": [],
+       "aliases": [
+        "arms crossed"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "抱臂",
@@ -53077,7 +52842,9 @@
       },
       {
        "en": "heavy film grain",
-       "aliases": [],
+       "aliases": [
+        "film grain heavy"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "厚重胶片颗粒",
@@ -53095,7 +52862,9 @@
       },
       {
        "en": "light leak",
-       "aliases": [],
+       "aliases": [
+        "light leaks"
+       ],
        "weight": 1.0,
        "enabled": true,
        "zh": "漏光效果",
@@ -79496,24 +79265,6 @@
        "enabled": true,
        "zh": "粒子拖尾",
        "id": "imported.c9.sub-2.particle-trail",
-       "type": "material",
-       "priority": 50,
-       "rarity": "common",
-       "groups": [],
-       "requires": [],
-       "mutex_with": [],
-       "desc": "",
-       "meta": {},
-       "gender": "",
-       "axis": "material"
-      },
-      {
-       "en": "light leaks",
-       "aliases": [],
-       "weight": 1.0,
-       "enabled": true,
-       "zh": "漏光",
-       "id": "imported.c9.sub-2.light-leaks",
        "type": "material",
        "priority": 50,
        "rarity": "common",

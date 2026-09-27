@@ -282,7 +282,8 @@ def _run(cdp, tab):
     #   **选用**搬进挑标签右栏。老断言写死 7 页签 + 该页签存在 → 改完必然假红
     #   (2026-09-21 实测: 只改点击路径不够, 页签断言也得跟着改)。
     ui_errs = []
-    want_tabs = ["🏠 首页", "挑标签", "🧬 互斥域", "✍ NL 句式", "📦 预设", "⚙ 设置"]
+    #   1.14.0 起文案已改「✍ 自然语言」——页签文案动了这里必须同步, 否则假红。
+    want_tabs = ["🏠 首页", "挑标签", "🧬 互斥域", "✍ 自然语言", "📦 预设", "⚙ 设置"]
     for t in want_tabs:
         ok = t in tabs
         print(f"    {'✓' if ok else '✗'} 页签存在: {t}")
@@ -543,7 +544,7 @@ def _run(cdp, tab):
     if not (grp_v["groups"] >= 50 and grp_v["cells"] >= 50 and grp_v["cfRules"] >= 1):  # 1.8.0: +nsfw 扩展域
         ui_errs.append(f"互斥域可编辑/规则并入不完整: {grp_v}")
 
-    # 7) NL 句式 (可编辑)
+    # 7) 自然语言视图 (可编辑)
     click_tab(".tp-nltab", "ui_nl.png",
               """(() => {
                 const fams=document.querySelectorAll('.tp-fam').length;
@@ -555,7 +556,7 @@ def _run(cdp, tab):
       cells: document.querySelectorAll('.tp-ecell').length,
       sels: document.querySelectorAll('select.tp-ecell').length})"""))
     if not (nl_v["cells"] >= 30 and nl_v["sels"] >= 10):
-        ui_errs.append(f"NL 句式未完全可编辑: {nl_v}")
+        ui_errs.append(f"自然语言视图未完全可编辑: {nl_v}")
 
     # 8) 设置新块
     click_tab(".tp-settab", "ui_set.png",
