@@ -542,6 +542,12 @@ class TagLibraryNode:
                              "weight": 1.0}
                 else:
                     lib_t = dict(lib_t)
+                # 手动输出补 @ 前缀依赖 _cat (与回显/前端同口径); 库外词查不到路径则保持原样。
+                if not lib_t.get("_cat"):
+                    _p = _en_path.get(en_l)
+                    if _p:
+                        _c0 = _p[0]
+                        lib_t["_cat"] = (_c0.get("name") if isinstance(_c0, dict) else str(_c0)) or ""
                 # 面板里给某个词单独调过权重 -> 以手调的为准 (手选即为准, 与
                 # "豁免排除类目"同一语义)。没调过就不写这个键, 保持库默认。
                 if isinstance(st_tag.get("weight"), (int, float)):

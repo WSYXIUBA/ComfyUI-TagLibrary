@@ -185,6 +185,32 @@ for seed in range(50):
         order_bad += 1
 check("output sorted by axis order", order_bad == 0, str(order_bad))
 
+# ---------------- T5b 钉选豁免排除类目 (2026-09-27 修复回归)
+print("T5b 钉选豁免排除类目")
+# 画师轴默认在 exclude_categories; 钉选词必须豁免排除类目才能进输出
+# (对齐 manual「手选即为准」与 reroll pin_force 语义), 未钉选的仍照常被排除。
+_cfg0 = engine.resolve_config({}, lib.get("settings") or {})
+_st_pin = {"tags": [{"en": "sw33t", "pinned": True}], "exclude_categories": ["画师"]}
+_ok = 0
+for _s in (11, 22, 33):
+    _r = engine.run_auto(snap, _st_pin, _s, nsfw_on=True, avoid_conflicts=True,
+                         search_text="", cat_weights={}, config=_cfg0)
+    if "sw33t" in {str(p.en).lstrip("@").lower() for p in _r.picks}:
+        _ok += 1
+check("pinned survives exclude_categories", _ok == 3, f"{_ok}/3")
+_r = engine.run_auto(snap, {"tags": [{"en": "sw33t"}], "exclude_categories": ["画师"]},
+                     44, nsfw_on=True, avoid_conflicts=True,
+                     search_text="", cat_weights={}, config=_cfg0)
+check("unpinned still excluded", "sw33t" not in {str(p.en).lstrip("@").lower() for p in _r.picks})
+
+# ---------------- T5c manual 输出画师 @ 前缀 (2026-09-27 修复回归)
+print("T5c manual 画师 @ 前缀")
+import nodes as _nodes_mod  # noqa: E402
+_txt, _pv, _ng = _nodes_mod.TagLibraryNode().build(
+    selection_state=json.dumps({"tags": [{"en": "sw33t", "enabled": True}]}),
+    mode="manual", seed=7)
+check("manual artist gets @ prefix", "@sw33t" in str(_txt), str(_txt)[:60])
+
 # ---------------- T6 性能
 print("T6 性能")
 ts = []

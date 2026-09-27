@@ -279,8 +279,11 @@ class _Extraction:
         self.slot_filled = None
         self.stats = None
 
-    def tag_ok(self, tid: int) -> bool:
-        """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。"""
+    def tag_ok(self, tid: int, ignore_exclude: bool = False) -> bool:
+        """排除/NSFW/性别三态/性别锁/未成年锁 五闸门 (候选级)。
+
+        ignore_exclude=True 时跳过「排除类目/槽位键/语义词根」三查 —— 供钉选词
+        豁免排除用 (与 manual 模式「手选即为准」及 reroll pin_force 同语义)。"""
         if not self.nsfw_on and self.snap.nsfw_flag[tid]:
             return False
         # 纯欲档: 未成年年龄词源头排除 (否则未成年锁触发后整场显式词全灭)
@@ -301,14 +304,15 @@ class _Extraction:
         if self.led.gender_lock == 2 and g == 1:
             return False
         si = self.snap.sub_of[tid]
-        cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
-        if cname in self.excl_cats or self.snap.sub_keys[si] in self.excl_keys:
-            return False
-        # 类目语义词根闸门: 分类不在被排除类目、但语义是它的词 (detailed armor /
-        # skirt hold / lace fabric … 分类在画质/动作/材质) 一并排除 —— 不设此闸,
-        # "排除服装"下真机仍有 4/12 张出复杂服装。
-        if self.excl_cats and slotpolicy.semantic_hit(self.snap.tag_lower[tid], self.excl_cats):
-            return False
+        if not ignore_exclude:
+            cname = self.snap.cat_names[self.snap.cat_of_sub[si]]
+            if cname in self.excl_cats or self.snap.sub_keys[si] in self.excl_keys:
+                return False
+            # 类目语义词根闸门: 分类不在被排除类目、但语义是它的词 (detailed armor /
+            # skirt hold / lace fabric …) 一并排除 —— 不设此闸,
+            # "排除服装"下真机仍有 4/12 张出复杂服装。
+            if self.excl_cats and slotpolicy.semantic_hit(self.snap.tag_lower[tid], self.excl_cats):
+                return False
         # ---- 场景条闸门 (1.8.1) ----
         _sk = self.snap.sub_keys[si]
         if self.solo_lock:
@@ -497,7 +501,9 @@ class _Extraction:
                 return
             if self.led.gender_lock == 2 and g == 1:
                 return
-        elif not self.tag_ok(tid):
+        elif not self.tag_ok(tid, ignore_exclude=True):
+            # 钉选词豁免排除类目 (对齐 manual「手选即为准」与 reroll pin_force 语义):
+            # 画师轴默认在 exclude_categories, 钉了却不豁免 = 静默吞词、用户看不出原因。
             return
         if tid not in self.pinned_tids:
             self.pinned_tids.append(tid)
